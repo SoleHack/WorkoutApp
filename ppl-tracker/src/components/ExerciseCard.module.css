@@ -130,7 +130,103 @@
 .doneReps { font-size: 10px; opacity: 0.85; }
 .setLabel { font-size: 9px; letter-spacing: 0.05em; }
 
-/* Log form */
+/* Rest timer */
+.timerWrap {
+  padding: 10px 14px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.timer { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+
+.timerBar {
+  height: 3px;
+  background: var(--border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.timerFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 1s linear;
+}
+
+.timerLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.timerDone {
+  padding: 10px 14px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  border-top: 1px solid var(--border);
+}
+
+.skipTimer {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  padding: 6px 10px;
+  min-height: unset;
+  height: 30px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* Plate calculator */
+.plates {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  min-height: 22px;
+}
+
+.platesLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 2px;
+}
+
+.plate {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 3px;
+  letter-spacing: 0.04em;
+}
+
+/* Swipe hint */
+.logHeaderRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.swipeHint {
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  color: var(--muted);
+  opacity: 0.5;
+  letter-spacing: 0.06em;
+}
+
 .logForm {
   border-top: 1px solid var(--border);
   padding: 14px;

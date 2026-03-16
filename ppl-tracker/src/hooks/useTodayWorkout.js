@@ -9,6 +9,7 @@ export function useTodayWorkout() {
   const [lastSession, setLastSession] = useState(null)
   const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [allSessions, setAllSessions] = useState([])
 
   useEffect(() => {
     if (user) load()
@@ -21,7 +22,7 @@ export function useTodayWorkout() {
       .select('day_key, date, completed_at')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
-      .limit(20)
+      .limit(60)
 
     if (!data || data.length === 0) {
       setTodayKey(PROGRAM_ORDER[0])
@@ -29,11 +30,11 @@ export function useTodayWorkout() {
       return
     }
 
-    // Find the last completed session
+    setAllSessions(data)
+
     const lastCompleted = data.find(s => s.completed_at)
     setLastSession(lastCompleted || data[0])
 
-    // Determine next workout in rotation
     if (lastCompleted) {
       const lastIdx = PROGRAM_ORDER.indexOf(lastCompleted.day_key)
       const nextIdx = (lastIdx + 1) % PROGRAM_ORDER.length
@@ -42,7 +43,6 @@ export function useTodayWorkout() {
       setTodayKey(PROGRAM_ORDER[0])
     }
 
-    // Calculate streak — consecutive days with completed sessions
     let currentStreak = 0
     const today = new Date()
     today.setHours(0, 0, 0, 0)
@@ -54,15 +54,12 @@ export function useTodayWorkout() {
       d.setHours(0, 0, 0, 0)
       const expected = new Date(today)
       expected.setDate(today.getDate() - i)
-      if (d.getTime() === expected.getTime()) {
-        currentStreak++
-      } else {
-        break
-      }
+      if (d.getTime() === expected.getTime()) currentStreak++
+      else break
     }
     setStreak(currentStreak)
     setLoading(false)
   }
 
-  return { todayKey, lastSession, streak, loading, refresh: load }
+  return { todayKey, lastSession, streak, loading, allSessions, refresh: load }
 }

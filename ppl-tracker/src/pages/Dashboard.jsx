@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useTodayWorkout } from '../hooks/useTodayWorkout'
+import { useBodyweight } from '../hooks/useBodyweight'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Dashboard.module.css'
 
@@ -10,15 +11,31 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
+// Check if user has trained consistently enough to need a deload
+function useDeloadCheck(allSessions, deloadEnabled) {
+  if (!deloadEnabled || !allSessions?.length) return false
+  // Count distinct training days in last 42 days (6 weeks)
+  const cutoff = new Date()
+  cutoff.setDate(cutoff.getDate() - 42)
+  const recentDays = new Set(
+    allSessions
+      .filter(s => s.completed_at && new Date(s.date) >= cutoff)
+      .map(s => s.date)
+  )
+  return recentDays.size >= 24 // ~4 days/week for 6 weeks
+}
+
 export default function Dashboard() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
-  const { getTodayKey, loading: settingsLoading } = useSettings()
-  const { lastSession, streak } = useTodayWorkout()
+  const { getTodayKey, settings, loading: settingsLoading } = useSettings()
+  const { lastSession, streak, allSessions } = useTodayWorkout()
+  const { latest: bwLatest, change: bwChange } = useBodyweight()
 
   const todayKey = getTodayKey()
   const isRest = !todayKey || todayKey === 'rest'
   const todayDay = !isRest ? PROGRAM[todayKey] : null
+  const showDeload = useDeloadCheck(allSessions, settings.deloadReminder)
 
   return (
     <div className={styles.wrap}>
@@ -50,12 +67,24 @@ export default function Dashboard() {
           </div>
           <div className={styles.statDivider} />
           <div className={styles.stat}>
-            <div className={styles.statVal} style={{ color: todayDay ? todayDay.color : 'var(--muted)' }}>
-              {isRest ? 'Rest' : todayDay?.label || '—'}
+            <div className={styles.statVal} style={{ color: bwLatest ? 'var(--text)' : 'var(--muted)' }}>
+              {bwLatest ? `${bwLatest.weight}` : '—'}
+              {bwLatest && bwChange !== null && (
+                <span style={{ fontSize: 11, color: parseFloat(bwChange) < 0 ? 'var(--success)' : 'var(--danger)', marginLeft: 4 }}>
+                  {parseFloat(bwChange) > 0 ? '+' : ''}{bwChange}
+                </span>
+              )}
             </div>
-            <div className={styles.statLabel}>Today</div>
+            <div className={styles.statLabel}>Weight (lbs)</div>
           </div>
         </div>
+
+        {showDeload && (
+          <div className={styles.deloadBanner}>
+            <div className={styles.deloadTitle}>⚡ Time for a deload</div>
+            <div className={styles.deloadSub}>You've trained consistently for 6+ weeks. Drop to 60% load this week to let joints and CNS recover.</div>
+          </div>
+        )}
       </header>
 
       <main className={styles.main}>

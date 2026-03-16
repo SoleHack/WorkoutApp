@@ -19,6 +19,19 @@
   --success: #4ADE80;
 }
 
+[data-theme='light'] {
+  --bg: #F5F4F0;
+  --bg2: #FFFFFF;
+  --bg3: #EDECE8;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.16);
+  --text: #1A1A18;
+  --muted: #888580;
+  --muted2: #555350;
+  --danger: #DC2626;
+  --success: #16A34A;
+}
+
 html { scroll-behavior: smooth; }
 
 body {

@@ -87,7 +87,44 @@
 
 .finishBtn {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 4px;
   padding: 14px;
   font-size: 15px;
+}
+
+.notesToggle {
+  width: 100%;
+  padding: 12px;
+  font-size: 13px;
+  color: var(--muted2);
+}
+
+.notesWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.notesInput {
+  width: 100%;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: 'DM Sans', sans-serif;
+  padding: 12px 14px;
+  outline: none;
+  resize: none;
+  line-height: 1.6;
+  transition: border-color 0.15s;
+}
+.notesInput:focus { border-color: var(--border2); }
+.notesInput::placeholder { color: var(--muted); }
+
+.notesHint {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  text-align: right;
 }

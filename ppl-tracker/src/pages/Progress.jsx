@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useBodyweight } from '../hooks/useBodyweight'
 import { EXERCISES, PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Progress.module.css'
 
@@ -65,6 +66,7 @@ function ChartTooltip({ active, payload, label, unit = 'lbs', showReps = false }
 export default function Progress() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const { entries: bwEntries } = useBodyweight()
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(PROGRAM_ORDER[0])
   const [selectedExId, setSelectedExId] = useState(null)
@@ -277,6 +279,35 @@ export default function Progress() {
                     <Tooltip content={<ChartTooltip />} />
                     <Bar dataKey="vol" fill="url(#volGrad)" radius={[4, 4, 0, 0]} />
                   </BarChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Bodyweight chart */}
+            {bwEntries.length > 1 && (
+              <div className={styles.chartCard}>
+                <div className={styles.chartTitle}>Bodyweight</div>
+                <div className={styles.chartSub}>lbs over time</div>
+                <ResponsiveContainer width="100%" height={140}>
+                  <AreaChart
+                    data={bwEntries.map(e => ({ date: fmt(e.date), weight: e.weight }))}
+                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="bwGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4ADE80" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#4ADE80" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
+                      tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
+                      tickLine={false} axisLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
+                    <Tooltip content={<ChartTooltip unit="lbs" />} />
+                    <Area type="monotone" dataKey="weight" stroke="#4ADE80" strokeWidth={2}
+                      fill="url(#bwGrad)"
+                      dot={{ fill: '#4ADE80', r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, strokeWidth: 0 }} />
+                  </AreaChart>
                 </ResponsiveContainer>
               </div>
             )}

@@ -1,29 +1,107 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { TAG_LABELS } from '../data/program'
 import styles from './ExerciseCard.module.css'
 
-export default function ExerciseCard({ exercise, programEx, dayColor, sets, lastSets, lastMax, onLogSet, onShowVideo, accent }) {
+// Plate calculator — returns plates for one side of a 45lb bar
+function calcPlates(totalWeight) {
+  const barWeight = 45
+  const available = [45, 35, 25, 10, 5, 2.5]
+  let remaining = (totalWeight - barWeight) / 2
+  if (remaining <= 0) return []
+  const result = []
+  for (const plate of available) {
+    while (remaining >= plate) {
+      result.push(plate)
+      remaining = Math.round((remaining - plate) * 10) / 10
+    }
+  }
+  return result
+}
+
+function PlateDisplay({ weight }) {
+  const w = parseFloat(weight)
+  if (!w || w <= 45 || w % 2.5 !== 0) return null
+  const plates = calcPlates(w)
+  if (!plates.length) return null
+  const colors = { 45: '#E24B4A', 35: '#378ADD', 25: '#F59E0B', 10: '#4ADE80', 5: '#E8E3D8', 2.5: '#9A9589' }
+  return (
+    <div className={styles.plates}>
+      <span className={styles.platesLabel}>Each side:</span>
+      {plates.map((p, i) => (
+        <span key={i} className={styles.plate} style={{ background: colors[p] || '#555', color: p >= 25 ? '#fff' : '#000' }}>
+          {p}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+function RestTimer({ seconds, onDone, color }) {
+  const [remaining, setRemaining] = useState(seconds)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    if (remaining <= 0) {
+      setDone(true)
+      if ('vibrate' in navigator) navigator.vibrate([200, 100, 200])
+      onDone?.()
+      return
+    }
+    const t = setTimeout(() => setRemaining(r => r - 1), 1000)
+    return () => clearTimeout(t)
+  }, [remaining])
+
+  const pct = ((seconds - remaining) / seconds) * 100
+
+  if (done) return (
+    <div className={styles.timerDone} style={{ color }}>
+      ✓ Rest complete — go!
+    </div>
+  )
+
+  const mins = Math.floor(remaining / 60)
+  const secs = remaining % 60
+  const label = mins > 0 ? `${mins}:${secs.toString().padStart(2, '0')}` : `${secs}s`
+
+  return (
+    <div className={styles.timer}>
+      <div className={styles.timerBar}>
+        <div className={styles.timerFill} style={{ width: `${pct}%`, background: color }} />
+      </div>
+      <div className={styles.timerLabel} style={{ color }}>Rest {label}</div>
+    </div>
+  )
+}
+
+export default function ExerciseCard({
+  exercise, programEx, dayColor, sets, lastSets, lastMax,
+  onLogSet, onShowVideo, accent
+}) {
   const [activeSet, setActiveSet] = useState(null)
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [saving, setSaving] = useState(false)
+  const [restTimer, setRestTimer] = useState(null) // { seconds, key }
+  const touchStartX = useRef(null)
+  const formRef = useRef(null)
 
   const completedCount = sets.filter(s => s?.completed).length
   const allDone = completedCount === programEx.sets
 
+  // Rest time based on tag
+  const restSeconds = programEx.tag === 'compound' ? 150 : 75
+
   const handleSetTap = (setNum) => {
     const existing = sets[setNum - 1]
     const lastSetData = lastSets[setNum - 1]
-
     setWeight(existing?.weight?.toString() ?? lastSetData?.weight?.toString() ?? '0')
-
-    // Extract just the numeric part from reps string like "10 each side", "40 sec", "12–15"
-    const repsStr = existing?.reps?.toString()
+    const rawReps = existing?.reps?.toString()
       || lastSetData?.reps?.toString()
-      || programEx.reps.replace(/[^0-9]/g, '').slice(0, 2)
+      || programEx.reps.replace(/[^0-9]/g, '').slice(0, 3)
       || '10'
-    setReps(repsStr.replace(/[^0-9]/g, '').slice(0, 3) || '10')
+    setReps(rawReps.replace(/[^0-9]/g, '').slice(0, 3) || '10')
     setActiveSet(setNum)
+    setRestTimer(null)
   }
 
   const handleLog = async () => {
@@ -36,20 +114,24 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
     const loggedWeight = isNaN(w) ? 0 : w
     const loggedReps = r
 
-    console.log('handleLog firing:', { loggedSetNum, loggedWeight, loggedReps })
+    // Haptic feedback
+    if ('vibrate' in navigator) navigator.vibrate(50)
+
     await onLogSet(loggedSetNum, loggedWeight, loggedReps)
     setSaving(false)
+    setActiveSet(null)
 
+    // Start rest timer
+    setRestTimer({ seconds: restSeconds, key: Date.now() })
+
+    // Auto-advance after timer or immediately find next
     const updatedSets = [...Array(programEx.sets)].map((_, i) => {
       if (i + 1 === loggedSetNum) return { completed: true }
       return sets[i] || null
     })
-
     const nextIncomplete = updatedSets.findIndex(s => !s?.completed)
     if (nextIncomplete !== -1) {
-      handleSetTap(nextIncomplete + 1)
-    } else {
-      setActiveSet(null)
+      // Don't auto-open next set — let them rest first
     }
   }
 
@@ -62,6 +144,15 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
   const adjustReps = (delta) => {
     const current = parseInt(reps) || 0
     setReps(Math.max(1, current + delta).toString())
+  }
+
+  // Swipe left to dismiss log form
+  const onTouchStart = (e) => { touchStartX.current = e.touches[0].clientX }
+  const onTouchEnd = (e) => {
+    if (touchStartX.current === null) return
+    const diff = touchStartX.current - e.changedTouches[0].clientX
+    if (diff > 60) setActiveSet(null) // swipe left > 60px to dismiss
+    touchStartX.current = null
   }
 
   return (
@@ -78,9 +169,9 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
             )}
           </div>
           <div className={styles.note}>{programEx.note}</div>
-          {lastMax && (
+          {lastMax !== null && lastMax !== undefined && (
             <div className={styles.lastCue}>
-              Last session: <strong>{lastMax} lbs</strong> — {allDone ? 'matched!' : 'try to beat it'}
+              Last: <strong>{lastMax > 0 ? `${lastMax} lbs` : 'BW'}</strong> — {allDone ? 'done!' : 'try to beat it'}
             </div>
           )}
         </div>
@@ -101,15 +192,10 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
           const isDone = s?.completed
           const isActive = activeSet === setNum
           return (
-            <button
-              key={setNum}
+            <button key={setNum}
               className={`${styles.setBtn} ${isDone ? styles.setDone : ''} ${isActive ? styles.setActive : ''}`}
-              style={
-                isDone ? { background: dayColor, borderColor: dayColor } :
-                isActive ? { borderColor: dayColor } : {}
-              }
-              onClick={() => handleSetTap(setNum)}
-            >
+              style={isDone ? { background: dayColor, borderColor: dayColor } : isActive ? { borderColor: dayColor } : {}}
+              onClick={() => handleSetTap(setNum)}>
               {isDone ? (
                 <span className={styles.setDoneInner}>
                   <span className={styles.doneWeight}>
@@ -126,52 +212,59 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
         })}
       </div>
 
-      {/* Log form — mobile optimized with +/- stepper buttons */}
+      {/* Rest timer */}
+      {restTimer && activeSet === null && (
+        <div className={styles.timerWrap}>
+          <RestTimer
+            key={restTimer.key}
+            seconds={restTimer.seconds}
+            color={dayColor}
+            onDone={() => {}}
+          />
+          <button className={styles.skipTimer} onClick={() => setRestTimer(null)}>Skip</button>
+        </div>
+      )}
+
+      {/* Log form */}
       {activeSet !== null && (
-        <div className={styles.logForm}>
+        <div
+          className={styles.logForm}
+          ref={formRef}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
           <div className={styles.logHeader}>
             <span className={styles.logSetLabel} style={{ color: dayColor }}>Set {activeSet}</span>
-            {lastSets[activeSet - 1] && (
-              <span className={styles.logLastHint}>
-                Last: {lastSets[activeSet - 1].weight}lbs × {lastSets[activeSet - 1].reps}
-              </span>
-            )}
+            <div className={styles.logHeaderRight}>
+              {lastSets[activeSet - 1] && (
+                <span className={styles.logLastHint}>
+                  Last: {lastSets[activeSet - 1].weight > 0 ? `${lastSets[activeSet - 1].weight}lbs` : 'BW'} × {lastSets[activeSet - 1].reps}
+                </span>
+              )}
+              <span className={styles.swipeHint}>← swipe to close</span>
+            </div>
           </div>
 
           <div className={styles.inputsRow}>
-            {/* Weight */}
             <div className={styles.inputBlock}>
               <div className={styles.inputLabel}>Weight (lbs)</div>
               <div className={styles.stepper}>
                 <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(-2.5)}>−</button>
-                <input
-                  className={styles.stepInput}
-                  type="number"
-                  inputMode="decimal"
-                  step="2.5"
-                  min="0"
-                  placeholder="0"
-                  value={weight}
-                  onChange={e => setWeight(e.target.value)}
-                />
+                <input className={styles.stepInput} type="number" inputMode="decimal"
+                  step="2.5" min="0" placeholder="0" value={weight}
+                  onChange={e => setWeight(e.target.value)} />
                 <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(2.5)}>+</button>
               </div>
+              <PlateDisplay weight={weight} />
             </div>
 
-            {/* Reps */}
             <div className={styles.inputBlock}>
               <div className={styles.inputLabel}>Reps</div>
               <div className={styles.stepper}>
                 <button type="button" className={styles.stepBtn} onClick={() => adjustReps(-1)}>−</button>
-                <input
-                  className={styles.stepInput}
-                  type="number"
-                  inputMode="numeric"
-                  min="1"
-                  placeholder="0"
-                  value={reps}
-                  onChange={e => setReps(e.target.value)}
-                />
+                <input className={styles.stepInput} type="number" inputMode="numeric"
+                  min="1" placeholder="0" value={reps}
+                  onChange={e => setReps(e.target.value)} />
                 <button type="button" className={styles.stepBtn} onClick={() => adjustReps(1)}>+</button>
               </div>
             </div>
@@ -179,12 +272,8 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
 
           <div className={styles.logActions}>
             <button className={`btn ${styles.cancelBtn}`} type="button" onClick={() => setActiveSet(null)}>Cancel</button>
-            <button
-              className={`btn btn-primary ${styles.logBtn}`}
-              type="button"
-              disabled={saving}
-              onClick={handleLog}
-            >
+            <button className={`btn btn-primary ${styles.logBtn}`} type="button"
+              disabled={saving} onClick={handleLog}>
               {saving ? 'Saving...' : '✓ Log Set'}
             </button>
           </div>

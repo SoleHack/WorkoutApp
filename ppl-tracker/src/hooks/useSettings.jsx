@@ -17,7 +17,8 @@ const DEFAULT_SETTINGS = {
   schedule: DEFAULT_SCHEDULE,
   weightUnit: 'lbs',
   deloadReminder: true,
-  weekStartsOn: 1, // 1 = Monday, 0 = Sunday
+  weekStartsOn: 1,
+  theme: 'dark',
 }
 
 const SettingsContext = createContext({})
@@ -31,6 +32,11 @@ export function SettingsProvider({ children }) {
     if (user) load()
     else setLoading(false)
   }, [user])
+
+  // Apply theme whenever settings change
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.theme || 'dark')
+  }, [settings.theme])
 
   const load = async () => {
     setLoading(true)
@@ -46,6 +52,7 @@ export function SettingsProvider({ children }) {
         weightUnit: data.weight_unit || 'lbs',
         deloadReminder: data.deload_reminder ?? true,
         weekStartsOn: data.week_starts_on ?? 1,
+        theme: data.theme || 'dark',
       })
     }
     setLoading(false)
@@ -63,13 +70,13 @@ export function SettingsProvider({ children }) {
         weight_unit: next.weightUnit,
         deload_reminder: next.deloadReminder,
         week_starts_on: next.weekStartsOn,
+        theme: next.theme,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
   }, [settings, user])
 
-  // Get today's scheduled workout key
   const getTodayKey = useCallback(() => {
-    const dayOfWeek = new Date().getDay() // 0 = Sunday
+    const dayOfWeek = new Date().getDay()
     return settings.schedule[dayOfWeek] || 'rest'
   }, [settings.schedule])
 

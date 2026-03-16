@@ -1,8 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PROGRAM, EXERCISES } from '../data/program'
 import { useWorkout } from '../hooks/useWorkout'
 import { useLastSession } from '../hooks/useLastSession'
+import { useWorkoutNotes } from '../hooks/useWorkoutNotes'
 import ExerciseCard from '../components/ExerciseCard'
 import VideoModal from '../components/VideoModal'
 import styles from './Workout.module.css'
@@ -13,12 +14,19 @@ export default function Workout() {
   const day = PROGRAM[dayKey]
   const { session, sets, loading, error, startSession, logSet, finishSession } = useWorkout(dayKey)
   const { lastData, lastDate } = useLastSession(dayKey)
+  const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
   const [activeVideo, setActiveVideo] = useState(null)
   const [finishing, setFinishing] = useState(false)
+  const [showNotes, setShowNotes] = useState(false)
+  const noteTimer = useRef(null)
 
   useEffect(() => {
     if (day && startSession) startSession()
   }, [dayKey, startSession])
+
+  useEffect(() => {
+    if (session?.id) loadNote(session.id)
+  }, [session?.id])
 
   if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
 
@@ -27,8 +35,15 @@ export default function Workout() {
     acc + (exSets || []).filter(s => s?.completed).length, 0)
   const progress = totalSets > 0 ? (completedSets / totalSets) * 100 : 0
 
+  const handleNoteChange = (text) => {
+    setNote(text)
+    clearTimeout(noteTimer.current)
+    noteTimer.current = setTimeout(() => saveNote(text), 1000) // autosave after 1s
+  }
+
   const handleFinish = async () => {
     setFinishing(true)
+    await saveNote(note)
     await finishSession()
     navigate('/')
   }
@@ -102,13 +117,36 @@ export default function Workout() {
         )}
 
         {!loading && completedSets > 0 && (
-          <button
-            className={`btn btn-primary ${styles.finishBtn}`}
-            onClick={handleFinish}
-            disabled={finishing}
-          >
-            {finishing ? 'Saving...' : '✓ Finish Workout'}
-          </button>
+          <>
+            <button
+              className={`btn ${styles.notesToggle}`}
+              type="button"
+              onClick={() => setShowNotes(v => !v)}
+            >
+              {showNotes ? 'Hide notes' : `📝 ${note ? 'Edit notes' : 'Add session notes'}`}
+            </button>
+
+            {showNotes && (
+              <div className={styles.notesWrap}>
+                <textarea
+                  className={styles.notesInput}
+                  placeholder="How did the session feel? Any PRs, injuries, or things to remember..."
+                  value={note}
+                  onChange={e => handleNoteChange(e.target.value)}
+                  rows={4}
+                />
+                <div className={styles.notesHint}>Auto-saves as you type</div>
+              </div>
+            )}
+
+            <button
+              className={`btn btn-primary ${styles.finishBtn}`}
+              onClick={handleFinish}
+              disabled={finishing}
+            >
+              {finishing ? 'Saving...' : '✓ Finish Workout'}
+            </button>
+          </>
         )}
       </main>
 

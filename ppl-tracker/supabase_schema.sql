@@ -69,3 +69,24 @@ create policy "Users can manage own settings"
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
+-- Bodyweight tracking
+create table if not exists bodyweight (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  weight numeric(5,1) not null,
+  date date not null default current_date,
+  created_at timestamptz default now(),
+  unique(user_id, date)
+);
+
+alter table bodyweight enable row level security;
+
+create policy "Users can manage own bodyweight"
+  on bodyweight for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Add notes column to workout_sessions
+alter table workout_sessions add column if not exists notes text;
+alter table user_settings add column if not exists theme text default 'dark';
+
