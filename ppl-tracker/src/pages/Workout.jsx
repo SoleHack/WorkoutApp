@@ -11,14 +11,14 @@ export default function Workout() {
   const { dayKey } = useParams()
   const navigate = useNavigate()
   const day = PROGRAM[dayKey]
-  const { session, sets, loading, startSession, logSet, finishSession } = useWorkout(dayKey)
+  const { session, sets, loading, error, startSession, logSet, finishSession } = useWorkout(dayKey)
   const { lastData, lastDate } = useLastSession(dayKey)
   const [activeVideo, setActiveVideo] = useState(null)
   const [finishing, setFinishing] = useState(false)
 
   useEffect(() => {
-    if (day) startSession()
-  }, [dayKey])
+    if (day && startSession) startSession()
+  }, [dayKey, startSession])
 
   if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
 
@@ -50,6 +50,22 @@ export default function Workout() {
           </div>
         </div>
       </header>
+
+      {error && (
+        <div style={{
+          margin: '12px 16px 0',
+          padding: '12px 14px',
+          background: 'rgba(248,113,113,0.1)',
+          border: '1px solid rgba(248,113,113,0.3)',
+          borderRadius: 6,
+          fontFamily: 'DM Mono, monospace',
+          fontSize: 12,
+          color: 'var(--danger)',
+          lineHeight: 1.6,
+        }}>
+          Session error: {error}. Check Supabase RLS policies.
+        </div>
+      )}
 
       {/* Progress bar */}
       <div className={styles.progressWrap}>
