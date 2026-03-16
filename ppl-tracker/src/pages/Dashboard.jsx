@@ -49,10 +49,6 @@ export default function Dashboard() {
               <span style={{ color: 'var(--legs)' }}> Legs</span>
             </h1>
           </div>
-          <div className={styles.headerActions}>
-            <button className={styles.iconBtn} onClick={() => navigate('/settings')} title="Settings">⚙</button>
-            <button className={styles.signOut} onClick={signOut}>Sign out</button>
-          </div>
         </div>
 
         <div className={styles.statsRow}>
@@ -150,16 +146,6 @@ export default function Dashboard() {
               <div className={styles.coreSub}>Daily · {PROGRAM.core.exercises.length} exercises · 10–15 min</div>
             </div>
             <div className={styles.coreArrow}>→</div>
-          </button>
-        </section>
-
-        {/* BOTTOM LINKS */}
-        <section className={styles.bottomLinks}>
-          <button className={styles.bottomLink} onClick={() => navigate('/progress')}>
-            <span>Progress Dashboard</span><span>→</span>
-          </button>
-          <button className={styles.bottomLink} onClick={() => navigate('/settings')}>
-            <span>Schedule & Settings</span><span>→</span>
           </button>
         </section>
 

@@ -226,3 +226,11 @@
   font-size: 15px;
   margin-top: 8px;
 }
+
+.signOutBtn {
+  width: 100%;
+  padding: 13px;
+  font-size: 14px;
+  color: var(--muted);
+  border-color: var(--border);
+}

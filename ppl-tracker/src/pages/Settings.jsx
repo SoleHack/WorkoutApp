@@ -6,7 +6,6 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Settings.module.css'
-
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -23,7 +22,7 @@ function getColor(dayKey) {
 export default function Settings() {
   const navigate = useNavigate()
   const { settings, save, loading } = useSettings()
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const { entries: bwEntries, logWeight, latest: bwLatest, change: bwChange } = useBodyweight()
   const [saved, setSaved] = useState(false)
   const [localSchedule, setLocalSchedule] = useState(null)
@@ -101,7 +100,6 @@ export default function Settings() {
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
-        <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
         <div className={styles.title}>Settings</div>
       </header>
 
@@ -248,6 +246,10 @@ export default function Settings() {
         {/* SAVE */}
         <button className={`btn btn-primary ${styles.saveBtn}`} onClick={handleSave}>
           {saved ? '✓ Saved' : 'Save Settings'}
+        </button>
+
+        <button className={`btn ${styles.signOutBtn}`} onClick={signOut}>
+          Sign out
         </button>
 
       </main>

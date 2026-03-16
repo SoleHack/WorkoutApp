@@ -190,7 +190,6 @@ export default function Progress() {
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
-        <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
         <div className={styles.title}>Progress</div>
         <div className={styles.tabs}>
           {['overview', 'exercises', 'history'].map(tab => (
