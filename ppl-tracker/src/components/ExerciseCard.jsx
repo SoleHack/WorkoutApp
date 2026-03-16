@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { TAG_LABELS } from '../data/program'
+import BodyMap from './BodyMap'
 import styles from './ExerciseCard.module.css'
 
 // Plate calculator — returns plates for one side of a 45lb bar
@@ -200,6 +201,13 @@ export default function ExerciseCard({
           <span className={`tag tag-${programEx.tag}`}>{TAG_LABELS[programEx.tag]}</span>
         </div>
       </div>
+
+      {/* Body map */}
+      {exercise.muscles && (
+        <div className={styles.bodyMapWrap}>
+          <BodyMap muscles={exercise.muscles} dayColor={dayColor} />
+        </div>
+      )}
 
       {/* Set buttons */}
       <div className={styles.setRow}>

@@ -1,0 +1,26 @@
+.wrap {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  padding: 10px 0 4px;
+}
+
+.figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.svg {
+  width: 72px;
+  height: auto;
+}
+
+.label {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+}
