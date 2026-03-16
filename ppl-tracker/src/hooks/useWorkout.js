@@ -48,7 +48,10 @@ export function useWorkout(dayKey) {
     } else {
       const { data: newSession, error: insertErr } = await supabase
         .from('workout_sessions')
-        .insert({ user_id: user.id, day_key: dayKey, date: today })
+        .upsert(
+          { user_id: user.id, day_key: dayKey, date: today },
+          { onConflict: 'user_id,day_key,date' }
+        )
         .select()
         .single()
 
