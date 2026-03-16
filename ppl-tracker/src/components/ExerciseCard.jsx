@@ -15,26 +15,31 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
     const existing = sets[setNum - 1]
     const lastSetData = lastSets[setNum - 1]
 
-    // Pre-fill with current session data, then last session, then empty
-    setWeight(existing?.weight?.toString() || lastSetData?.weight?.toString() || '')
-    setReps(existing?.reps?.toString() || lastSetData?.reps?.toString() || programEx.reps.split('–')[0] || '')
+    setWeight(existing?.weight?.toString() ?? lastSetData?.weight?.toString() ?? '0')
+
+    // Extract just the numeric part from reps string like "10 each side", "40 sec", "12–15"
+    const repsStr = existing?.reps?.toString()
+      || lastSetData?.reps?.toString()
+      || programEx.reps.replace(/[^0-9]/g, '').slice(0, 2)
+      || '10'
+    setReps(repsStr.replace(/[^0-9]/g, '').slice(0, 3) || '10')
     setActiveSet(setNum)
   }
 
-  const handleLog = async (e) => {
-    e.preventDefault()
-    if (weight === '' || reps === '' || !reps) return
+  const handleLog = async () => {
+    const w = parseFloat(weight)
+    const r = parseInt(reps)
+    if (isNaN(r) || r < 1) return
     setSaving(true)
 
     const loggedSetNum = activeSet
-    const loggedWeight = parseFloat(weight) || 0
-    const loggedReps = parseInt(reps)
+    const loggedWeight = isNaN(w) ? 0 : w
+    const loggedReps = r
 
+    console.log('handleLog firing:', { loggedSetNum, loggedWeight, loggedReps })
     await onLogSet(loggedSetNum, loggedWeight, loggedReps)
     setSaving(false)
 
-    // Build updated sets snapshot to find next incomplete
-    // (can't rely on sets state here — it may not have updated yet)
     const updatedSets = [...Array(programEx.sets)].map((_, i) => {
       if (i + 1 === loggedSetNum) return { completed: true }
       return sets[i] || null
@@ -123,7 +128,7 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
 
       {/* Log form — mobile optimized with +/- stepper buttons */}
       {activeSet !== null && (
-        <form className={styles.logForm} onSubmit={handleLog}>
+        <div className={styles.logForm}>
           <div className={styles.logHeader}>
             <span className={styles.logSetLabel} style={{ color: dayColor }}>Set {activeSet}</span>
             {lastSets[activeSet - 1] && (
@@ -174,11 +179,16 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
 
           <div className={styles.logActions}>
             <button className={`btn ${styles.cancelBtn}`} type="button" onClick={() => setActiveSet(null)}>Cancel</button>
-            <button className={`btn btn-primary ${styles.logBtn}`} type="submit" disabled={saving}>
+            <button
+              className={`btn btn-primary ${styles.logBtn}`}
+              type="button"
+              disabled={saving}
+              onClick={handleLog}
+            >
               {saving ? 'Saving...' : '✓ Log Set'}
             </button>
           </div>
-        </form>
+        </div>
       )}
     </div>
   )
