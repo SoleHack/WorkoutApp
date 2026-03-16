@@ -158,8 +158,8 @@
 }
 
 .inputsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -181,21 +181,23 @@
   border: 1px solid var(--border);
   border-radius: 6px;
   overflow: hidden;
+  height: 52px;
 }
 
 .stepBtn {
-  width: 40px;
-  height: 44px;
+  width: 56px;
+  height: 52px;
   background: none;
   border: none;
   color: var(--muted2);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 300;
   flex-shrink: 0;
   transition: all 0.1s;
   display: flex;
   align-items: center;
   justify-content: center;
+  min-height: unset;
 }
 .stepBtn:active { background: var(--bg3); color: var(--text); }
 
@@ -208,15 +210,17 @@
   border-left: 1px solid var(--border);
   border-right: 1px solid var(--border);
   color: var(--text);
-  font-size: 18px;
+  font-size: 22px;
   font-family: 'DM Mono', monospace;
+  font-weight: 500;
   padding: 10px 4px;
   outline: none;
+  height: 52px;
   -moz-appearance: textfield;
 }
 .stepInput::-webkit-outer-spin-button,
 .stepInput::-webkit-inner-spin-button { -webkit-appearance: none; }
-.stepInput::placeholder { color: var(--muted); }
+.stepInput::placeholder { color: var(--muted); font-size: 18px; }
 
 .logActions {
   display: grid;
@@ -225,12 +229,16 @@
 }
 
 .cancelBtn {
-  padding: 12px;
+  padding: 14px;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 14px;
+  min-height: unset;
+  height: 50px;
 }
 
 .logBtn {
-  padding: 12px;
-  font-size: 14px;
+  padding: 14px;
+  font-size: 15px;
+  min-height: unset;
+  height: 50px;
 }

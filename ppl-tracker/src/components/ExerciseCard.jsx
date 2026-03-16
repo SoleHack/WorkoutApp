@@ -23,15 +23,24 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
 
   const handleLog = async (e) => {
     e.preventDefault()
-    if (!weight || !reps) return
+    if (weight === '' || reps === '' || !reps) return
     setSaving(true)
-    await onLogSet(activeSet, parseFloat(weight), parseInt(reps))
+
+    const loggedSetNum = activeSet
+    const loggedWeight = parseFloat(weight) || 0
+    const loggedReps = parseInt(reps)
+
+    await onLogSet(loggedSetNum, loggedWeight, loggedReps)
     setSaving(false)
 
-    // Auto-advance to next incomplete set
-    const nextIncomplete = [...Array(programEx.sets)].findIndex((_, i) =>
-      !sets[i]?.completed && i + 1 !== activeSet
-    )
+    // Build updated sets snapshot to find next incomplete
+    // (can't rely on sets state here — it may not have updated yet)
+    const updatedSets = [...Array(programEx.sets)].map((_, i) => {
+      if (i + 1 === loggedSetNum) return { completed: true }
+      return sets[i] || null
+    })
+
+    const nextIncomplete = updatedSets.findIndex(s => !s?.completed)
     if (nextIncomplete !== -1) {
       handleSetTap(nextIncomplete + 1)
     } else {
@@ -98,7 +107,10 @@ export default function ExerciseCard({ exercise, programEx, dayColor, sets, last
             >
               {isDone ? (
                 <span className={styles.setDoneInner}>
-                  <span className={styles.doneWeight}>{s.weight}<span className={styles.doneUnit}>lbs</span></span>
+                  <span className={styles.doneWeight}>
+                    {s.weight > 0 ? s.weight : 'BW'}
+                    {s.weight > 0 && <span className={styles.doneUnit}>lbs</span>}
+                  </span>
                   <span className={styles.doneReps}>{s.reps}</span>
                 </span>
               ) : (
