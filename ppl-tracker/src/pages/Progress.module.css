@@ -3,10 +3,8 @@
 .header {
   padding: 20px 20px 0;
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  background: var(--bg);
-  z-index: 10;
+  position: sticky; top: 0;
+  background: var(--bg); z-index: 10;
 }
 
 .back {
@@ -23,26 +21,21 @@
   margin-bottom: 16px;
 }
 
-.tabs {
-  display: flex; gap: 0;
-  border-bottom: none;
-}
+.tabs { display: flex; }
 
 .tab {
   background: none; border: none;
   border-bottom: 2px solid transparent;
-  padding: 12px 16px;
-  font-family: 'DM Mono', monospace;
-  font-size: 11px; letter-spacing: 0.1em;
-  text-transform: uppercase; color: var(--muted);
-  transition: color 0.15s; margin-bottom: -1px;
+  padding: 12px 16px 12px 0;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--muted); transition: color 0.15s; margin-bottom: -1px;
 }
-.tab:first-child { padding-left: 0; }
 .tabActive { color: var(--text); border-bottom-color: var(--text); }
 
-.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 16px; }
+.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 14px; }
 
-/* Stats grid */
+/* Stats */
 .statsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 
 .statCard {
@@ -51,7 +44,7 @@
 }
 
 .statNum {
-  font-family: 'DM Mono', monospace; font-size: 24px;
+  font-family: 'DM Mono', monospace; font-size: 22px;
   font-weight: 500; color: var(--text); line-height: 1; margin-bottom: 4px;
 }
 
@@ -67,54 +60,110 @@
 }
 
 .chartTitle { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
-.chartSub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 12px; }
+.chartSub { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 14px; }
 
 /* Tooltip */
 .tooltip {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: 6px; padding: 8px 12px;
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 8px 12px; min-width: 120px;
 }
-.tooltipLabel { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 2px; }
-.tooltipVal { font-family: 'DM Mono', monospace; font-size: 13px; color: var(--text); }
+.tooltipLabel { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.tooltipRow { display: flex; align-items: center; gap: 6px; margin-top: 2px; }
+.tooltipDot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+.tooltipVal { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--text); }
 
-/* PRs */
+/* Chart legend */
+.chartToggleRow { display: flex; align-items: center; margin-bottom: 12px; }
+.chartLegend { display: flex; align-items: center; gap: 8px; }
+.legendDot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.legendLabel { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* Rep breakdown */
+.repBreakdown {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;
+  margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px;
+}
+
+.repCell { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+.repDate { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+.repWeight { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; line-height: 1; }
+.repReps { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+/* Heatmap */
+.heatmapWrap { display: flex; flex-direction: column; gap: 8px; }
+
+.heatmap { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+.heatmap::-webkit-scrollbar { display: none; }
+
+.heatmapCol { display: flex; flex-direction: column; gap: 3px; }
+
+.heatmapCell {
+  width: 14px; height: 14px; border-radius: 3px;
+  cursor: pointer; transition: opacity 0.1s; flex-shrink: 0;
+}
+.heatmapCell:hover { opacity: 0.75; }
+
+.heatmapTooltip {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted2); text-align: center; min-height: 16px;
+}
+
+.heatmapLegend {
+  display: flex; align-items: center; gap: 4px;
+  justify-content: flex-end;
+}
+
+.legendText { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); }
+.legendCell { width: 12px; height: 12px; border-radius: 2px; }
+
+/* Section labels */
 .sectionLabel {
   font-family: 'DM Mono', monospace; font-size: 10px;
   letter-spacing: 0.15em; text-transform: uppercase; color: var(--muted);
-  margin-top: 4px;
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
 }
+.sectionSub { font-size: 9px; color: var(--muted); opacity: 0.7; text-transform: none; letter-spacing: 0; }
 
+/* PRs */
 .prList { display: flex; flex-direction: column; gap: 6px; }
 
 .prRow {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 6px; padding: 12px 14px;
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
+  display: flex; align-items: center; gap: 12px; position: relative;
 }
 
+.prRowNew { border-color: rgba(245,158,11,0.3); }
+
+.prNewBadge {
+  font-family: 'DM Mono', monospace; font-size: 8px;
+  letter-spacing: 0.1em; padding: 2px 6px; border-radius: 3px;
+  background: rgba(245,158,11,0.15); color: var(--push);
+  border: 1px solid rgba(245,158,11,0.3); flex-shrink: 0;
+}
+
+.prInfo { flex: 1; }
 .prName { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
 .prDate { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
 
 .prWeight { text-align: right; flex-shrink: 0; }
-.prNum { font-family: 'DM Mono', monospace; font-size: 22px; font-weight: 500; color: var(--push); }
+.prNum { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; color: var(--push); }
 .prUnit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-left: 3px; }
+.pr1rm { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
 
 /* Day tabs */
 .dayTabs {
-  display: flex; overflow-x: auto;
-  border-bottom: 1px solid var(--border);
-  margin: 0 -16px; padding: 0 16px;
-  scrollbar-width: none;
+  display: flex; overflow-x: auto; border-bottom: 1px solid var(--border);
+  margin: 0 -16px; padding: 0 16px; scrollbar-width: none;
 }
 .dayTabs::-webkit-scrollbar { display: none; }
 
 .dayTab {
-  background: none; border: none;
-  border-bottom: 2px solid transparent;
+  background: none; border: none; border-bottom: 2px solid transparent;
   padding: 12px 12px; font-family: 'DM Mono', monospace;
   font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
-  color: var(--muted); white-space: nowrap;
-  transition: color 0.15s; margin-bottom: -1px;
+  color: var(--muted); white-space: nowrap; transition: color 0.15s;
+  margin-bottom: -1px;
 }
 .dayTabActive { border-bottom-color: currentColor; }
 
@@ -149,14 +198,13 @@
   border-radius: 8px; overflow: hidden;
 }
 
-.sessionHeader { padding: 14px 14px 0; margin-bottom: 10px; }
+.sessionHeader { padding: 14px 14px 10px; }
 .sessionDate { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
 .sessionMeta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
 .sessionDone { color: var(--success); }
 
 .sessionExList {
-  border-top: 1px solid var(--border);
-  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border); padding: 10px 14px 12px;
   display: flex; flex-direction: column; gap: 6px;
 }
 
