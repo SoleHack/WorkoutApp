@@ -169,6 +169,23 @@ export default function ExerciseCard({
             )}
           </div>
           <div className={styles.note}>{programEx.note}</div>
+
+          {/* Muscle tags */}
+          {(exercise.muscles?.primary?.length > 0 || exercise.muscles?.secondary?.length > 0) && (
+            <div className={styles.muscleTags}>
+              {exercise.muscles.primary?.map(m => (
+                <span key={m} className={styles.muscleTagPrimary} style={{ background: `${dayColor}22`, color: dayColor, borderColor: `${dayColor}55` }}>
+                  {m}
+                </span>
+              ))}
+              {exercise.muscles.secondary?.map(m => (
+                <span key={m} className={styles.muscleTagSecondary}>
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+
           {lastMax !== null && lastMax !== undefined && (
             <div className={styles.lastCue}>
               Last: <strong>{lastMax > 0 ? `${lastMax} lbs` : 'BW'}</strong> — {allDone ? 'done!' : 'try to beat it'}

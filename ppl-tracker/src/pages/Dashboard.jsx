@@ -29,7 +29,7 @@ export default function Dashboard() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const { getTodayKey, settings, loading: settingsLoading } = useSettings()
-  const { lastSession, streak, allSessions } = useTodayWorkout()
+  const { lastSession, streak, allSessions, todayCompleted, coreCompletedToday } = useTodayWorkout()
   const { latest: bwLatest, change: bwChange } = useBodyweight()
 
   const todayKey = getTodayKey()
@@ -97,17 +97,24 @@ export default function Dashboard() {
           ) : (
             todayDay && (
               <button
-                className={styles.todayCard}
-                style={{ '--day-color': todayDay.color }}
+                className={`${styles.todayCard} ${todayCompleted ? styles.todayCardDone : ''}`}
+                style={{ '--day-color': todayCompleted ? 'var(--success)' : todayDay.color }}
                 onClick={() => navigate(`/workout/${todayKey}`)}
               >
                 <div className={styles.todayLeft}>
                   <div className={styles.todayDayLabel}>{todayDay.day}</div>
                   <div className={styles.todayTitle}>{todayDay.label}</div>
                   <div className={styles.todayFocus}>{todayDay.focus}</div>
-                  <div className={styles.todayMeta}>{todayDay.exercises.length} exercises</div>
+                  <div className={styles.todayMeta}>
+                    {todayCompleted
+                      ? <span style={{ color: 'var(--success)' }}>✓ Completed today</span>
+                      : `${todayDay.exercises.length} exercises`
+                    }
+                  </div>
                 </div>
-                <div className={styles.todayArrow} style={{ color: todayDay.color }}>→</div>
+                <div className={styles.todayArrow} style={{ color: todayCompleted ? 'var(--success)' : todayDay.color }}>
+                  {todayCompleted ? '✓' : '→'}
+                </div>
               </button>
             )
           )}
@@ -140,12 +147,22 @@ export default function Dashboard() {
         {/* MORNING CORE */}
         <section className={styles.section}>
           <div className={styles.sectionLabel}>Morning routine</div>
-          <button className={styles.coreCard} onClick={() => navigate('/workout/core')}>
+          <button
+            className={`${styles.coreCard} ${coreCompletedToday ? styles.coreCardDone : ''}`}
+            onClick={() => navigate('/workout/core')}
+          >
             <div>
               <div className={styles.coreTitle}>AM Core</div>
-              <div className={styles.coreSub}>Daily · {PROGRAM.core.exercises.length} exercises · 10–15 min</div>
+              <div className={styles.coreSub}>
+                {coreCompletedToday
+                  ? <span style={{ color: 'var(--success)' }}>✓ Done today — great start</span>
+                  : `Daily · ${PROGRAM.core.exercises.length} exercises · 10–15 min`
+                }
+              </div>
             </div>
-            <div className={styles.coreArrow}>→</div>
+            <div className={styles.coreArrow} style={{ color: coreCompletedToday ? 'var(--success)' : undefined }}>
+              {coreCompletedToday ? '✓' : '→'}
+            </div>
           </button>
         </section>
 

@@ -38,8 +38,10 @@ export default function Workout() {
   const handleNoteChange = (text) => {
     setNote(text)
     clearTimeout(noteTimer.current)
-    noteTimer.current = setTimeout(() => saveNote(text), 1000) // autosave after 1s
+    noteTimer.current = setTimeout(() => saveNote(text), 1000)
   }
+
+  const allDone = !loading && totalSets > 0 && completedSets === totalSets
 
   const handleFinish = async () => {
     setFinishing(true)
@@ -114,6 +116,13 @@ export default function Workout() {
               />
             )
           })
+        )}
+
+        {allDone && !finishing && (
+          <div className={styles.allDoneBanner}>
+            <div className={styles.allDoneTitle}>💪 All sets complete!</div>
+            <div className={styles.allDoneSub}>Add any notes, then finish your session.</div>
+          </div>
         )}
 
         {!loading && completedSets > 0 && (

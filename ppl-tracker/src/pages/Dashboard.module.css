@@ -103,6 +103,7 @@
   transition: opacity 0.15s;
 }
 .todayCard:active { opacity: 0.85; }
+.todayCardDone { background: rgba(74,222,128,0.05); }
 
 .todayLeft { flex: 1; }
 
@@ -162,6 +163,7 @@
   align-items: center; transition: background 0.15s;
 }
 .coreCard:active { background: var(--bg3); }
+.coreCardDone { border-left-color: var(--success); background: rgba(74,222,128,0.04); }
 .coreTitle { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--text); letter-spacing: 0.04em; line-height: 1; }
 .coreSub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .coreArrow { font-size: 20px; color: var(--core); }

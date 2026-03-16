@@ -130,6 +130,37 @@
 .doneReps { font-size: 10px; opacity: 0.85; }
 .setLabel { font-size: 9px; letter-spacing: 0.05em; }
 
+/* Muscle tags */
+.muscleTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 6px 0 4px;
+}
+
+.muscleTagPrimary {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  border: 1px solid transparent;
+  font-weight: 600;
+}
+
+.muscleTagSecondary {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
 /* Rest timer */
 .timerWrap {
   padding: 10px 14px 14px;
