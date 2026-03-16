@@ -83,13 +83,17 @@ export function useWorkout(dayKey) {
 
   const logSet = useCallback(async (exerciseId, setNumber, weight, reps) => {
     const currentSession = sessionRef.current
+    console.log('logSet called:', { exerciseId, setNumber, weight, reps, sessionId: currentSession?.id })
+
     if (!currentSession) {
+      console.error('logSet: no session in ref')
       setError('Session not ready. Please wait a moment and try again.')
       return
     }
 
     // Read existing from ref (always current, no stale closure)
     const existing = setsRef.current[exerciseId]?.[setNumber - 1]
+    console.log('logSet existing:', existing)
 
     // Optimistic update — update UI immediately
     updateSets(prev => {
@@ -99,14 +103,15 @@ export function useWorkout(dayKey) {
     })
 
     if (existing?.id) {
-      // Update existing row
+      console.log('logSet: updating existing row', existing.id)
       const { error } = await supabase
         .from('session_sets')
         .update({ weight, reps, completed: true })
         .eq('id', existing.id)
       if (error) console.error('logSet update error:', error)
+      else console.log('logSet: update success')
     } else {
-      // Insert new row
+      console.log('logSet: inserting new row into session', currentSession.id)
       const { data, error } = await supabase
         .from('session_sets')
         .insert({
@@ -125,6 +130,8 @@ export function useWorkout(dayKey) {
         setError(error.message)
         return
       }
+
+      console.log('logSet: insert success', data)
 
       // Backfill the DB id so future updates use UPDATE not INSERT
       if (data) {
