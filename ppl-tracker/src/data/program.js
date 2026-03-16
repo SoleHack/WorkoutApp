@@ -37,7 +37,7 @@ export const EXERCISES = {
   'machine-preacher-curl': { name: 'Machine Preacher Curl',            video: mp4(BASE+'male-Machine-machine-seated-plate-loaded-preacher-curl-side.mp4'),        muscles: { primary: ['Biceps'], secondary: [] } },
   // LEGS
   'belt-squat':            { name: 'Belt Squat',                       video: mp4(BASE+'male-Machine-machine-belt-squat-front.mp4'),                              muscles: { primary: ['Quadriceps', 'Glutes'], secondary: ['Hamstrings'] } },
-  'leg-press-high':        { name: 'Leg Press — Standard Foot',        video: mp4(BASE+'male-Machine-machine-leg-press-side.mp4'),                                                                               muscles: { primary: ['Quadriceps'], secondary: ['Glutes', 'Hamstrings'] } },
+  'leg-press-high':        { name: 'Leg Press — Standard Foot',        video: mp4(BASE+'male-Machine-machine-leg-press-side.mp4'),                                                                                muscles: { primary: ['Quadriceps'], secondary: ['Glutes', 'Hamstrings'] } },
   'leg-extension':         { name: 'Leg Extension',                    video: mp4(BASE+'male-machine-leg-extension-front.mp4'),                                   muscles: { primary: ['Quadriceps'], secondary: [] } },
   'seated-leg-curl':       { name: 'Seated Leg Curl',                  video: mp4(BASE+'male-machine-hamstring-curl-front.mp4'),                                  muscles: { primary: ['Hamstrings'], secondary: [] } },
   'machine-abduction':     { name: 'Machine Hip Abduction',            video: mp4(BASE+'male-Machine-machine-hip-abduction-front.mp4'),                           muscles: { primary: ['Glutes'], secondary: ['Hip Flexors'] } },
