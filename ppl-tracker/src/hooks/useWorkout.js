@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
@@ -9,9 +9,22 @@ export function useWorkout(dayKey) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  // Use a ref so logSet always sees the latest session without stale closure
+  // Refs so callbacks always read current values without stale closures
   const sessionRef = useRef(null)
-  const setSession_ = (s) => { sessionRef.current = s; setSession(s) }
+  const setsRef = useRef({})
+
+  const updateSets = (updater) => {
+    setSets(prev => {
+      const next = typeof updater === 'function' ? updater(prev) : updater
+      setsRef.current = next
+      return next
+    })
+  }
+
+  const updateSession = (s) => {
+    sessionRef.current = s
+    setSession(s)
+  }
 
   const startSession = useCallback(async () => {
     if (!user) return
@@ -36,7 +49,7 @@ export function useWorkout(dayKey) {
     }
 
     if (existing) {
-      setSession_(existing)
+      updateSession(existing)
       const setsMap = {}
       existing.session_sets.forEach(s => {
         if (!setsMap[s.exercise_id]) setsMap[s.exercise_id] = []
@@ -44,7 +57,7 @@ export function useWorkout(dayKey) {
           weight: s.weight, reps: s.reps, completed: s.completed, id: s.id,
         }
       })
-      setSets(setsMap)
+      updateSets(setsMap)
     } else {
       const { data: newSession, error: insertErr } = await supabase
         .from('workout_sessions')
@@ -62,39 +75,38 @@ export function useWorkout(dayKey) {
         return
       }
 
-      setSession_(newSession)
-      setSets({})
+      updateSession(newSession)
+      updateSets({})
     }
     setLoading(false)
   }, [user, dayKey])
 
   const logSet = useCallback(async (exerciseId, setNumber, weight, reps) => {
-    // Use ref instead of state so we always have the latest session
     const currentSession = sessionRef.current
     if (!currentSession) {
-      console.error('logSet: session is null — startSession may not have completed')
-      setError('Session not started. Try leaving and re-entering this workout.')
+      setError('Session not ready. Please wait a moment and try again.')
       return
     }
 
-    setSets(prev => {
-      const existing = prev[exerciseId]?.[setNumber - 1]
+    // Read existing from ref (always current, no stale closure)
+    const existing = setsRef.current[exerciseId]?.[setNumber - 1]
 
-      // Optimistically update UI immediately
+    // Optimistic update — update UI immediately
+    updateSets(prev => {
       const exSets = [...(prev[exerciseId] || [])]
       exSets[setNumber - 1] = { ...(existing || {}), weight, reps, completed: true }
       return { ...prev, [exerciseId]: exSets }
     })
 
-    const existing = sets[exerciseId]?.[setNumber - 1]
-
     if (existing?.id) {
+      // Update existing row
       const { error } = await supabase
         .from('session_sets')
         .update({ weight, reps, completed: true })
         .eq('id', existing.id)
       if (error) console.error('logSet update error:', error)
     } else {
+      // Insert new row
       const { data, error } = await supabase
         .from('session_sets')
         .insert({
@@ -113,16 +125,17 @@ export function useWorkout(dayKey) {
         setError(error.message)
         return
       }
+
+      // Backfill the DB id so future updates use UPDATE not INSERT
       if (data) {
-        // Update with the real DB id
-        setSets(prev => {
+        updateSets(prev => {
           const exSets = [...(prev[exerciseId] || [])]
           exSets[setNumber - 1] = { weight, reps, completed: true, id: data.id }
           return { ...prev, [exerciseId]: exSets }
         })
       }
     }
-  }, [sets])
+  }, []) // No dependencies needed — uses refs
 
   const finishSession = useCallback(async () => {
     const currentSession = sessionRef.current
