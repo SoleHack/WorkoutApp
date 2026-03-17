@@ -29,7 +29,7 @@
 .main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 14px; }
 
 /* Stats */
-.statsGrid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.statsGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
 
 .statCard {
   background: var(--bg2); border: 1px solid var(--border);

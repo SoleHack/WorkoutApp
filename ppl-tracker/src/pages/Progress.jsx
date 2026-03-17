@@ -9,6 +9,8 @@ import { useBodyweight } from '../hooks/useBodyweight'
 import { useVolumeLandmarks } from '../hooks/useVolumeLandmarks'
 import { useAchievements } from '../hooks/useAchievements'
 import { useBodyMeasurements } from '../hooks/useBodyComposition'
+import { navyBodyFat } from '../lib/bodyFat'
+import { useSettings } from '../hooks/useSettings.jsx'
 import { EXERCISES, PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Progress.module.css'
 
@@ -135,6 +137,20 @@ export default function Progress() {
   const { entries: bwEntries } = useBodyweight()
   const { landmarks } = useVolumeLandmarks()
   const { entries: measureEntries } = useBodyMeasurements()
+  const { settings } = useSettings()
+
+  // Build body fat trend from measurement entries
+  const bfTrendData = (() => {
+    const h = settings.heightInches
+    const sex = settings.sex || 'male'
+    if (!h || measureEntries.length < 2) return []
+    return [...measureEntries].reverse()
+      .map(e => {
+        const bf = navyBodyFat({ waist: e.waist, neck: e.neck, hip: e.hips, height: h, sex })
+        return bf !== null ? { date: fmt(e.date), bf, rawDate: e.date } : null
+      })
+      .filter(Boolean)
+  })()
 
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(PROGRAM_ORDER[0])
@@ -274,6 +290,14 @@ export default function Progress() {
   const totalVolume = allSessions.reduce((acc,s) =>
     acc + (s.session_sets?.reduce((a,set) => a+(set.completed&&set.weight&&set.reps?set.weight*set.reps:0),0)||0), 0)
 
+  const sessionsWithDur = completedSessions.filter(s => s.duration_seconds > 0)
+  const avgDuration = sessionsWithDur.length > 0
+    ? Math.round(sessionsWithDur.reduce((a,s) => a + s.duration_seconds, 0) / sessionsWithDur.length)
+    : null
+  const avgDurStr = avgDuration
+    ? `${Math.floor(avgDuration/60)}m`
+    : '—'
+
   const heatmapColor = (count) => {
     if (count === 0) return 'var(--bg3)'
     if (count === 1) return 'rgba(56,189,248,0.4)'
@@ -318,6 +342,10 @@ export default function Progress() {
               <div className={styles.statCard}>
                 <div className={styles.statNum}>{fmtK(Math.round(totalVolume/1000))}k</div>
                 <div className={styles.statName}>Total lbs</div>
+              </div>
+              <div className={styles.statCard}>
+                <div className={styles.statNum}>{avgDurStr}</div>
+                <div className={styles.statName}>Avg session</div>
               </div>
             </div>
 
@@ -438,6 +466,69 @@ export default function Progress() {
                       fill="url(#bwGrad)"
                       dot={{ fill:'#4ADE80', r:3, strokeWidth:0 }}
                       activeDot={{ r:6, strokeWidth:0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Body fat trend */}
+            {bfTrendData.length > 1 && (
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <div>
+                    <div className={styles.chartTitle}>Body fat %</div>
+                    <div className={styles.chartSub}>
+                      {(() => {
+                        const diff = bfTrendData[bfTrendData.length-1]?.bf - bfTrendData[0]?.bf
+                        return <span style={{ color: diff < 0 ? 'var(--success)' : diff > 0 ? 'var(--danger)' : 'var(--muted)' }}>
+                          {diff > 0 ? '+' : ''}{diff.toFixed(1)}% in range · US Navy formula
+                        </span>
+                      })()}
+                    </div>
+                  </div>
+                </div>
+                <ResponsiveContainer width="100%" height={200}>
+                  <AreaChart data={bfTrendData} margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="bfGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#F87171" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#F87171" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false}
+                      domain={['dataMin - 1', 'dataMax + 1']} tickFormatter={v => `${v}%`} width={38} />
+                    <Tooltip content={<RichTooltip unit="%" />} />
+                    <Area type="monotone" dataKey="bf" stroke="#F87171" strokeWidth={2} fill="url(#bfGrad)"
+                      dot={{ fill:'#F87171', r:4, strokeWidth:0 }} activeDot={{ r:6, strokeWidth:0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Waist measurement */}
+            {measureEntries.filter(e => e.waist).length > 1 && (
+              <div className={styles.chartCard}>
+                <div className={styles.chartTitle}>Waist measurement</div>
+                <div className={styles.chartSub}>inches over time</div>
+                <ResponsiveContainer width="100%" height={160}>
+                  <AreaChart
+                    data={[...measureEntries].filter(e => e.waist).reverse().map(e => ({ date: fmt(e.date), waist: e.waist }))}
+                    margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="waistGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C084FC" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#C084FC" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false}
+                      domain={['dataMin - 1','dataMax + 1']} width={36} />
+                    <Tooltip content={<RichTooltip unit="in" />} />
+                    <Area type="monotone" dataKey="waist" stroke="#C084FC" strokeWidth={2} fill="url(#waistGrad)"
+                      dot={{ fill:'#C084FC', r:3, strokeWidth:0 }} activeDot={{ r:6, strokeWidth:0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>

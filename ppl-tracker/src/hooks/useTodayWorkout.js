@@ -23,7 +23,7 @@ export function useTodayWorkout() {
 
     const { data } = await supabase
       .from('workout_sessions')
-      .select('day_key, date, completed_at')
+      .select('day_key, date, completed_at, session_sets(rpe, completed)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(60)

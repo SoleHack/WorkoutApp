@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { PROGRAM, EXERCISES } from '../data/program'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
 import { useWorkout } from '../hooks/useWorkout'
 import { useLastSession } from '../hooks/useLastSession'
 import { useWorkoutNotes } from '../hooks/useWorkoutNotes'
@@ -28,6 +30,7 @@ export default function Workout() {
   const [showNotes, setShowNotes] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [sessionPRs, setSessionPRs] = useState([])
+  const [bestSessionVol, setBestSessionVol] = useState(null)
 
   // Exercise swap: { [originalId]: replacementId }
   const [swappedExercises, setSwappedExercises] = useState({})
@@ -39,6 +42,8 @@ export default function Workout() {
   const noteTimer = useRef(null)
   const prTracker = useRef({})
 
+  const { user } = useAuth()
+
   useEffect(() => {
     if (day && startSession) startSession()
   }, [dayKey, startSession])
@@ -46,6 +51,31 @@ export default function Workout() {
   useEffect(() => {
     if (session?.id) loadNote(session.id)
   }, [session?.id])
+
+  // Fetch best session volume for this day (for "vs best" comparison)
+  useEffect(() => {
+    if (!user || !dayKey) return
+    const fetchBest = async () => {
+      const { data } = await supabase
+        .from('workout_sessions')
+        .select('session_sets(weight, reps, completed)')
+        .eq('user_id', user.id)
+        .eq('day_key', dayKey)
+        .not('completed_at', 'is', null)
+        .order('completed_at', { ascending: false })
+        .limit(20)
+      if (!data) return
+      let best = 0
+      data.forEach(s => {
+        const vol = (s.session_sets || [])
+          .filter(x => x.completed && x.weight && x.reps)
+          .reduce((a, x) => a + x.weight * x.reps, 0)
+        if (vol > best) best = vol
+      })
+      setBestSessionVol(best > 0 ? Math.round(best) : null)
+    }
+    fetchBest()
+  }, [user, dayKey])
 
   if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
 
@@ -136,6 +166,7 @@ export default function Workout() {
         sets={sets}
         duration={elapsed}
         prs={sessionPRs}
+        bestSessionVol={bestSessionVol}
         onDismiss={() => navigate('/')}
       />
     )

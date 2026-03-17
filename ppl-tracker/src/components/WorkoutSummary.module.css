@@ -81,6 +81,13 @@
   color: var(--muted);
 }
 
+.statDiff {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
 /* PRs */
 .prSection {
   background: rgba(245,158,11,0.06);

@@ -8,7 +8,7 @@ import styles from './WorkoutSummary.module.css'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 
-export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss }) {
+export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss, bestSessionVol }) {
   const navigate = useNavigate()
   const [showConfetti, setShowConfetti] = useState(prs?.length > 0)
   const [sharing, setSharing] = useState(false)
@@ -17,9 +17,11 @@ export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss 
 
   const totalSets = Object.values(sets).reduce((a, s) => a + (s || []).filter(x => x?.completed).length, 0)
   const totalVol = Object.values(sets).reduce((a, exSets) =>
-    a + (exSets || []).filter(s => s?.completed).reduce((b, s) => b + (s.weight * s.reps || 0), 0), 0)
+    a + (exSets || []).filter(s => s?.completed).reduce((b, s) => b + ((s.weight || 0) * (s.reps || 0)), 0), 0)
+  const roundedVol = Math.round(totalVol)
+  const volDiff = bestSessionVol && bestSessionVol > 0 ? roundedVol - bestSessionVol : null
 
-  // Build muscle map from all exercises done today
+  // Build muscle map
   const allMuscles = { primary: new Set(), secondary: new Set() }
   day?.exercises.forEach(ex => {
     const exercise = EXERCISES[ex.id]
@@ -30,15 +32,14 @@ export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss 
       exercise.muscles.secondary?.forEach(m => allMuscles.secondary.add(m))
     }
   })
-  const sessionMuscles = {
-    primary: [...allMuscles.primary],
-    secondary: [...allMuscles.secondary],
-  }
+  const sessionMuscles = { primary: [...allMuscles.primary], secondary: [...allMuscles.secondary] }
 
   const formatDuration = (s) => {
     const m = Math.floor(s / 60)
     return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`
   }
+
+  const fmtVol = (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v.toLocaleString()
 
   return (
     <div className={styles.overlay}>
@@ -63,8 +64,13 @@ export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss 
             <div className={styles.statName}>Sets logged</div>
           </div>
           <div className={styles.stat}>
-            <div className={styles.statVal}>{Math.round(totalVol / 1000 * 10) / 10}k</div>
+            <div className={styles.statVal}>{fmtVol(roundedVol)}</div>
             <div className={styles.statName}>lbs moved</div>
+            {volDiff !== null && (
+              <div className={styles.statDiff} style={{ color: volDiff >= 0 ? 'var(--success)' : 'var(--danger)' }}>
+                {volDiff >= 0 ? '+' : ''}{fmtVol(volDiff)} vs best
+              </div>
+            )}
           </div>
         </div>
 

@@ -10,6 +10,51 @@ import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Settings.module.css'
+
+// Side-by-side photo comparison picker
+function PhotoComparison({ photos }) {
+  const [leftIdx, setLeftIdx] = useState(photos.length - 1)  // oldest
+  const [rightIdx, setRightIdx] = useState(0)                // newest
+  const [picking, setPicking] = useState(null) // 'left' | 'right' | null
+
+  const left = photos[leftIdx]
+  const right = photos[rightIdx]
+
+  return (
+    <div className={styles.comparison}>
+      <div className={styles.comparisonLabel}>Side-by-side comparison</div>
+      <div className={styles.comparisonPair}>
+        {[{ side: 'left', photo: left, idx: leftIdx }, { side: 'right', photo: right, idx: rightIdx }].map(({ side, photo, idx }) => (
+          <div key={side} className={styles.comparisonSlot}>
+            <img src={photo?.public_url} className={styles.comparisonImg} alt={photo?.date} />
+            <div className={styles.comparisonDate}>
+              {photo ? new Date(photo.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' }) : '—'}
+            </div>
+            <button className={styles.comparisonSwitch}
+              onClick={() => setPicking(picking === side ? null : side)}>
+              {picking === side ? 'Cancel' : 'Change'}
+            </button>
+            {picking === side && (
+              <div className={styles.comparisonPicker}>
+                {photos.map((p, i) => (
+                  <button key={p.id}
+                    className={`${styles.comparisonPickBtn} ${i === idx ? styles.comparisonPickActive : ''}`}
+                    onClick={() => {
+                      side === 'left' ? setLeftIdx(i) : setRightIdx(i)
+                      setPicking(null)
+                    }}>
+                    <img src={p.public_url} className={styles.comparisonPickThumb} alt={p.date} />
+                    <span>{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
@@ -31,38 +76,28 @@ export default function Settings() {
   const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements()
   const { photos, uploading, uploadPhoto, deletePhoto } = useProgressPhotos()
   const { permission, requestPermission } = usePushNotifications()
-  const { isSupported: healthSupported, syncWorkout } = useAppleHealth()
+  const { syncWorkout } = useAppleHealth()
+
+  // Only truly transient UI state lives here — not settings
   const [saved, setSaved] = useState(false)
-  const [localSchedule, setLocalSchedule] = useState(null)
-  const [localUnit, setLocalUnit] = useState(null)
-  const [localDeload, setLocalDeload] = useState(null)
-  const [localTheme, setLocalTheme] = useState(null)
   const [bwInput, setBwInput] = useState('')
   const [bwSaving, setBwSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [measurements, setMeasurements] = useState({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
   const [measureSaving, setMeasureSaving] = useState(false)
   const [photoNote, setPhotoNote] = useState('')
-  const [localPartnerMode, setLocalPartnerMode] = useState(null)
   const [heightInput, setHeightInput] = useState('')
-  const [sexInput, setSexInput] = useState('male')
 
-  const schedule = localSchedule ?? settings.schedule
-  const weightUnit = localUnit ?? settings.weightUnit
-  const deloadReminder = localDeload ?? settings.deloadReminder
-  const theme = localTheme ?? settings.theme ?? 'dark'
-
-  // Apply theme to document
+  // Sync height input from loaded settings
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme)
-  }, [theme])
+    if (settings.heightInches) setHeightInput(settings.heightInches.toString())
+  }, [settings.heightInches])
 
   const handleScheduleChange = (dayIndex, value) => {
-    setLocalSchedule(prev => ({ ...(prev ?? settings.schedule), [dayIndex]: value }))
+    save({ schedule: { ...settings.schedule, [dayIndex]: value } })
   }
 
   const handleSave = async () => {
-    await save({ schedule, weightUnit, deloadReminder, theme })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -164,7 +199,7 @@ export default function Settings() {
 
           <div className={styles.scheduleGrid}>
             {DAYS.map((dayName, i) => {
-              const assigned = schedule[i] || 'rest'
+              const assigned = settings.schedule[i] || 'rest'
               return (
                 <div key={i} className={styles.scheduleRow}>
                   <div className={styles.dayName}>{dayName}</div>
@@ -188,7 +223,7 @@ export default function Settings() {
           {/* Week preview */}
           <div className={styles.weekPreview}>
             {SHORT_DAYS.map((d, i) => {
-              const assigned = schedule[i] || 'rest'
+              const assigned = settings.schedule[i] || 'rest'
               const label = assigned === 'rest' ? '—' : PROGRAM[assigned]?.label || '—'
               const isToday = new Date().getDay() === i
               return (
@@ -207,8 +242,8 @@ export default function Settings() {
           <div className={styles.toggleRow}>
             {['lbs', 'kg'].map(unit => (
               <button key={unit}
-                className={`${styles.toggleBtn} ${weightUnit === unit ? styles.toggleActive : ''}`}
-                onClick={() => setLocalUnit(unit)}>
+                className={`${styles.toggleBtn} ${settings.weightUnit === unit ? styles.toggleActive : ''}`}
+                onClick={() => save({ weightUnit: unit })}>
                 {unit}
               </button>
             ))}
@@ -221,8 +256,8 @@ export default function Settings() {
           <div className={styles.toggleRow}>
             {[{ label: '🌑 Dark', value: 'dark' }, { label: '☀️ Light', value: 'light' }].map(opt => (
               <button key={opt.value}
-                className={`${styles.toggleBtn} ${theme === opt.value ? styles.toggleActive : ''}`}
-                onClick={() => setLocalTheme(opt.value)}>
+                className={`${styles.toggleBtn} ${settings.theme === opt.value ? styles.toggleActive : ''}`}
+                onClick={() => save({ theme: opt.value })}>
                 {opt.label}
               </button>
             ))}
@@ -238,8 +273,8 @@ export default function Settings() {
           <div className={styles.toggleRow}>
             {[{ label: 'On', value: true }, { label: 'Off', value: false }].map(opt => (
               <button key={opt.label}
-                className={`${styles.toggleBtn} ${deloadReminder === opt.value ? styles.toggleActive : ''}`}
-                onClick={() => setLocalDeload(opt.value)}>
+                className={`${styles.toggleBtn} ${settings.deloadReminder === opt.value ? styles.toggleActive : ''}`}
+                onClick={() => save({ deloadReminder: opt.value })}>
                 {opt.label}
               </button>
             ))}
@@ -301,15 +336,19 @@ export default function Settings() {
               <label className={styles.bfLabel}>Height (inches)</label>
               <input className={styles.bfInput} type="number" inputMode="decimal"
                 placeholder="70" value={heightInput}
-                onChange={e => setHeightInput(e.target.value)} />
+                onChange={e => {
+                  setHeightInput(e.target.value)
+                  const h = parseFloat(e.target.value)
+                  if (h > 48 && h < 96) save({ heightInches: h })
+                }} />
             </div>
             <div className={styles.inputBlock}>
               <label className={styles.bfLabel}>Sex</label>
               <div className={styles.toggleRow}>
                 {['male','female'].map(s => (
                   <button key={s}
-                    className={`${styles.toggleBtn} ${sexInput===s?styles.toggleActive:''}`}
-                    onClick={() => setSexInput(s)}>
+                    className={`${styles.toggleBtn} ${settings.sex===s?styles.toggleActive:''}`}
+                    onClick={() => save({ sex: s })}>
                     {s.charAt(0).toUpperCase()+s.slice(1)}
                   </button>
                 ))}
@@ -328,8 +367,8 @@ export default function Settings() {
                 Log waist + neck measurements and enter height above to see your estimate.
               </div>
             )
-            const bf = navyBodyFat({ waist: w, neck: n, hip, height: h, sex: sexInput })
-            const cat = bfCategory(bf, sexInput)
+            const bf = navyBodyFat({ waist: w, neck: n, hip, height: h, sex: settings.sex || 'male' })
+            const cat = bfCategory(bf, settings.sex || 'male')
             const lm = bwLatest && bf ? leanMass(bwLatest.weight, bf) : null
             if (bf === null) return <div className={styles.bfMissing}>Invalid measurements — check waist &gt; neck.</div>
             return (
@@ -356,17 +395,23 @@ export default function Settings() {
         <section className={styles.section}>
           <div className={styles.sectionTitle}>Progress Photos</div>
           <div className={styles.sectionDesc}>
-            Photos are stored privately in your account.
+            Photos are stored privately. Tap two photos to compare side by side.
           </div>
+
+          {photos.length >= 2 && <PhotoComparison photos={photos} />}
+
           <div className={styles.photoGrid}>
-            {photos.slice(0, 6).map(p => (
+            {photos.slice(0, 9).map(p => (
               <div key={p.id} className={styles.photoThumb}>
                 <img src={p.public_url} alt={p.date} className={styles.photoImg} />
-                <div className={styles.photoDate}>{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                <div className={styles.photoDate}>
+                  {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </div>
                 <button className={styles.photoDelete} onClick={() => deletePhoto(p)}>✕</button>
               </div>
             ))}
           </div>
+
           <label className={`btn ${styles.photoUploadBtn}`}>
             {uploading ? 'Uploading...' : '📸 Add Progress Photo'}
             <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
@@ -388,29 +433,13 @@ export default function Settings() {
           <div className={styles.toggleRow}>
             {[{ label: 'On', value: true }, { label: 'Off', value: false }].map(opt => (
               <button key={opt.label}
-                className={`${styles.toggleBtn} ${(localPartnerMode ?? false) === opt.value ? styles.toggleActive : ''}`}
-                onClick={async () => {
-                  setLocalPartnerMode(opt.value)
-                  if (opt.value) {
-                    // Register in public_stats
-                    await supabase.from('public_stats').upsert({
-                      user_id: user.id,
-                      email: user.email,
-                      display_name: user.email?.split('@')[0],
-                      partner_mode: true,
-                      updated_at: new Date().toISOString(),
-                    }, { onConflict: 'user_id' })
-                  } else {
-                    await supabase.from('public_stats')
-                      .update({ partner_mode: false })
-                      .eq('user_id', user.id)
-                  }
-                }}>
+                className={`${styles.toggleBtn} ${settings.partnerMode === opt.value ? styles.toggleActive : ''}`}
+                onClick={() => save({ partnerMode: opt.value })}>
                 {opt.label}
               </button>
             ))}
           </div>
-          {(localPartnerMode ?? false) && (
+          {settings.partnerMode && (
             <div className={styles.partnerEmail}>
               Your partner email: <strong>{user?.email}</strong>
             </div>
@@ -467,10 +496,10 @@ export default function Settings() {
           </button>
         </section>
 
-        {/* SAVE */}
-        <button className={`btn btn-primary ${styles.saveBtn}`} onClick={handleSave}>
-          {saved ? '✓ Saved' : 'Save Settings'}
-        </button>
+        {/* AUTO-SAVE indicator */}
+        <div className={styles.autoSaveNote}>
+          ✓ All settings save automatically
+        </div>
 
         <button className={`btn ${styles.signOutBtn}`} onClick={signOut}>
           Sign out

@@ -15,18 +15,37 @@ function formatDate(dateStr) {
   return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
 }
 
-// Check if user has trained consistently enough to need a deload
+// Check if user needs a deload — volume-based OR sustained high RPE
 function useDeloadCheck(allSessions, deloadEnabled) {
-  if (!deloadEnabled || !allSessions?.length) return false
-  // Count distinct training days in last 42 days (6 weeks)
-  const cutoff = new Date()
-  cutoff.setDate(cutoff.getDate() - 42)
+  if (!deloadEnabled || !allSessions?.length) return { needed: false, reason: null }
+
+  const cutoff42 = new Date(); cutoff42.setDate(cutoff42.getDate() - 42)
+  const cutoff14 = new Date(); cutoff14.setDate(cutoff14.getDate() - 14)
+
+  // Signal 1: trained 24+ days in last 42 (volume overreach)
   const recentDays = new Set(
     allSessions
-      .filter(s => s.completed_at && new Date(s.date) >= cutoff)
+      .filter(s => s.completed_at && new Date(s.date) >= cutoff42)
       .map(s => s.date)
   )
-  return recentDays.size >= 24 // ~4 days/week for 6 weeks
+  if (recentDays.size >= 24) {
+    return { needed: true, reason: 'volume', message: "You've trained 4+ days/week for 6 straight weeks. Drop to 60% load this week." }
+  }
+
+  // Signal 2: average RPE >= 8.5 across last 2 weeks
+  const recentSets = allSessions
+    .filter(s => s.completed_at && new Date(s.date) >= cutoff14)
+    .flatMap(s => s.session_sets || [])
+    .filter(set => set.rpe && set.rpe >= 1)
+
+  if (recentSets.length >= 10) {
+    const avgRpe = recentSets.reduce((a, s) => a + s.rpe, 0) / recentSets.length
+    if (avgRpe >= 8.5) {
+      return { needed: true, reason: 'rpe', message: `Average RPE of ${avgRpe.toFixed(1)} over 2 weeks — your body is telling you to back off.` }
+    }
+  }
+
+  return { needed: false, reason: null }
 }
 
 export default function Dashboard() {
@@ -98,10 +117,12 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {showDeload && (
+        {showDeload.needed && (
           <div className={styles.deloadBanner}>
-            <div className={styles.deloadTitle}>⚡ Time for a deload</div>
-            <div className={styles.deloadSub}>You've trained consistently for 6+ weeks. Drop to 60% load this week to let joints and CNS recover.</div>
+            <div className={styles.deloadTitle}>
+              {showDeload.reason === 'rpe' ? '🔥 High Fatigue Detected' : '⚡ Time for a deload'}
+            </div>
+            <div className={styles.deloadSub}>{showDeload.message}</div>
           </div>
         )}
       </header>
