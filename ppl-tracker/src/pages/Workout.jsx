@@ -160,7 +160,7 @@ export default function Workout() {
       </main>
 
       {activeVideo && (
-        <VideoModal exercise={activeVideo} onClose={() => setActiveVideo(null)} />
+        <VideoModal exercise={activeVideo} dayColor={day.color} onClose={() => setActiveVideo(null)} />
       )}
     </div>
   )

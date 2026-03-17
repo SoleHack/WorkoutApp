@@ -5,17 +5,22 @@
   z-index: 300;
   display: flex;
   align-items: flex-end;
-  padding: 0;
 }
 
 .modal {
   background: var(--bg2);
   border: 1px solid var(--border2);
-  border-radius: 12px 12px 0 0;
-  padding: 20px;
+  border-radius: 16px 16px 0 0;
+  padding: 20px 20px 32px;
   width: 100%;
-  max-height: 90vh;
+  max-height: 92vh;
   overflow-y: auto;
+  animation: slideUp 0.2s ease;
+}
+
+@keyframes slideUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
 }
 
 .header {
@@ -27,7 +32,7 @@
 
 .name {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 26px;
+  font-size: 28px;
   color: var(--text);
   line-height: 1;
   flex: 1;
@@ -37,12 +42,13 @@
 .close {
   background: none;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   color: var(--muted);
   font-size: 14px;
-  padding: 4px 9px;
+  padding: 6px 10px;
   line-height: 1;
   transition: all 0.15s;
+  min-height: unset;
 }
 .close:hover { color: var(--text); border-color: var(--border2); }
 
@@ -50,9 +56,9 @@
   width: 100%;
   aspect-ratio: 16/9;
   background: #000;
-  border-radius: 6px;
+  border-radius: 8px;
   overflow: hidden;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .video {
@@ -61,28 +67,59 @@
   object-fit: contain;
 }
 
+.noVideo {
+  width: 100%;
+  padding: 32px 0;
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  background: var(--bg3);
+  border-radius: 8px;
+  margin-bottom: 14px;
+}
+
 .muscles {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  margin-bottom: 16px;
 }
 
 .primary {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  padding: 4px 10px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
   border-radius: 4px;
-  background: rgba(245,158,11,0.12);
-  color: #F59E0B;
-  border: 1px solid rgba(245,158,11,0.25);
+  border: 1px solid transparent;
+  font-weight: 600;
 }
 
 .secondary {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  padding: 4px 10px;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 10px;
   border-radius: 4px;
   background: rgba(255,255,255,0.04);
   color: var(--muted2);
   border: 1px solid var(--border);
+}
+
+.mapSection {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.mapLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--muted);
+  margin-bottom: 4px;
 }

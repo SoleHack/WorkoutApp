@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { TAG_LABELS } from '../data/program'
-import BodyMap from './BodyMap'
 import styles from './ExerciseCard.module.css'
 
 // Plate calculator — returns plates for one side of a 45lb bar
@@ -82,8 +81,7 @@ export default function ExerciseCard({
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [saving, setSaving] = useState(false)
-  const [restTimer, setRestTimer] = useState(null)
-  const [mapExpanded, setMapExpanded] = useState(false) // { seconds, key }
+  const [restTimer, setRestTimer] = useState(null) // { seconds, key }
   const touchStartX = useRef(null)
   const formRef = useRef(null)
 
@@ -172,9 +170,9 @@ export default function ExerciseCard({
           </div>
           <div className={styles.note}>{programEx.note}</div>
 
-          {/* Muscle tags — tap to expand body map */}
+          {/* Muscle tags */}
           {(exercise.muscles?.primary?.length > 0 || exercise.muscles?.secondary?.length > 0) && (
-            <button className={styles.muscleTags} onClick={() => setMapExpanded(v => !v)}>
+            <div className={styles.muscleTags}>
               {exercise.muscles.primary?.map(m => (
                 <span key={m} className={styles.muscleTagPrimary} style={{ background: `${dayColor}22`, color: dayColor, borderColor: `${dayColor}55` }}>
                   {m}
@@ -185,8 +183,10 @@ export default function ExerciseCard({
                   {m}
                 </span>
               ))}
-              <span className={styles.muscleToggleHint}>{mapExpanded ? '▲' : '▼'}</span>
-            </button>
+              {exercise.video && (
+                <span className={styles.videoHint}>▶ tap for diagram</span>
+              )}
+            </div>
           )}
 
           {lastMax !== null && lastMax !== undefined && (
@@ -203,9 +203,6 @@ export default function ExerciseCard({
           <span className={`tag tag-${programEx.tag}`}>{TAG_LABELS[programEx.tag]}</span>
         </div>
       </div>
-
-      {/* Body map — shown when muscle tags are tapped */}
-      <BodyMap muscles={exercise.muscles} dayColor={dayColor} expanded={mapExpanded} />
 
       {/* Set buttons */}
       <div className={styles.setRow}>
