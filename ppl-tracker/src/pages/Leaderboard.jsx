@@ -6,20 +6,24 @@ import styles from './Leaderboard.module.css'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 
-function StatCard({ label, you, them, higherIsBetter = true }) {
-  const youWins = higherIsBetter ? you >= them : you <= them
-  const themWins = higherIsBetter ? them > you : them < you
+function StatCard({ label, you, them, higherIsBetter = true, unit = '', zeroIsGood = false }) {
+  const youNum = parseFloat(you) || 0
+  const themNum = parseFloat(them) || 0
+  const youWins = higherIsBetter ? youNum >= themNum : (youNum <= themNum && youNum > 0)
+  const themWins = higherIsBetter ? themNum > youNum : (themNum < youNum && themNum > 0)
+
+  const fmt = (v) => v != null && v !== '' ? `${v}${unit}` : '—'
 
   return (
     <div className={styles.statCard}>
       <div className={styles.statLabel}>{label}</div>
       <div className={styles.statRow}>
-        <div className={`${styles.statVal} ${youWins && you > 0 ? styles.winner : ''}`}>
-          {you || '—'}
+        <div className={`${styles.statVal} ${youWins && youNum > 0 ? styles.winner : ''}`}>
+          {fmt(you)}
         </div>
         <div className={styles.statVs}>vs</div>
-        <div className={`${styles.statVal} ${themWins && them > 0 ? styles.winner : ''}`}>
-          {them || '—'}
+        <div className={`${styles.statVal} ${themWins && themNum > 0 ? styles.winner : ''}`}>
+          {fmt(them)}
         </div>
       </div>
     </div>
@@ -31,33 +35,105 @@ async function fetchUserStats(userId) {
 
   const { data: sessions } = await supabase
     .from('workout_sessions')
-    .select('*, session_sets(*)')
+    .select('date, completed_at, duration_seconds, session_sets(*)')
     .eq('user_id', userId)
     .not('completed_at', 'is', null)
+    .neq('day_key', 'core')
+    .neq('day_key', 'rest')
     .order('date', { ascending: false })
-    .limit(100)
+    .limit(365) // full year for meaningful stats
 
   if (!sessions) return null
 
+  const today = new Date(); today.setHours(0,0,0,0)
+  const todayStr = today.toISOString().split('T')[0]
+
+  // ── Total sessions ──────────────────────────────────────────
   const totalSessions = sessions.length
+
+  // ── Total volume ────────────────────────────────────────────
   const totalVolume = sessions.reduce((acc, s) =>
     acc + (s.session_sets?.reduce((a, set) =>
       a + (set.completed && set.weight && set.reps ? set.weight * set.reps : 0), 0) || 0), 0)
 
-  const today = new Date(); today.setHours(0,0,0,0)
-  const dates = [...new Set(sessions.map(s => s.date))].sort((a,b) => b.localeCompare(a))
+  // ── Total sets ──────────────────────────────────────────────
+  const totalSets = sessions.reduce((acc, s) =>
+    acc + (s.session_sets?.filter(set => set.completed).length || 0), 0)
+
+  // ── Current streak ──────────────────────────────────────────
+  const dates = [...new Set(sessions.map(s => s.date))].sort((a, b) => b.localeCompare(a))
   let streak = 0
   for (let i = 0; i < dates.length; i++) {
-    const d = new Date(dates[i]); d.setHours(0,0,0,0)
+    const d = new Date(dates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
     const exp = new Date(today); exp.setDate(today.getDate() - i)
     if (d.getTime() === exp.getTime()) streak++
     else break
   }
 
-  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
-  const thisWeek = sessions.filter(s => new Date(s.date) >= weekAgo).length
+  // ── Longest streak ever ─────────────────────────────────────
+  let longestStreak = 0, runStreak = 1
+  const sortedDates = [...dates].sort((a, b) => a.localeCompare(b))
+  for (let i = 1; i < sortedDates.length; i++) {
+    const prev = new Date(sortedDates[i-1] + 'T12:00:00')
+    const curr = new Date(sortedDates[i] + 'T12:00:00')
+    const diffDays = Math.round((curr - prev) / (1000 * 60 * 60 * 24))
+    if (diffDays === 1) { runStreak++; longestStreak = Math.max(longestStreak, runStreak) }
+    else runStreak = 1
+  }
+  longestStreak = Math.max(longestStreak, streak, sortedDates.length > 0 ? 1 : 0)
 
-  return { totalSessions, totalVolume: Math.round(totalVolume), streak, thisWeek }
+  // ── This week ───────────────────────────────────────────────
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+  const thisWeek = sessions.filter(s => new Date(s.date + 'T12:00:00') >= weekAgo).length
+
+  // ── This month ──────────────────────────────────────────────
+  const monthStart = todayStr.slice(0, 7) // 'YYYY-MM'
+  const thisMonth = sessions.filter(s => s.date.startsWith(monthStart)).length
+
+  // ── Consistency % (last 30 days, 6-day program = ~26 sessions expected) ──
+  const thirtyAgo = new Date(); thirtyAgo.setDate(today.getDate() - 30)
+  const last30 = sessions.filter(s => new Date(s.date + 'T12:00:00') >= thirtyAgo).length
+  const consistency = Math.min(100, Math.round((last30 / 26) * 100)) // 26 = ~4 weeks × 6 days
+
+  // ── Best PR (e1RM across all exercises) ─────────────────────
+  let bestE1rm = 0
+  let bestLift = ''
+  const allSets = sessions.flatMap(s => s.session_sets || [])
+  const e1rmByExercise = {}
+  allSets.forEach(set => {
+    if (!set.completed || !set.weight || !set.reps) return
+    const est = e1rm(set.weight, set.reps)
+    if (!e1rmByExercise[set.exercise_id] || est > e1rmByExercise[set.exercise_id]) {
+      e1rmByExercise[set.exercise_id] = est
+    }
+    if (est > bestE1rm) { bestE1rm = est; bestLift = set.exercise_id }
+  })
+
+  // ── Avg session duration (minutes) ──────────────────────────
+  const withDuration = sessions.filter(s => s.duration_seconds > 0)
+  const avgDuration = withDuration.length
+    ? Math.round(withDuration.reduce((a, s) => a + s.duration_seconds, 0) / withDuration.length / 60)
+    : 0
+
+  // ── Days since last workout ──────────────────────────────────
+  const daysSinceLast = dates.length
+    ? Math.round((today - new Date(dates[0] + 'T12:00:00')) / (1000 * 60 * 60 * 24))
+    : null
+
+  return {
+    totalSessions,
+    totalVolume: Math.round(totalVolume),
+    totalSets,
+    streak,
+    longestStreak,
+    thisWeek,
+    thisMonth,
+    consistency,
+    bestE1rm,
+    bestLift,
+    avgDuration,
+    daysSinceLast,
+  }
 }
 
 export default function Leaderboard() {
@@ -164,8 +240,20 @@ export default function Leaderboard() {
     setPartnerName('Them')
   }
 
-  const totalYou = myStats ? myStats.totalSessions + myStats.streak * 2 + myStats.thisWeek * 3 : 0
-  const totalThem = theirStats ? theirStats.totalSessions + theirStats.streak * 2 + theirStats.thisWeek * 3 : 0
+  const totalYou = myStats
+    ? myStats.totalSessions
+      + myStats.streak * 2
+      + myStats.thisMonth * 3
+      + myStats.consistency
+      + (myStats.longestStreak * 0.5)
+    : 0
+  const totalThem = theirStats
+    ? theirStats.totalSessions
+      + theirStats.streak * 2
+      + theirStats.thisMonth * 3
+      + theirStats.consistency
+      + (theirStats.longestStreak * 0.5)
+    : 0
   const leader = totalYou >= totalThem ? myName : partnerName
 
   if (loading) return (
@@ -219,7 +307,10 @@ export default function Leaderboard() {
               <div className={styles.leaderLabel}>🏆 Current Leader</div>
               <div className={styles.leaderName}>{leader}</div>
               <div className={styles.leaderScore}>
-                {myName}: {totalYou} pts · {partnerName}: {totalThem} pts
+                {myName}: {Math.round(totalYou)} pts · {partnerName}: {Math.round(totalThem)} pts
+              </div>
+              <div className={styles.scoreBreakdown}>
+                Points = sessions + streak×2 + month×3 + consistency + longest×0.5
               </div>
             </div>
 
@@ -232,12 +323,20 @@ export default function Leaderboard() {
               <StatCard label="Total Sessions"
                 you={myStats?.totalSessions} them={theirStats?.totalSessions} />
               <StatCard label="Current Streak"
-                you={myStats?.streak} them={theirStats?.streak} />
-              <StatCard label="This Week"
-                you={myStats?.thisWeek} them={theirStats?.thisWeek} />
-              <StatCard label="Total Volume (lbs)"
-                you={myStats?.totalVolume?.toLocaleString()}
-                them={theirStats?.totalVolume?.toLocaleString()} />
+                you={myStats?.streak} them={theirStats?.streak} unit=" days" />
+              <StatCard label="Longest Streak"
+                you={myStats?.longestStreak} them={theirStats?.longestStreak} unit=" days" />
+              <StatCard label="This Month"
+                you={myStats?.thisMonth} them={theirStats?.thisMonth} unit=" sessions" />
+              <StatCard label="Consistency (30d)"
+                you={myStats?.consistency} them={theirStats?.consistency} unit="%" />
+              <StatCard label="Best e1RM"
+                you={myStats?.bestE1rm} them={theirStats?.bestE1rm} unit=" lbs" />
+              <StatCard label="Avg Session"
+                you={myStats?.avgDuration} them={theirStats?.avgDuration} unit=" min" />
+              <StatCard label="Days Since Last"
+                you={myStats?.daysSinceLast} them={theirStats?.daysSinceLast}
+                higherIsBetter={false} />
             </div>
 
             <button className={`btn ${styles.disconnectBtn}`} onClick={disconnect}>

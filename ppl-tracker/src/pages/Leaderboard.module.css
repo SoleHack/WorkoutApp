@@ -58,7 +58,11 @@
 .scoreMe { color: var(--pull); }
 .scoreThem { color: var(--push); }
 
-.stats { display: flex; flex-direction: column; gap: 8px; }
+.stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 2vw, 10px);
+}
 
 .statCard {
   background: var(--bg2); border: 1px solid var(--border);
@@ -89,9 +93,19 @@
 /* ── Responsive ── */
 @media (min-width: 640px) {
   .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) 80px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(6px, 1vw, 12px); }
+  .stats { grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 1vw, 12px); }
 }
 @media (min-width: 1024px) {
   .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
   .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
+  .stats { grid-template-columns: repeat(4, 1fr); }
+}
+
+.scoreBreakdown {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  opacity: 0.7;
 }
