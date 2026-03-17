@@ -1,39 +1,94 @@
-import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useCallback } from 'react'
 import {
-  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Area, AreaChart, ReferenceLine
+  LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+  ResponsiveContainer, Area, AreaChart, ReferenceLine, Legend, ComposedChart
 } from 'recharts'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useBodyweight } from '../hooks/useBodyweight'
 import { useVolumeLandmarks } from '../hooks/useVolumeLandmarks'
-import { useAchievements, ACHIEVEMENT_DEFS } from '../hooks/useAchievements'
+import { useAchievements } from '../hooks/useAchievements'
 import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { EXERCISES, PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Progress.module.css'
 
+const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
+
+function fmt(date) {
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+function fmtK(v) { return v >= 1000 ? `${(v/1000).toFixed(1)}k` : String(v) }
+
+function getWeekLabel(dateStr) {
+  const d = new Date(dateStr)
+  const day = d.getDay()
+  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
+  return new Date(d.setDate(diff)).toISOString().split('T')[0]
+}
+
+function buildHeatmap(sessions) {
+  const today = new Date(); today.setHours(0,0,0,0)
+  const sessionMap = {}
+  sessions.forEach(s => { if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date]||0)+1 })
+  const cells = []
+  for (let i = 111; i >= 0; i--) {
+    const d = new Date(today); d.setDate(today.getDate()-i)
+    const key = d.toISOString().split('T')[0]
+    cells.push({ date: key, count: sessionMap[key]||0, day: d.getDay() })
+  }
+  return cells
+}
+
+// Rich tooltip shown on chart hover
+function RichTooltip({ active, payload, label, unit = 'lbs' }) {
+  if (!active || !payload?.length) return null
+  return (
+    <div className={styles.tooltip}>
+      <div className={styles.tooltipLabel}>{label}</div>
+      {payload.map((p, i) => (
+        <div key={i} className={styles.tooltipRow}>
+          <span className={styles.tooltipDot} style={{ background: p.color || p.stroke }} />
+          <span className={styles.tooltipName}>{
+            p.name === 'e1rm' ? 'Est. 1RM' :
+            p.name === 'weight' ? 'Max Weight' :
+            p.name === 'vol' ? 'Volume' :
+            p.name === 'bw' ? 'Bodyweight' : p.name
+          }</span>
+          <span className={styles.tooltipVal}>{typeof p.value === 'number' ? p.value.toLocaleString() : p.value} {unit}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Range selector button group
+function RangeSelector({ value, onChange, options }) {
+  return (
+    <div className={styles.rangeRow}>
+      {options.map(o => (
+        <button key={o.value} className={`${styles.rangeBtn} ${value===o.value?styles.rangeBtnActive:''}`}
+          onClick={() => onChange(o.value)}>{o.label}</button>
+      ))}
+    </div>
+  )
+}
+
+// Achievements tab
 function AchievementsTab({ totalSessions, allSessions, prs, totalVolume }) {
-  const streak = 0 // simplified — achievements use approximation
   const stats = {
     totalSessions,
-    streak,
+    streak: 0,
     totalPRs: Object.keys(prs).length,
     totalVolume,
     uniqueDays: new Set(allSessions.map(s => s.day_key)).size,
-    bwEntries: 0,
-    photoCount: 0,
-    deloadCount: 0,
+    bwEntries: 0, photoCount: 0, deloadCount: 0,
   }
   const { all } = useAchievements(stats)
   const unlocked = all.filter(a => a.isUnlocked)
   const locked = all.filter(a => !a.isUnlocked)
-
   return (
     <>
-      <div className={styles.sectionLabel}>
-        Unlocked <span className={styles.sectionSub}>{unlocked.length}/{all.length}</span>
-      </div>
+      <div className={styles.sectionLabel}>Unlocked <span className={styles.sectionSub}>{unlocked.length}/{all.length}</span></div>
       <div className={styles.achievementGrid}>
         {unlocked.map(a => (
           <div key={a.id} className={`${styles.achievement} ${styles.achievementUnlocked}`}>
@@ -49,8 +104,8 @@ function AchievementsTab({ totalSessions, allSessions, prs, totalVolume }) {
           <div className={styles.achievementGrid}>
             {locked.map(a => (
               <div key={a.id} className={styles.achievement}>
-                <div className={styles.achievementIcon} style={{ opacity: 0.3 }}>{a.icon}</div>
-                <div className={styles.achievementTitle} style={{ opacity: 0.4 }}>{a.title}</div>
+                <div className={styles.achievementIcon} style={{ opacity: 0.25 }}>{a.icon}</div>
+                <div className={styles.achievementTitle} style={{ opacity: 0.35 }}>{a.title}</div>
                 <div className={styles.achievementDesc}>{a.desc}</div>
               </div>
             ))}
@@ -61,81 +116,48 @@ function AchievementsTab({ totalSessions, allSessions, prs, totalVolume }) {
   )
 }
 
-// Epley formula: estimated 1RM
-const e1rm = (weight, reps) => reps === 1 ? weight : Math.round(weight * (1 + reps / 30))
+const RANGE_OPTIONS = [
+  { label: '4W', value: 28 },
+  { label: '8W', value: 56 },
+  { label: '3M', value: 90 },
+  { label: 'All', value: 9999 },
+]
 
-function fmt(date) {
-  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-}
-
-function fmtK(v) {
-  return v >= 1000 ? `${(v / 1000).toFixed(1)}k` : v
-}
-
-// Build 16-week heatmap grid
-function buildHeatmap(sessions) {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const cells = []
-  const sessionMap = {}
-  sessions.forEach(s => {
-    if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date] || 0) + 1
-  })
-  for (let i = 111; i >= 0; i--) {
-    const d = new Date(today)
-    d.setDate(today.getDate() - i)
-    const key = d.toISOString().split('T')[0]
-    cells.push({ date: key, count: sessionMap[key] || 0, day: d.getDay() })
-  }
-  return cells
-}
-
-function getWeekLabel(dateStr) {
-  const d = new Date(dateStr)
-  const day = d.getDay()
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1)
-  const monday = new Date(d.setDate(diff))
-  return monday.toISOString().split('T')[0]
-}
-
-// Custom gradient chart tooltip
-function ChartTooltip({ active, payload, label, unit = 'lbs', showReps = false }) {
-  if (!active || !payload?.length) return null
-  return (
-    <div className={styles.tooltip}>
-      <div className={styles.tooltipLabel}>{label}</div>
-      {payload.map((p, i) => (
-        <div key={i} className={styles.tooltipRow}>
-          <span className={styles.tooltipDot} style={{ background: p.color }} />
-          <span className={styles.tooltipVal}>{p.value} {p.name === 'e1rm' ? 'lbs (est. 1RM)' : p.name === 'vol' ? 'lbs vol' : unit}</span>
-        </div>
-      ))}
-    </div>
-  )
-}
+const EX_RANGE_OPTIONS = [
+  { label: '1M', value: 30 },
+  { label: '3M', value: 90 },
+  { label: '6M', value: 180 },
+  { label: 'All', value: 9999 },
+]
 
 export default function Progress() {
   const { user } = useAuth()
-  const navigate = useNavigate()
   const { entries: bwEntries } = useBodyweight()
   const { landmarks } = useVolumeLandmarks()
   const { entries: measureEntries } = useBodyMeasurements()
+
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(PROGRAM_ORDER[0])
   const [selectedExId, setSelectedExId] = useState(null)
   const [allSessions, setAllSessions] = useState([])
   const [prs, setPrs] = useState({})
-  const [recentPrs, setRecentPrs] = useState([]) // PRs set in last 30 days
+  const [recentPrs, setRecentPrs] = useState([])
   const [volumeData, setVolumeData] = useState([])
-  const [chartData, setChartData] = useState([])
+  const [chartData, setChartData] = useState([])  // raw set history for exercise
   const [heatmapCells, setHeatmapCells] = useState([])
   const [loading, setLoading] = useState(true)
   const [hoveredCell, setHoveredCell] = useState(null)
+  const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
+  const [volRange, setVolRange] = useState(56)
+  const [bwRange, setBwRange] = useState(9999)
+  const [exRange, setExRange] = useState(9999)
+  const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume'
 
   useEffect(() => { loadAll() }, [user])
   useEffect(() => {
     if (selectedExId) loadChart(selectedExId)
     else setChartData([])
+    setSelectedPoint(null)
   }, [selectedExId])
 
   const loadAll = async () => {
@@ -145,46 +167,40 @@ export default function Progress() {
       .select('*, session_sets(*)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
-      .limit(120)
+      .limit(200)
 
     if (!sessions) { setLoading(false); return }
     setAllSessions(sessions)
     setHeatmapCells(buildHeatmap(sessions))
 
-    // PRs — max e1RM per exercise
+    // PRs
     const prMap = {}
-    const thirtyDaysAgo = new Date()
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-
+    const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate()-30)
     sessions.forEach(s => {
       s.session_sets?.forEach(set => {
         if (!set.completed || !set.weight || !set.reps) return
-        const estimated = e1rm(set.weight, set.reps)
-        if (!prMap[set.exercise_id] || estimated > prMap[set.exercise_id].e1rm) {
-          prMap[set.exercise_id] = {
-            weight: set.weight, reps: set.reps, date: s.date,
-            e1rm: estimated,
-            isRecent: new Date(s.date) >= thirtyDaysAgo
-          }
+        const est = e1rm(set.weight, set.reps)
+        if (!prMap[set.exercise_id] || est > prMap[set.exercise_id].e1rm) {
+          prMap[set.exercise_id] = { weight: set.weight, reps: set.reps, date: s.date, e1rm: est, isRecent: new Date(s.date) >= thirtyAgo }
         }
       })
     })
     setPrs(prMap)
-    setRecentPrs(Object.entries(prMap).filter(([, pr]) => pr.isRecent).slice(0, 5))
+    setRecentPrs(Object.entries(prMap).filter(([,pr]) => pr.isRecent).slice(0, 5))
 
-    // Volume per week
+    // Weekly volume with day breakdown
     const weekMap = {}
     sessions.forEach(s => {
       const week = getWeekLabel(s.date)
-      if (!weekMap[week]) weekMap[week] = 0
+      if (!weekMap[week]) weekMap[week] = { week, vol: 0, sessions: 0 }
+      weekMap[week].sessions++
       s.session_sets?.forEach(set => {
-        if (set.completed && set.weight && set.reps) weekMap[week] += set.weight * set.reps
+        if (set.completed && set.weight && set.reps) weekMap[week].vol += set.weight * set.reps
       })
     })
-    const volArr = Object.entries(weekMap)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .slice(-10)
-      .map(([week, vol]) => ({ week, vol: Math.round(vol) }))
+    const volArr = Object.values(weekMap)
+      .sort((a,b) => a.week.localeCompare(b.week))
+      .map(w => ({ ...w, vol: Math.round(w.vol), label: fmt(w.week) }))
     setVolumeData(volArr)
     setLoading(false)
   }
@@ -192,66 +208,93 @@ export default function Progress() {
   const loadChart = async (exerciseId) => {
     const { data } = await supabase
       .from('session_sets')
-      .select('weight, reps, workout_sessions!inner(date, user_id)')
+      .select('weight, reps, rpe, workout_sessions!inner(date, user_id)')
       .eq('workout_sessions.user_id', user.id)
       .eq('exercise_id', exerciseId)
       .eq('completed', true)
       .order('workout_sessions(date)', { ascending: true })
-      .limit(100)
-
+      .limit(200)
     if (!data) return
 
-    // Group by date — take best e1RM set per session
+    // Group by date — collect ALL sets, compute best e1RM and total volume
     const byDate = {}
     data.forEach(s => {
       const d = s.workout_sessions.date
-      const estimated = e1rm(s.weight, s.reps)
-      if (!byDate[d] || estimated > e1rm(byDate[d].weight, byDate[d].reps)) {
-        byDate[d] = { weight: s.weight, reps: s.reps, e1rm: estimated }
-      }
+      if (!byDate[d]) byDate[d] = { date: d, sets: [], maxWeight: 0, totalVol: 0 }
+      byDate[d].sets.push({ weight: s.weight, reps: s.reps, rpe: s.rpe })
+      const est = e1rm(s.weight, s.reps)
+      if (est > (byDate[d].e1rm||0)) { byDate[d].e1rm = est; byDate[d].weight = s.weight; byDate[d].reps = s.reps }
+      if (s.weight > byDate[d].maxWeight) byDate[d].maxWeight = s.weight
+      byDate[d].totalVol = (byDate[d].totalVol||0) + s.weight * s.reps
     })
-    setChartData(Object.entries(byDate).map(([date, v]) => ({
-      date: fmt(date), weight: v.weight, reps: v.reps, e1rm: v.e1rm
+    setChartData(Object.values(byDate).map(d => ({
+      ...d,
+      label: fmt(d.date),
+      volume: Math.round(d.totalVol),
+      setsCount: d.sets.length,
     })))
   }
+
+  // Filter chart data by range
+  const filteredChartData = useCallback((data, days) => {
+    if (days >= 9999) return data
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - days)
+    return data.filter(d => new Date(d.date || d.week || d.rawDate) >= cutoff)
+  }, [])
+
+  const filteredVol = (() => {
+    if (volRange >= 9999) return volumeData
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - volRange)
+    return volumeData.filter(d => new Date(d.week) >= cutoff)
+  })()
+
+  const filteredBw = (() => {
+    if (bwRange >= 9999) return [...bwEntries].reverse()
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - bwRange)
+    return [...bwEntries].reverse().filter(d => new Date(d.date) >= cutoff)
+  })()
+
+  const filteredEx = (() => {
+    if (exRange >= 9999) return chartData
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - exRange)
+    return chartData.filter(d => new Date(d.date) >= cutoff)
+  })()
 
   const dayExercises = PROGRAM[activeDay]?.exercises || []
   const daySessions = allSessions.filter(s => s.day_key === activeDay)
   const completedSessions = allSessions.filter(s => s.completed_at)
   const totalSessions = completedSessions.length
   const thisWeekSessions = completedSessions.filter(s => {
-    const d = new Date(s.date)
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
-    return d >= weekAgo
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7)
+    return new Date(s.date) >= weekAgo
   }).length
-  const totalVolume = allSessions.reduce((acc, s) => {
-    return acc + (s.session_sets?.reduce((a, set) => a + (set.completed && set.weight && set.reps ? set.weight * set.reps : 0), 0) || 0)
-  }, 0)
+  const totalVolume = allSessions.reduce((acc,s) =>
+    acc + (s.session_sets?.reduce((a,set) => a+(set.completed&&set.weight&&set.reps?set.weight*set.reps:0),0)||0), 0)
 
   const heatmapColor = (count) => {
     if (count === 0) return 'var(--bg3)'
-    if (count === 1) return 'rgba(56,189,248,0.35)'
-    return 'rgba(56,189,248,0.85)'
+    if (count === 1) return 'rgba(56,189,248,0.4)'
+    return 'rgba(56,189,248,0.9)'
   }
-
-  // Group heatmap into weeks for rendering
   const heatmapWeeks = []
-  for (let i = 0; i < heatmapCells.length; i += 7) {
-    heatmapWeeks.push(heatmapCells.slice(i, i + 7))
-  }
+  for (let i = 0; i < heatmapCells.length; i += 7) heatmapWeeks.push(heatmapCells.slice(i, i+7))
+
+  const dayColor = PROGRAM[activeDay]?.color || '#F59E0B'
 
   return (
     <div className={styles.wrap}>
       <header className={styles.header}>
         <div className={styles.title}>Progress</div>
-        <div className={styles.tabs}>
-          {['overview', 'volume', 'exercises', 'history', 'achievements'].map(tab => (
-            <button key={tab}
-              className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
-              onClick={() => setActiveTab(tab)}>
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </button>
-          ))}
+        <div className={styles.tabsWrap}>
+          <div className={styles.tabs}>
+            {['overview', 'volume', 'exercises', 'history', 'achievements'].map(tab => (
+              <button key={tab}
+                className={`${styles.tab} ${activeTab===tab?styles.tabActive:''}`}
+                onClick={() => setActiveTab(tab)}>
+                {tab === 'exercises' ? 'Lifts' : tab.charAt(0).toUpperCase()+tab.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </header>
 
@@ -260,7 +303,6 @@ export default function Progress() {
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
           <>
-            {/* Top stats */}
             <div className={styles.statsGrid}>
               <div className={styles.statCard}>
                 <div className={styles.statNum}>{totalSessions}</div>
@@ -271,7 +313,7 @@ export default function Progress() {
                 <div className={styles.statName}>This week</div>
               </div>
               <div className={styles.statCard}>
-                <div className={styles.statNum}>{fmtK(Math.round(totalVolume / 1000))}k</div>
+                <div className={styles.statNum}>{fmtK(Math.round(totalVolume/1000))}k</div>
                 <div className={styles.statName}>Total lbs</div>
               </div>
             </div>
@@ -279,18 +321,17 @@ export default function Progress() {
             {/* Heatmap */}
             <div className={styles.chartCard}>
               <div className={styles.chartTitle}>Training consistency</div>
-              <div className={styles.chartSub}>Last 16 weeks · each cell = one day</div>
+              <div className={styles.chartSub}>Last 16 weeks · tap a cell to see the date</div>
               <div className={styles.heatmapWrap}>
                 <div className={styles.heatmap}>
-                  {heatmapWeeks.map((week, wi) => (
+                  {heatmapWeeks.map((week,wi) => (
                     <div key={wi} className={styles.heatmapCol}>
-                      {week.map((cell, di) => (
-                        <div
-                          key={di}
-                          className={styles.heatmapCell}
+                      {week.map((cell,di) => (
+                        <div key={di} className={styles.heatmapCell}
                           style={{ background: heatmapColor(cell.count) }}
                           onMouseEnter={() => setHoveredCell(cell)}
                           onMouseLeave={() => setHoveredCell(null)}
+                          onClick={() => setHoveredCell(cell)}
                         />
                       ))}
                     </div>
@@ -298,96 +339,102 @@ export default function Progress() {
                 </div>
                 {hoveredCell && (
                   <div className={styles.heatmapTooltip}>
-                    {fmt(hoveredCell.date)} — {hoveredCell.count === 0 ? 'Rest' : `${hoveredCell.count} session${hoveredCell.count > 1 ? 's' : ''}`}
+                    {fmt(hoveredCell.date)} — {hoveredCell.count === 0 ? 'Rest day' : `${hoveredCell.count} session${hoveredCell.count>1?'s':''}`}
                   </div>
                 )}
                 <div className={styles.heatmapLegend}>
                   <span className={styles.legendText}>Less</span>
-                  {[0, 1, 2].map(v => (
-                    <div key={v} className={styles.legendCell} style={{ background: heatmapColor(v) }} />
-                  ))}
+                  {[0,1,2].map(v => <div key={v} className={styles.legendCell} style={{ background: heatmapColor(v) }} />)}
                   <span className={styles.legendText}>More</span>
                 </div>
               </div>
             </div>
 
-            {/* Weekly volume chart */}
-            {volumeData.length > 0 && (
+            {/* Weekly Volume */}
+            {filteredVol.length > 0 && (
               <div className={styles.chartCard}>
-                <div className={styles.chartTitle}>Weekly volume</div>
-                <div className={styles.chartSub}>Total lbs moved per week</div>
-                <ResponsiveContainer width="100%" height={140}>
-                  <BarChart data={volumeData} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <div className={styles.chartCardHeader}>
+                  <div>
+                    <div className={styles.chartTitle}>Weekly volume</div>
+                    <div className={styles.chartSub}>Total lbs moved — tap a bar for details</div>
+                  </div>
+                  <RangeSelector value={volRange} onChange={setVolRange} options={RANGE_OPTIONS} />
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={filteredVol} margin={{ top: 10, right: 4, left: -10, bottom: 0 }}
+                    onClick={e => e?.activePayload && setSelectedPoint({ type: 'vol', data: e.activePayload[0].payload })}>
                     <defs>
                       <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#38BDF8" stopOpacity={0.9} />
                         <stop offset="100%" stopColor="#38BDF8" stopOpacity={0.4} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="week" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} tickFormatter={v => fmt(v)} />
-                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} tickFormatter={fmtK} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="vol" fill="url(#volGrad)" radius={[4, 4, 0, 0]} />
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="label" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
+                      tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
+                      tickLine={false} axisLine={false} tickFormatter={fmtK} width={36} />
+                    <Tooltip content={<RichTooltip unit="lbs" />} />
+                    <Bar dataKey="vol" fill="url(#volGrad)" radius={[4,4,0,0]} cursor="pointer" />
                   </BarChart>
                 </ResponsiveContainer>
+                {selectedPoint?.type === 'vol' && (
+                  <div className={styles.pointDetail}>
+                    <div className={styles.pointDetailHeader}>
+                      <span className={styles.pointDetailDate}>{selectedPoint.data.label}</span>
+                      <button className={styles.pointDetailClose} onClick={() => setSelectedPoint(null)}>✕</button>
+                    </div>
+                    <div className={styles.pointDetailRow}>
+                      <span>Total volume</span>
+                      <strong>{selectedPoint.data.vol?.toLocaleString()} lbs</strong>
+                    </div>
+                    <div className={styles.pointDetailRow}>
+                      <span>Sessions</span>
+                      <strong>{selectedPoint.data.sessions}</strong>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
-            {/* Bodyweight chart */}
-            {bwEntries.length > 1 && (
+            {/* Bodyweight */}
+            {filteredBw.length > 1 && (
               <div className={styles.chartCard}>
-                <div className={styles.chartTitle}>Bodyweight</div>
-                <div className={styles.chartSub}>lbs over time</div>
-                <ResponsiveContainer width="100%" height={140}>
-                  <AreaChart
-                    data={bwEntries.map(e => ({ date: fmt(e.date), weight: e.weight }))}
-                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                <div className={styles.chartCardHeader}>
+                  <div>
+                    <div className={styles.chartTitle}>Bodyweight</div>
+                    <div className={styles.chartSub}>
+                      {filteredBw.length > 1 && (() => {
+                        const first = filteredBw[0]?.weight
+                        const last = filteredBw[filteredBw.length-1]?.weight
+                        const diff = last - first
+                        return <span style={{ color: diff < 0 ? 'var(--success)' : diff > 0 ? 'var(--danger)' : 'var(--muted)' }}>
+                          {diff > 0 ? '+' : ''}{diff.toFixed(1)} lbs in range
+                        </span>
+                      })()}
+                    </div>
+                  </div>
+                  <RangeSelector value={bwRange} onChange={setBwRange} options={RANGE_OPTIONS} />
+                </div>
+                <ResponsiveContainer width="100%" height={220}>
+                  <AreaChart data={filteredBw.map(e => ({ date: fmt(e.date), bw: e.weight, rawDate: e.date }))}
+                    margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bwGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#4ADE80" stopOpacity={0.3} />
                         <stop offset="100%" stopColor="#4ADE80" stopOpacity={0} />
                       </linearGradient>
                     </defs>
-                    <XAxis dataKey="date" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                    <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
                       tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} domain={['dataMin - 2', 'dataMax + 2']} />
-                    <Tooltip content={<ChartTooltip unit="lbs" />} />
-                    <Area type="monotone" dataKey="weight" stroke="#4ADE80" strokeWidth={2}
+                    <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
+                      tickLine={false} axisLine={false} domain={['dataMin - 2','dataMax + 2']} width={36} />
+                    <Tooltip content={<RichTooltip unit="lbs" />} />
+                    <Area type="monotone" dataKey="bw" stroke="#4ADE80" strokeWidth={2}
                       fill="url(#bwGrad)"
-                      dot={{ fill: '#4ADE80', r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, strokeWidth: 0 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            )}
-
-            {/* Waist measurement chart */}
-            {measureEntries.filter(e => e.waist).length > 1 && (
-              <div className={styles.chartCard}>
-                <div className={styles.chartTitle}>Waist measurement</div>
-                <div className={styles.chartSub}>inches over time</div>
-                <ResponsiveContainer width="100%" height={120}>
-                  <AreaChart
-                    data={measureEntries.filter(e => e.waist).slice().reverse().map(e => ({ date: fmt(e.date), waist: e.waist }))}
-                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="waistGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#C084FC" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#C084FC" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="date" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
-                    <Tooltip content={<ChartTooltip unit="in" />} />
-                    <Area type="monotone" dataKey="waist" stroke="#C084FC" strokeWidth={2}
-                      fill="url(#waistGrad)"
-                      dot={{ fill: '#C084FC', r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, strokeWidth: 0 }} />
+                      dot={{ fill:'#4ADE80', r:3, strokeWidth:0 }}
+                      activeDot={{ r:6, strokeWidth:0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -396,19 +443,19 @@ export default function Progress() {
             {/* Recent PRs */}
             {recentPrs.length > 0 && (
               <>
-                <div className={styles.sectionLabel}>Recent PRs <span className={styles.sectionSub}>last 30 days</span></div>
+                <div className={styles.sectionLabel}>New PRs <span className={styles.sectionSub}>last 30 days</span></div>
                 <div className={styles.prList}>
                   {recentPrs.map(([exId, pr]) => (
                     <div key={exId} className={`${styles.prRow} ${styles.prRowNew}`}>
-                      <div className={styles.prNewBadge}>NEW</div>
+                      <div className={styles.prNewBadge}>PR</div>
                       <div className={styles.prInfo}>
-                        <div className={styles.prName}>{EXERCISES[exId]?.name || exId}</div>
+                        <div className={styles.prName}>{EXERCISES[exId]?.name||exId}</div>
                         <div className={styles.prDate}>{fmt(pr.date)}</div>
                       </div>
                       <div className={styles.prWeight}>
                         <span className={styles.prNum}>{pr.weight}</span>
                         <span className={styles.prUnit}>lbs × {pr.reps}</span>
-                        <div className={styles.pr1rm}>≈ {pr.e1rm} 1RM</div>
+                        <div className={styles.pr1rm}>≈ {pr.e1rm} est. 1RM</div>
                       </div>
                     </div>
                   ))}
@@ -416,7 +463,6 @@ export default function Progress() {
               </>
             )}
 
-            {/* All PRs */}
             {Object.keys(prs).length > 0 && (
               <>
                 <div className={styles.sectionLabel}>All-time PRs</div>
@@ -424,13 +470,13 @@ export default function Progress() {
                   {Object.entries(prs).map(([exId, pr]) => (
                     <div key={exId} className={styles.prRow}>
                       <div className={styles.prInfo}>
-                        <div className={styles.prName}>{EXERCISES[exId]?.name || exId}</div>
+                        <div className={styles.prName}>{EXERCISES[exId]?.name||exId}</div>
                         <div className={styles.prDate}>{fmt(pr.date)}</div>
                       </div>
                       <div className={styles.prWeight}>
                         <span className={styles.prNum}>{pr.weight}</span>
                         <span className={styles.prUnit}>lbs × {pr.reps}</span>
-                        <div className={styles.pr1rm}>≈ {pr.e1rm} 1RM</div>
+                        <div className={styles.pr1rm}>≈ {pr.e1rm} est. 1RM</div>
                       </div>
                     </div>
                   ))}
@@ -439,168 +485,8 @@ export default function Progress() {
             )}
 
             {!loading && totalSessions === 0 && (
-              <div className={styles.empty}>Complete your first workout to start seeing progress data here.</div>
+              <div className={styles.empty}>Complete your first workout to see progress data here.</div>
             )}
-          </>
-        )}
-
-        {/* ── EXERCISES ── */}
-        {activeTab === 'exercises' && (
-          <>
-            <div className={styles.dayTabs}>
-              {PROGRAM_ORDER.map(key => (
-                <button key={key}
-                  className={`${styles.dayTab} ${activeDay === key ? styles.dayTabActive : ''}`}
-                  style={activeDay === key ? { color: PROGRAM[key].color, borderBottomColor: PROGRAM[key].color } : {}}
-                  onClick={() => { setActiveDay(key); setSelectedExId(null) }}>
-                  {PROGRAM[key].label}
-                </button>
-              ))}
-            </div>
-
-            {/* Dual chart — weight + est 1RM */}
-            {selectedExId && chartData.length > 1 && (
-              <div className={styles.chartCard}>
-                <div className={styles.chartTitle}>{EXERCISES[selectedExId]?.name}</div>
-                <div className={styles.chartToggleRow}>
-                  <div className={styles.chartLegend}>
-                    <span className={styles.legendDot} style={{ background: PROGRAM[activeDay].color }} />
-                    <span className={styles.legendLabel}>Max weight</span>
-                    <span className={styles.legendDot} style={{ background: 'rgba(255,255,255,0.25)' }} />
-                    <span className={styles.legendLabel}>Est. 1RM</span>
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={180}>
-                  <AreaChart data={chartData} margin={{ top: 8, right: 4, left: -20, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="weightGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor={PROGRAM[activeDay].color} stopOpacity={0.3} />
-                        <stop offset="100%" stopColor={PROGRAM[activeDay].color} stopOpacity={0} />
-                      </linearGradient>
-                      <linearGradient id="ormGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="rgba(255,255,255,0.15)" stopOpacity={1} />
-                        <stop offset="100%" stopColor="rgba(255,255,255,0)" stopOpacity={1} />
-                      </linearGradient>
-                    </defs>
-                    <XAxis dataKey="date" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} />
-                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
-                      tickLine={false} axisLine={false} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Area type="monotone" dataKey="e1rm" stroke="rgba(255,255,255,0.2)"
-                      strokeWidth={1} fill="url(#ormGrad)" dot={false} strokeDasharray="4 3" />
-                    <Area type="monotone" dataKey="weight" stroke={PROGRAM[activeDay].color}
-                      strokeWidth={2.5} fill="url(#weightGrad)"
-                      dot={{ fill: PROGRAM[activeDay].color, r: 3, strokeWidth: 0 }}
-                      activeDot={{ r: 5, strokeWidth: 0 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
-
-                {/* Rep breakdown */}
-                {chartData.length > 0 && (
-                  <div className={styles.repBreakdown}>
-                    {chartData.slice(-4).map((d, i) => (
-                      <div key={i} className={styles.repCell}>
-                        <div className={styles.repDate}>{d.date}</div>
-                        <div className={styles.repWeight} style={{ color: PROGRAM[activeDay].color }}>{d.weight}</div>
-                        <div className={styles.repReps}>× {d.reps}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {selectedExId && chartData.length === 1 && (
-              <div className={styles.chartCard}>
-                <div className={styles.chartSub} style={{ padding: '8px 0' }}>Need 2+ sessions to show a trend</div>
-              </div>
-            )}
-
-            <div className={styles.exList}>
-              {dayExercises.map(ex => {
-                const pr = prs[ex.id]
-                const isSelected = selectedExId === ex.id
-                return (
-                  <button key={ex.id}
-                    className={`${styles.exRow} ${isSelected ? styles.exRowActive : ''}`}
-                    style={isSelected ? { borderColor: PROGRAM[activeDay].color } : {}}
-                    onClick={() => setSelectedExId(isSelected ? null : ex.id)}>
-                    <div className={styles.exLeft}>
-                      <div className={styles.exName}>{EXERCISES[ex.id]?.name}</div>
-                      <div className={styles.exTarget}>{ex.sets} sets · {ex.reps}</div>
-                    </div>
-                    <div className={styles.exRight}>
-                      {pr ? (
-                        <>
-                          <div className={styles.exPR}>
-                            <span className={styles.exPRNum} style={{ color: PROGRAM[activeDay].color }}>{pr.weight}</span>
-                            <span className={styles.exPRUnit}>lbs</span>
-                          </div>
-                          <div className={styles.exPRLabel}>PR · {pr.reps} reps · {pr.e1rm} e1RM</div>
-                        </>
-                      ) : (
-                        <div className={styles.exNoData}>No data</div>
-                      )}
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </>
-        )}
-
-        {/* ── HISTORY ── */}
-        {activeTab === 'history' && (
-          <>
-            <div className={styles.dayTabs}>
-              {PROGRAM_ORDER.map(key => (
-                <button key={key}
-                  className={`${styles.dayTab} ${activeDay === key ? styles.dayTabActive : ''}`}
-                  style={activeDay === key ? { color: PROGRAM[key].color, borderBottomColor: PROGRAM[key].color } : {}}
-                  onClick={() => setActiveDay(key)}>
-                  {PROGRAM[key].label}
-                </button>
-              ))}
-            </div>
-            <div className={styles.sessionList}>
-              {daySessions.length === 0 && (
-                <div className={styles.empty}>No sessions logged for {PROGRAM[activeDay].label} yet.</div>
-              )}
-              {daySessions.map(session => {
-                const completedSets = session.session_sets?.filter(s => s.completed) || []
-                const totalVol = completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
-                const uniqueExercises = [...new Set(completedSets.map(s => s.exercise_id))]
-                return (
-                  <div key={session.id} className={styles.sessionCard}>
-                    <div className={styles.sessionHeader}>
-                      <div className={styles.sessionDate}>
-                        {new Date(session.date).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                      </div>
-                      <div className={styles.sessionMeta}>
-                        {completedSets.length} sets · {Math.round(totalVol).toLocaleString()} lbs
-                        {session.completed_at && <span className={styles.sessionDone}> · ✓</span>}
-                      </div>
-                    </div>
-                    {uniqueExercises.length > 0 && (
-                      <div className={styles.sessionExList}>
-                        {uniqueExercises.map(exId => {
-                          const exSets = completedSets.filter(s => s.exercise_id === exId)
-                          const maxW = Math.max(...exSets.map(s => s.weight || 0))
-                          const totalR = exSets.reduce((a, s) => a + (s.reps || 0), 0)
-                          return (
-                            <div key={exId} className={styles.sessionEx}>
-                              <span className={styles.sessionExName}>{EXERCISES[exId]?.name || exId}</span>
-                              <span className={styles.sessionExData}>{exSets.length}×{Math.round(totalR / exSets.length)} @ {maxW}lbs</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
           </>
         )}
 
@@ -610,17 +496,18 @@ export default function Progress() {
             <div className={styles.volumeHeader}>
               <div className={styles.sectionLabel}>Weekly sets per muscle group</div>
               <div className={styles.volumeDesc}>
-                Based on RP Strength evidence-based targets. MEV = minimum to grow, MAV = optimal range, MRV = maximum recoverable.
+                Based on RP Strength evidence-based targets. MEV = minimum to see progress,
+                MAV = optimal growth range, MRV = maximum you can recover from.
               </div>
             </div>
             <div className={styles.landmarkList}>
               {landmarks.map(l => {
-                const pct = Math.min((l.sets / l.mrv) * 100, 105)
-                const mevPct = (l.mev / l.mrv) * 100
-                const mavPct = (l.mav / l.mrv) * 100
-                const color = l.status === 'over' ? 'var(--danger)'
-                  : l.status === 'mav' ? 'var(--success)'
-                  : l.status === 'mev' ? 'var(--push)'
+                const pct = Math.min((l.sets/l.mrv)*100, 105)
+                const mevPct = (l.mev/l.mrv)*100
+                const mavPct = (l.mav/l.mrv)*100
+                const color = l.status==='over' ? 'var(--danger)'
+                  : l.status==='mav' ? 'var(--success)'
+                  : l.status==='mev' ? 'var(--push)'
                   : 'var(--muted2)'
                 return (
                   <div key={l.cat} className={styles.landmarkRow}>
@@ -632,10 +519,9 @@ export default function Progress() {
                     </div>
                     <div className={styles.landmarkBarWrap}>
                       <div className={styles.landmarkBar}>
-                        <div className={styles.landmarkFill} style={{ width: `${pct}%`, background: color }} />
-                        {/* Zone markers */}
-                        <div className={styles.landmarkMarker} style={{ left: `${mevPct}%` }} title="MEV" />
-                        <div className={styles.landmarkMarker} style={{ left: `${mavPct}%` }} title="MAV" />
+                        <div className={styles.landmarkFill} style={{ width:`${pct}%`, background:color }} />
+                        <div className={styles.landmarkMarker} style={{ left:`${mevPct}%` }} />
+                        <div className={styles.landmarkMarker} style={{ left:`${mavPct}%` }} />
                       </div>
                     </div>
                     <div className={styles.landmarkZones}>
@@ -645,11 +531,206 @@ export default function Progress() {
                       <span className={styles.landmarkMrv}>MRV {l.mrv}</span>
                     </div>
                     <div className={styles.landmarkStatus} style={{ color }}>
-                      {l.status === 'over' && '⚠ Above MRV — consider reducing volume'}
-                      {l.status === 'mav' && '✓ In optimal growth range'}
-                      {l.status === 'mev' && '↑ Above minimum — room to add more'}
-                      {l.status === 'below' && `Add ${l.mev - l.sets} more sets to reach MEV`}
+                      {l.status==='over' && '⚠ Above MRV — reduce volume this week'}
+                      {l.status==='mav' && '✓ In optimal growth range'}
+                      {l.status==='mev' && `↑ Above minimum — ${l.mav - l.sets} more sets to reach optimal`}
+                      {l.status==='below' && `Add ${l.mev - l.sets} more sets to reach minimum effective dose`}
                     </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── EXERCISES / LIFTS ── */}
+        {activeTab === 'exercises' && (
+          <>
+            <div className={styles.dayTabsWrap}>
+              <div className={styles.dayTabs}>
+                {PROGRAM_ORDER.map(key => (
+                  <button key={key}
+                    className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
+                    style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
+                    onClick={() => { setActiveDay(key); setSelectedExId(null) }}>
+                    {PROGRAM[key].day}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Exercise chart */}
+            {selectedExId && (
+              <div className={styles.chartCard}>
+                <div className={styles.chartCardHeader}>
+                  <div>
+                    <div className={styles.chartTitle}>{EXERCISES[selectedExId]?.name}</div>
+                    <div className={styles.chartSub}>Tap any point to see all sets that session</div>
+                  </div>
+                  <RangeSelector value={exRange} onChange={setExRange} options={EX_RANGE_OPTIONS} />
+                </div>
+
+                {/* Metric switcher */}
+                <div className={styles.metricRow}>
+                  {[
+                    { key: 'e1rm', label: 'Est. 1RM' },
+                    { key: 'weight', label: 'Max Weight' },
+                    { key: 'volume', label: 'Volume' },
+                  ].map(m => (
+                    <button key={m.key}
+                      className={`${styles.metricBtn} ${chartMetric===m.key?styles.metricActive:''}`}
+                      style={chartMetric===m.key?{color:dayColor,borderColor:dayColor}:{}}
+                      onClick={() => setChartMetric(m.key)}>
+                      {m.label}
+                    </button>
+                  ))}
+                </div>
+
+                {filteredEx.length > 1 ? (
+                  <ResponsiveContainer width="100%" height={260}>
+                    <AreaChart data={filteredEx}
+                      margin={{ top: 10, right: 4, left: -10, bottom: 0 }}
+                      onClick={e => e?.activePayload && setSelectedPoint({ type: 'ex', data: e.activePayload[0].payload })}>
+                      <defs>
+                        <linearGradient id="exGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor={dayColor} stopOpacity={0.35} />
+                          <stop offset="100%" stopColor={dayColor} stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                      <XAxis dataKey="label" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
+                        tickLine={false} axisLine={false} />
+                      <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
+                        tickLine={false} axisLine={false} domain={['dataMin - 5','dataMax + 5']} width={36} />
+                      <Tooltip content={<RichTooltip unit={chartMetric==='volume'?'lbs total':'lbs'} />} />
+                      <Area type="monotone" dataKey={chartMetric} stroke={dayColor} strokeWidth={2.5}
+                        fill="url(#exGrad)"
+                        dot={{ fill:dayColor, r:4, strokeWidth:0, cursor:'pointer' }}
+                        activeDot={{ r:7, strokeWidth:2, stroke:'#0C0C0B', cursor:'pointer' }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className={styles.chartEmpty}>Need 2+ sessions to show a trend</div>
+                )}
+
+                {/* Tapped point detail */}
+                {selectedPoint?.type === 'ex' && (
+                  <div className={styles.pointDetail}>
+                    <div className={styles.pointDetailHeader}>
+                      <span className={styles.pointDetailDate}>{selectedPoint.data.label}</span>
+                      <button className={styles.pointDetailClose} onClick={() => setSelectedPoint(null)}>✕</button>
+                    </div>
+                    <div className={styles.pointDetailRow}>
+                      <span>Max weight</span>
+                      <strong style={{ color: dayColor }}>{selectedPoint.data.weight} lbs</strong>
+                    </div>
+                    <div className={styles.pointDetailRow}>
+                      <span>Est. 1RM</span>
+                      <strong>{selectedPoint.data.e1rm} lbs</strong>
+                    </div>
+                    <div className={styles.pointDetailRow}>
+                      <span>Session volume</span>
+                      <strong>{selectedPoint.data.volume?.toLocaleString()} lbs</strong>
+                    </div>
+                    <div className={styles.setsBreakdown}>
+                      <div className={styles.setsBreakdownLabel}>All sets</div>
+                      {selectedPoint.data.sets?.map((s,i) => (
+                        <div key={i} className={styles.setBreakdownRow}>
+                          <span className={styles.setBreakdownNum}>Set {i+1}</span>
+                          <span className={styles.setBreakdownVal} style={{ color: dayColor }}>
+                            {s.weight > 0 ? `${s.weight} lbs` : 'BW'} × {s.reps}
+                          </span>
+                          {s.rpe && <span className={styles.setBreakdownRpe}>RPE {s.rpe}</span>}
+                          <span className={styles.setBreakdownE1rm}>≈ {e1rm(s.weight,s.reps)} 1RM</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Exercise list */}
+            <div className={styles.exList}>
+              {dayExercises.map(ex => {
+                const exercise = EXERCISES[ex.id]
+                if (!exercise) return null
+                const pr = prs[ex.id]
+                return (
+                  <button key={ex.id}
+                    className={`${styles.exRow} ${selectedExId===ex.id?styles.exRowActive:''}`}
+                    style={selectedExId===ex.id?{borderColor:dayColor,background:`${dayColor}0A`}:{}}
+                    onClick={() => setSelectedExId(selectedExId===ex.id?null:ex.id)}>
+                    <div className={styles.exInfo}>
+                      <div className={styles.exName}>{exercise.name}</div>
+                      <div className={styles.exSets}>{ex.sets} × {ex.reps}</div>
+                    </div>
+                    {pr && (
+                      <div className={styles.exPR}>
+                        <div className={styles.exPRNum} style={{ color:dayColor }}>{pr.weight}</div>
+                        <div className={styles.exPRUnit}>lbs PR</div>
+                        <div className={styles.exPR1rm}>≈ {pr.e1rm}</div>
+                      </div>
+                    )}
+                    <div className={styles.exArrow} style={selectedExId===ex.id?{color:dayColor}:{}}>
+                      {selectedExId===ex.id?'▲':'▼'}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── HISTORY ── */}
+        {activeTab === 'history' && (
+          <>
+            <div className={styles.dayTabsWrap}>
+              <div className={styles.dayTabs}>
+                {PROGRAM_ORDER.map(key => (
+                  <button key={key}
+                    className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
+                    style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
+                    onClick={() => setActiveDay(key)}>
+                    {PROGRAM[key].day}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className={styles.sessionList}>
+              {daySessions.length === 0 && (
+                <div className={styles.empty}>No {PROGRAM[activeDay]?.label} sessions yet.</div>
+              )}
+              {daySessions.map(session => {
+                const completedSets = session.session_sets?.filter(s => s.completed) || []
+                const totalVol = completedSets.reduce((acc,s) => acc+(s.weight*s.reps||0), 0)
+                const uniqueExercises = [...new Set(completedSets.map(s => s.exercise_id))]
+                return (
+                  <div key={session.id} className={styles.sessionCard}>
+                    <div className={styles.sessionHeader}>
+                      <div className={styles.sessionDate}>
+                        {new Date(session.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
+                      </div>
+                      <div className={styles.sessionMeta}>
+                        {completedSets.length} sets · {Math.round(totalVol).toLocaleString()} lbs
+                        {session.completed_at && <span className={styles.sessionDone}> · ✓</span>}
+                      </div>
+                    </div>
+                    {uniqueExercises.length > 0 && (
+                      <div className={styles.sessionExList}>
+                        {uniqueExercises.map(exId => {
+                          const exSets = completedSets.filter(s => s.exercise_id===exId)
+                          const maxW = Math.max(...exSets.map(s => s.weight||0))
+                          const avgR = Math.round(exSets.reduce((a,s)=>a+(s.reps||0),0)/exSets.length)
+                          return (
+                            <div key={exId} className={styles.sessionEx}>
+                              <span className={styles.sessionExName}>{EXERCISES[exId]?.name||exId}</span>
+                              <span className={styles.sessionExData}>{exSets.length}×{avgR} @ {maxW}lbs</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    )}
                   </div>
                 )
               })}

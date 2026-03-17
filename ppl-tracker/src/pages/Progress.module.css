@@ -277,3 +277,100 @@
 .achievementIcon { font-size: 24px; line-height: 1; margin-bottom: 2px; }
 .achievementTitle { font-size: 13px; font-weight: 600; color: var(--text); }
 .achievementDesc { font-size: 11px; color: var(--muted); line-height: 1.5; }
+
+/* ── New chart UI ── */
+
+.tabsWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); min-width: max-content; }
+
+.chartCardHeader {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 12px; margin-bottom: 12px; flex-wrap: wrap;
+}
+
+/* Range selector */
+.rangeRow { display: flex; gap: 4px; flex-shrink: 0; }
+.rangeBtn {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  padding: 4px 9px; border-radius: 4px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); min-height: unset; height: 26px;
+  letter-spacing: 0.04em;
+}
+.rangeBtnActive {
+  background: var(--border2); color: var(--text); border-color: var(--border2);
+}
+
+/* Metric switcher */
+.metricRow { display: flex; gap: 6px; margin-bottom: 10px; }
+.metricBtn {
+  flex: 1; font-family: 'DM Mono', monospace; font-size: 10px;
+  padding: 7px 4px; border-radius: 6px;
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--muted); min-height: unset;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.metricActive { font-weight: 600; }
+
+/* Tap-to-detail panel */
+.pointDetail {
+  margin-top: 10px; border-top: 1px solid var(--border);
+  padding-top: 12px; animation: slideDown 0.15s ease;
+}
+.pointDetailHeader {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.pointDetailDate {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted2);
+}
+.pointDetailClose {
+  background: none; border: none; color: var(--muted); font-size: 14px;
+  min-height: unset; padding: 0;
+}
+.pointDetailRow {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+  font-size: 13px; color: var(--muted2);
+}
+.pointDetailRow strong { color: var(--text); }
+
+/* Sets breakdown in exercise point detail */
+.setsBreakdown { margin-top: 10px; }
+.setsBreakdownLabel {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+  margin-bottom: 6px;
+}
+.setBreakdownRow {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+.setBreakdownNum {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); width: 36px; flex-shrink: 0;
+}
+.setBreakdownVal {
+  font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; flex: 1;
+}
+.setBreakdownRpe {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  color: var(--muted); background: var(--bg3); padding: 2px 6px; border-radius: 3px;
+}
+.setBreakdownE1rm {
+  font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted);
+}
+
+/* Day tabs scrollable */
+.dayTabsWrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0 -16px; padding: 0 16px; }
+.dayTabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); min-width: max-content; }
+
+.chartEmpty {
+  padding: 24px; text-align: center;
+  font-size: 13px; color: var(--muted);
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

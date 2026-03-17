@@ -19,7 +19,7 @@ export default function Workout() {
   const { session, sets, loading, error, startSession, logSet, finishSession } = useWorkout(dayKey)
   const { lastData, lastDate } = useLastSession(dayKey)
   const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
-  const { elapsed, formatted: timerFormatted } = useWorkoutTimer(!loading && !!session)
+  const { elapsed, formatted: timerFormatted, clearTimer } = useWorkoutTimer(!loading && !!session)
   const [activeVideo, setActiveVideo] = useState(null)
   const [finishing, setFinishing] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -69,6 +69,7 @@ export default function Workout() {
     setFinishing(true)
     await saveNote(note)
     await finishSession()
+    clearTimer()
 
     // Collect PRs for summary
     const prs = Object.entries(prTracker.current).map(([exerciseId, e1rmVal]) => {
