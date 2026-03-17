@@ -137,6 +137,12 @@
   align-items: center;
   gap: 4px;
   margin: 6px 0 4px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  text-align: left;
+  min-height: unset;
 }
 
 .muscleTagPrimary {
@@ -162,13 +168,25 @@
   border: 1px solid var(--border);
 }
 
-.videoHint {
+.muscleToggleHint {
   font-family: 'DM Mono', monospace;
   font-size: 9px;
   color: var(--muted);
-  opacity: 0.5;
+  opacity: 0.55;
   letter-spacing: 0.04em;
   margin-left: 2px;
+}
+
+.inlineMap {
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  animation: slideDown 0.15s ease;
+}
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 /* Rest timer */
