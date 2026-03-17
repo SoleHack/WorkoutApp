@@ -1,4 +1,4 @@
-.wrap { min-height: 100vh; }
+.wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
 
 .header {
   padding: 20px 20px 16px;
@@ -9,17 +9,32 @@
 
 .title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 36px; letter-spacing: 0.04em; line-height: 1;
-  margin-bottom: 4px;
+  font-size: 36px; letter-spacing: 0.04em; line-height: 1; margin-bottom: 4px;
+}
+.sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+.main {
+  padding: 16px 16px 80px;
+  display: flex; flex-direction: column; gap: 16px;
+  /* Prevent horizontal overflow */
+  overflow-x: hidden;
+  box-sizing: border-box;
+  width: 100%;
 }
 
-.sub { font-size: 13px; color: var(--muted); }
+/* Inputs — side by side on wider, stacked on narrow */
+.inputRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
 
-.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 16px; }
+@media (max-width: 360px) {
+  .inputRow { grid-template-columns: 1fr; }
+}
 
-.inputRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-
-.inputBlock { display: flex; flex-direction: column; gap: 6px; }
+.inputBlock { display: flex; flex-direction: column; gap: 6px; width: 100%; }
 
 .label {
   font-family: 'DM Mono', monospace; font-size: 9px;
@@ -27,22 +42,72 @@
 }
 
 .input {
-  padding: 14px; background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; color: var(--text); font-size: 20px;
-  font-family: 'DM Mono', monospace; font-weight: 500; outline: none;
-  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 14px 10px;
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text);
+  font-size: 20px; font-family: 'DM Mono', monospace; font-weight: 500;
+  outline: none; text-align: center;
+  /* Prevent iOS zoom */
+  font-size: 16px;
 }
 .input:focus { border-color: var(--border2); }
 
-.formulaRow { display: flex; gap: 8px; }
-.formulaBtn {
-  flex: 1; padding: 8px; background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 6px; color: var(--muted); font-family: 'DM Mono', monospace;
-  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
-  min-height: unset;
-}
-.formulaActive { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+/* Formula */
+.formulaSection { display: flex; flex-direction: column; gap: 8px; }
 
+.formulaHeader {
+  display: flex; justify-content: space-between; align-items: center;
+}
+
+.formulaTitle {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+
+.formulaInfoBtn {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--pull); background: none; border: none;
+  padding: 0; min-height: unset;
+}
+
+.formulaInfo {
+  font-size: 12px; color: var(--muted2); line-height: 1.7;
+  padding: 10px 12px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px;
+  animation: slideDown 0.15s ease;
+}
+
+.formulaRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.formulaBtn {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--muted); min-height: unset;
+  transition: all 0.15s;
+}
+.formulaActive {
+  background: var(--bg3); border-color: var(--border2); color: var(--text);
+}
+.formulaBtnName {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+.formulaBtnDesc { font-size: 10px; color: var(--muted); }
+.formulaActive .formulaBtnDesc { color: var(--muted2); }
+
+.formulaCurrentDesc {
+  font-size: 12px; color: var(--muted2); text-align: center;
+  font-style: italic; min-height: 18px;
+}
+
+/* Result */
 .result {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 12px; padding: 24px; text-align: center;
@@ -52,43 +117,35 @@
   text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 8px;
 }
 .resultVal {
-  font-family: 'Bebas Neue', sans-serif; font-size: 64px;
+  font-family: 'Bebas Neue', sans-serif; font-size: 72px;
   letter-spacing: 0.02em; line-height: 1; color: var(--push);
 }
-.resultUnit { font-size: 28px; color: var(--muted2); }
+.resultUnit { font-size: 32px; color: var(--muted2); }
 .resultSub { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--muted); margin-top: 4px; }
 
-.section { display: flex; flex-direction: column; gap: 10px; }
+/* Sections */
+.section { display: flex; flex-direction: column; gap: 8px; }
 .sectionTitle {
   font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted);
 }
+.sectionDesc { font-size: 12px; color: var(--muted); line-height: 1.5; }
 
+/* Zones */
 .zones { display: flex; flex-direction: column; gap: 6px; }
 .zone {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 8px; padding: 12px 14px;
-  display: grid; grid-template-columns: auto 1fr auto;
-  grid-template-rows: auto auto;
-  column-gap: 12px; align-items: center;
+  display: flex; justify-content: space-between; align-items: center; gap: 12px;
 }
-.zonePct {
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  color: var(--muted); grid-row: 1/3; align-self: center;
-}
-.zoneWeight {
-  font-family: 'DM Mono', monospace; font-size: 20px;
-  font-weight: 500; color: var(--push); grid-column: 2;
-}
-.zoneLabel { font-size: 13px; font-weight: 500; color: var(--text); grid-column: 2; }
-.zoneReps {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  color: var(--muted2); grid-column: 3; grid-row: 1; text-align: right;
-}
-.zoneDesc {
-  font-size: 11px; color: var(--muted); grid-column: 3; grid-row: 2; text-align: right;
-}
+.zoneLeft { flex: 1; }
+.zoneLabel { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.zoneDesc { font-size: 11px; color: var(--muted); }
+.zoneRight { text-align: right; flex-shrink: 0; }
+.zoneWeight { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 600; line-height: 1; }
+.zoneReps { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 2px; }
 
+/* Table */
 .table {
   background: var(--bg2); border: 1px solid var(--border);
   border-radius: 8px; overflow: hidden;
@@ -109,7 +166,21 @@
 .tableKg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
 
 .disclaimer {
-  font-size: 11px; color: var(--muted); line-height: 1.7;
+  font-size: 12px; color: var(--muted); line-height: 1.7;
   padding: 12px 14px; background: var(--bg2);
   border: 1px solid var(--border); border-radius: 8px;
+}
+
+/* Placeholder */
+.placeholder {
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 40px 20px; text-align: center;
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+}
+.placeholderIcon { font-size: 40px; }
+.placeholderText { font-size: 14px; color: var(--muted); line-height: 1.7; max-width: 260px; }
+
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }

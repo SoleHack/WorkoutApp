@@ -51,8 +51,8 @@ body {
   min-height: 100vh;
   min-height: 100dvh;
   -webkit-font-smoothing: antialiased;
-  /* Prevent text size adjust on orientation change */
   -webkit-text-size-adjust: 100%;
+  overflow-x: hidden;
 }
 
 button { cursor: pointer; font-family: inherit; /* Ensure min tap target size */ min-height: 44px; }

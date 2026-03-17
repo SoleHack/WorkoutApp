@@ -71,8 +71,9 @@
 }
 .statRow { display: flex; align-items: center; justify-content: space-between; }
 .statVal {
-  font-family: 'DM Mono', monospace; font-size: 24px;
+  font-family: 'DM Mono', monospace; font-size: 20px;
   font-weight: 500; color: var(--muted2); flex: 1;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .statVal:last-child { text-align: right; }
 .winner { color: var(--success); }
