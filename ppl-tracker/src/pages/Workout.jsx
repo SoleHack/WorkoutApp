@@ -230,7 +230,7 @@ export default function Workout() {
 
       <header className={styles.header}>
         <div className={styles.headerTop}>
-          <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
+          <button className={styles.back} onClick={() => navigate('/')}>← Save & Exit</button>
           <div className={styles.timer}>{timerFormatted}</div>
           <button className={styles.cancelWorkoutBtn} onClick={() => setShowCancelConfirm(true)}>
             Cancel
