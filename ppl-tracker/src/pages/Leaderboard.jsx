@@ -91,18 +91,19 @@ export default function Leaderboard() {
         .maybeSingle()
 
       if (savedSettings?.partner_user_id) {
-        setPartnerUserId(savedSettings.partner_user_id)
+        const pid = savedSettings.partner_user_id
+        setPartnerUserId(pid)
         // Fetch display name live from public_stats
         const { data: partnerPublic } = await supabase
           .from('public_stats')
           .select('display_name, email')
-          .eq('user_id', settings.partner_user_id)
+          .eq('user_id', pid)
           .maybeSingle()
         const name = partnerPublic?.display_name
           || partnerPublic?.email?.split('@')[0]
           || 'Them'
         setPartnerName(name)
-        const theirStats = await fetchUserStats(settings.partner_user_id)
+        const theirStats = await fetchUserStats(pid)
         setTheirStats(theirStats)
       }
 
@@ -131,11 +132,18 @@ export default function Leaderboard() {
     const name = data.display_name || partnerEmail.split('@')[0]
 
     // Write partner_user_id to BOTH users via RPC (bypasses RLS)
-    await supabase.rpc('sync_partner', {
+    const { error: rpcError } = await supabase.rpc('sync_partner', {
       my_id: user.id,
       their_id: data.user_id,
       connecting: true,
     })
+    // Fallback: if RPC not deployed yet, at least save our own side
+    if (rpcError) {
+      await supabase.from('user_settings').upsert({
+        user_id: user.id,
+        partner_user_id: data.user_id,
+      }, { onConflict: 'user_id' })
+    }
 
     setPartnerUserId(data.user_id)
     setPartnerName(name)
