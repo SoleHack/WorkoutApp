@@ -85,3 +85,15 @@
 .disconnectBtn {
   width: 100%; padding: 12px; color: var(--muted); font-size: 13px;
 }
+
+/* ── Responsive ── */
+@media (min-width: 640px) {
+  .main { padding: 24px 32px 80px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+}
+
+@media (min-width: 1024px) {
+  .header { padding: 32px 40px 24px; padding-top: 32px; }
+  .main { padding: 32px 40px 40px; max-width: 900px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+}

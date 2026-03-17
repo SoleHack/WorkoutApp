@@ -3,17 +3,24 @@
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
-  /* Center on desktop */
-  max-width: 480px;
-  margin: 0 auto;
-  position: relative;
-  /* Subtle border on desktop */
-  box-shadow: 0 0 0 1px var(--border);
+  width: 100%;
 }
 
 .content {
   flex: 1;
-  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
-  overflow-x: hidden;
   width: 100%;
+  overflow-x: hidden;
+  /* Bottom padding for tab bar */
+  padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
+}
+
+/* On desktop, tab bar is on the left — content shifts right */
+@media (min-width: 1024px) {
+  .layout {
+    flex-direction: row;
+  }
+  .content {
+    padding-bottom: 0;
+    padding-left: 220px; /* sidebar width */
+  }
 }

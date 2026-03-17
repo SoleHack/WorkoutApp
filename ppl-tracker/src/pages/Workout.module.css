@@ -249,6 +249,7 @@
   z-index: 300;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 
 .cancelSheet {
@@ -256,11 +257,17 @@
   border-radius: 16px 16px 0 0;
   border: 1px solid var(--border2);
   width: 100%;
+  max-width: 640px;
   padding: 24px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
   animation: slideUp 0.2s ease;
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+@media (min-width: 1024px) {
+  .cancelOverlay { align-items: center; }
+  .cancelSheet { border-radius: 16px; max-width: 480px; padding: 32px; }
 }
 
 .cancelTitle {
@@ -300,4 +307,16 @@
   font-size: 15px;
   font-weight: 500;
   min-height: unset;
+}
+
+/* ── Responsive ── */
+@media (min-width: 640px) {
+  .main { padding: 16px 32px 80px; }
+  .header { padding: 20px 32px 16px; padding-top: max(env(safe-area-inset-top,0px) + 12px, 20px); }
+}
+
+@media (min-width: 1024px) {
+  .header { padding: 32px 40px 16px; padding-top: 32px; }
+  .main { padding: 24px 40px 40px; max-width: 900px; }
+  .dayTitle { font-size: 48px; }
 }

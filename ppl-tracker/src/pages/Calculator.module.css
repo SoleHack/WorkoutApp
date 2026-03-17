@@ -222,3 +222,18 @@
   color: var(--push); flex-shrink: 0; text-align: right;
 }
 .prPickerE1rm { color: var(--muted); font-size: 10px; }
+
+/* ── Responsive ── */
+@media (min-width: 640px) {
+  .main { padding: 24px 32px 80px; }
+  .inputRow { grid-template-columns: 1fr 1fr; max-width: 480px; }
+  .formulaRow { max-width: 480px; }
+}
+
+@media (min-width: 1024px) {
+  .header { padding: 32px 40px 24px; padding-top: 32px; }
+  .main { padding: 32px 40px 40px; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .inputRow { grid-column: 1; }
+  .formulaSection { grid-column: 1; }
+  .result { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: 24px; }
+}

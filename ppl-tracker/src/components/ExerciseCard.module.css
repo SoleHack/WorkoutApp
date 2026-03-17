@@ -662,3 +662,14 @@
   transition: color 0.15s;
 }
 .clearSetBtn:active { color: var(--danger); }
+
+/* ── Responsive ── */
+@media (min-width: 640px) {
+  .card { margin: 0 0 10px; border-radius: 10px; }
+  .setRow { flex-wrap: nowrap; }
+}
+
+@media (min-width: 1024px) {
+  .inputsRow { grid-template-columns: 1fr 1fr; gap: 16px; }
+  .name { font-size: 17px; }
+}

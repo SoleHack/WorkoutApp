@@ -1,10 +1,11 @@
 .overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.92);
+  background: rgba(0,0,0,0.85);
   z-index: 400;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
 }
 
 .sheet {
@@ -12,10 +13,20 @@
   border-radius: 16px 16px 0 0;
   border: 1px solid var(--border2);
   width: 100%;
+  max-width: 640px;
   max-height: 92vh;
   overflow-y: auto;
   padding: 24px 20px 40px;
   animation: slideUp 0.25s ease;
+}
+
+@media (min-width: 1024px) {
+  .overlay { align-items: center; }
+  .sheet {
+    border-radius: 16px;
+    max-height: 85vh;
+    max-width: 560px;
+  }
 }
 
 @keyframes slideUp {

@@ -1,3 +1,4 @@
+/* ── Mobile: bottom tab bar ── */
 .tabBar {
   position: fixed;
   bottom: 0;
@@ -8,7 +9,6 @@
   align-items: stretch;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  /* iOS safe area */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
@@ -21,7 +21,7 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 10px 4px 10px;
+  padding: 10px 4px;
   background: none;
   border: none;
   color: var(--muted);
@@ -29,18 +29,27 @@
   transition: color 0.15s;
   position: relative;
 }
+.tab:hover { color: var(--muted2); }
+.tabActive { color: var(--text) !important; }
 
-.tab:active { opacity: 0.7; }
-
-.tabActive { color: var(--text); }
+.tabActive::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 2px;
+  background: var(--text);
+  border-radius: 0 0 2px 2px;
+}
 
 .iconWrap {
-  position: relative;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
 }
 
 .tabLabel {
@@ -48,21 +57,71 @@
   font-size: 9px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  line-height: 1;
 }
 
-.badge {
-  position: absolute;
-  top: -4px;
-  right: -10px;
-  background: var(--pull);
-  color: var(--bg);
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  font-weight: 600;
-  padding: 2px 5px;
-  border-radius: 10px;
-  white-space: nowrap;
-  min-width: 20px;
-  text-align: center;
+/* ── Desktop: left sidebar ── */
+@media (min-width: 1024px) {
+  .tabBar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    right: auto;
+    width: 220px;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    border-top: none;
+    border-right: 1px solid var(--border);
+    padding-bottom: 0;
+    padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
+  }
+
+  .tab {
+    flex: 0;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 12px;
+    padding: 14px 24px;
+    border-radius: 0;
+  }
+
+  .tab:hover { background: var(--bg2); }
+
+  .tabActive::after {
+    top: 50%;
+    left: 0;
+    bottom: auto;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 20px;
+    border-radius: 0 2px 2px 0;
+  }
+
+  .iconWrap {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  .tabLabel {
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    text-transform: none;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+  }
+
+  /* App name/logo at top of sidebar */
+  .tabBar::before {
+    content: 'PPL Tracker';
+    display: block;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 22px;
+    letter-spacing: 0.1em;
+    color: var(--text);
+    padding: 0 24px 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
 }

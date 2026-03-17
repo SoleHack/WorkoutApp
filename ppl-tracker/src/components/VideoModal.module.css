@@ -5,6 +5,11 @@
   z-index: 300;
   display: flex;
   align-items: flex-end;
+  justify-content: center;
+}
+
+@media (min-width: 1024px) {
+  .overlay { align-items: center; }
 }
 
 .modal {
@@ -13,9 +18,18 @@
   border-radius: 16px 16px 0 0;
   padding: 20px 20px 32px;
   width: 100%;
+  max-width: 640px;
   max-height: 92vh;
   overflow-y: auto;
   animation: slideUp 0.2s ease;
+}
+
+@media (min-width: 1024px) {
+  .modal {
+    border-radius: 16px;
+    max-height: 85vh;
+    max-width: 560px;
+  }
 }
 
 @keyframes slideUp {
