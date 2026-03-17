@@ -1,46 +1,54 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 
 export function usePullToRefresh(onRefresh) {
   const [pulling, setPulling] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [pullDistance, setPullDistance] = useState(0)
   const startY = useRef(null)
+  const currentDist = useRef(0)
   const threshold = 72
 
-  const onTouchStart = useCallback((e) => {
-    // Only trigger if scrolled to top
-    if (window.scrollY > 0) return
-    startY.current = e.touches[0].clientY
-  }, [])
-
-  const onTouchMove = useCallback((e) => {
-    if (startY.current === null) return
-    const dist = e.touches[0].clientY - startY.current
-    if (dist < 0) { startY.current = null; return }
-    if (dist > 0 && window.scrollY === 0) {
-      setPulling(true)
-      setPullDistance(Math.min(dist * 0.5, threshold + 20))
+  useEffect(() => {
+    const handleTouchStart = (e) => {
+      if (window.scrollY > 2) return
+      startY.current = e.touches[0].clientY
     }
-  }, [threshold])
 
-  const onTouchEnd = useCallback(async () => {
-    if (!pulling) return
-    if (pullDistance >= threshold) {
-      setRefreshing(true)
-      setPullDistance(threshold)
-      try {
+    const handleTouchMove = (e) => {
+      if (startY.current === null) return
+      const dist = e.touches[0].clientY - startY.current
+      if (dist <= 0) { startY.current = null; return }
+      currentDist.current = dist
+      const clamped = Math.min(dist * 0.45, threshold + 24)
+      setPulling(true)
+      setPullDistance(clamped)
+    }
+
+    const handleTouchEnd = async () => {
+      if (!pulling && currentDist.current < 5) return
+      if (currentDist.current * 0.45 >= threshold) {
+        setRefreshing(true)
+        setPullDistance(threshold)
+        setPulling(false)
         await onRefresh()
-      } finally {
         setRefreshing(false)
       }
+      setPulling(false)
+      setPullDistance(0)
+      startY.current = null
+      currentDist.current = 0
     }
-    setPulling(false)
-    setPullDistance(0)
-    startY.current = null
-  }, [pulling, pullDistance, threshold, onRefresh])
 
-  return {
-    pulling, refreshing, pullDistance, threshold,
-    handlers: { onTouchStart, onTouchMove, onTouchEnd }
-  }
+    document.addEventListener('touchstart', handleTouchStart, { passive: true })
+    document.addEventListener('touchmove', handleTouchMove, { passive: true })
+    document.addEventListener('touchend', handleTouchEnd, { passive: true })
+
+    return () => {
+      document.removeEventListener('touchstart', handleTouchStart)
+      document.removeEventListener('touchmove', handleTouchMove)
+      document.removeEventListener('touchend', handleTouchEnd)
+    }
+  }, [pulling, onRefresh, threshold])
+
+  return { pulling, refreshing, pullDistance, threshold }
 }

@@ -10,19 +10,15 @@ export default function AppLayout({ children }) {
   const isLogin = location.pathname === '/login'
 
   const handleRefresh = useCallback(async () => {
-    // Reload the page — service worker will fetch fresh data
     window.location.reload()
   }, [])
 
-  const { pulling, refreshing, pullDistance, threshold, handlers } = usePullToRefresh(handleRefresh)
+  const { pulling, refreshing, pullDistance, threshold } = usePullToRefresh(handleRefresh)
 
   if (isLogin) return children
 
   return (
-    <div
-      className={styles.layout}
-      {...handlers}
-    >
+    <div className={styles.layout}>
       <PullToRefresh
         pulling={pulling}
         refreshing={refreshing}
@@ -31,11 +27,15 @@ export default function AppLayout({ children }) {
       />
       <div
         className={styles.content}
-        style={pulling || refreshing ? { transform: `translateY(${pullDistance}px)`, transition: 'none' } : { transition: 'transform 0.2s ease' }}
+        style={
+          pulling || refreshing
+            ? { transform: `translateY(${pullDistance}px)`, transition: 'none' }
+            : { transition: 'transform 0.2s ease' }
+        }
       >
         {children}
       </div>
-      <TabBar completedSets={0} totalSets={0} />
+      <TabBar />
     </div>
   )
 }
