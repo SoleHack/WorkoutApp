@@ -580,3 +580,49 @@
   transition: all 0.1s;
 }
 .rpeBtnActive { font-weight: 600; }
+
+/* Name row updated layout */
+.nameBlock { display: flex; flex-direction: column; gap: 3px; flex: 1; }
+.nameActions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+/* Swap / superset badges */
+.swappedBadge, .supersetBadge {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px; letter-spacing: 0.06em;
+  display: flex; align-items: center; gap: 4px;
+}
+.swappedBadge { color: var(--pull); }
+.clearSwap {
+  background: none; border: none; color: var(--muted);
+  font-size: 9px; padding: 0; min-height: unset;
+  line-height: 1; opacity: 0.7;
+}
+.clearSwap:hover { opacity: 1; }
+
+/* Pair button */
+.pairBtn {
+  background: none; border: 1px solid var(--border);
+  border-radius: 4px; color: var(--muted);
+  font-size: 13px; padding: 3px 7px;
+  min-height: unset; line-height: 1;
+  transition: all 0.15s;
+}
+.pairBtnActive {
+  border-color: currentColor;
+  background: rgba(255,255,255,0.05);
+}
+
+/* Updated alts */
+.altsTitle {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.altRow {
+  width: 100%; display: flex; justify-content: space-between; align-items: center;
+  padding: 11px 12px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px;
+  margin-bottom: 5px; text-align: left; min-height: unset;
+}
+.altName { font-size: 13px; color: var(--text); }
+.altArrow { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--pull); }

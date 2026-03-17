@@ -76,7 +76,11 @@ function RestTimer({ seconds, onDone, color }) {
 
 export default function ExerciseCard({
   exercise, programEx, dayColor, sets, lastSets, lastMax,
-  onLogSet, onShowVideo, accent, onSwapExercise
+  onLogSet, onShowVideo, accent,
+  // Swap
+  isSwapped, originalName, onSwapExercise, onClearSwap,
+  // Superset
+  supersetPartner, onPairRequest, onUnpair, isPairingMode,
 }) {
   const [activeSet, setActiveSet] = useState(null)
   const [weight, setWeight] = useState('')
@@ -87,7 +91,7 @@ export default function ExerciseCard({
   const [mapExpanded, setMapExpanded] = useState(false)
   const [showWarmup, setShowWarmup] = useState(false)
   const [showAlts, setShowAlts] = useState(false)
-  const [customRest, setCustomRest] = useState(null) // override in seconds // { seconds, key }
+  const [customRest, setCustomRest] = useState(null)
   const touchStartX = useRef(null)
   const formRef = useRef(null)
 
@@ -160,10 +164,35 @@ export default function ExerciseCard({
       <div className={styles.header}>
         <div className={styles.left}>
           <div className={styles.nameRow}>
-            <span className={styles.name}>{exercise.name}</span>
-            {exercise.video && (
-              <button className={styles.videoBtn} onClick={onShowVideo} aria-label="Watch demo">▶</button>
-            )}
+            <div className={styles.nameBlock}>
+              <span className={styles.name}>{exercise.name}</span>
+              {isSwapped && originalName && (
+                <span className={styles.swappedBadge}>
+                  swap from {originalName}
+                  <button className={styles.clearSwap} onClick={onClearSwap}>✕</button>
+                </span>
+              )}
+              {supersetPartner && (
+                <span className={styles.supersetBadge} style={{ color: dayColor }}>
+                  ⇄ {supersetPartner}
+                  <button className={styles.clearSwap} onClick={onUnpair}>✕</button>
+                </span>
+              )}
+            </div>
+            <div className={styles.nameActions}>
+              {exercise.video && (
+                <button className={styles.videoBtn} onClick={onShowVideo} aria-label="Watch demo">▶</button>
+              )}
+              {/* Superset pair button */}
+              <button
+                className={`${styles.pairBtn} ${supersetPartner ? styles.pairBtnActive : ''}`}
+                style={supersetPartner ? { color: dayColor } : {}}
+                onClick={supersetPartner ? onUnpair : onPairRequest}
+                title={supersetPartner ? 'Remove superset' : 'Pair as superset'}
+              >
+                ⇄
+              </button>
+            </div>
           </div>
           <div className={styles.note}>{programEx.note}</div>
 
@@ -261,16 +290,19 @@ export default function ExerciseCard({
       )}
 
       {/* Exercise alternatives */}
-      {showAlts && ALTERNATIVES[programEx.id]?.length > 0 && (
+      {showAlts && ALTERNATIVES[programEx.originalId || programEx.id]?.length > 0 && (
         <div className={styles.altsWrap}>
-          <div className={styles.altsTitle}>Alternatives</div>
-          {ALTERNATIVES[programEx.id].slice(0, 3).map(altId => (
-            <button key={altId} className={styles.altRow}
-              onClick={() => onSwapExercise?.(altId)}>
-              <span className={styles.altName}>{altId.replace(/-/g, ' ')}</span>
-              <span className={styles.altArrow}>→</span>
-            </button>
-          ))}
+          <div className={styles.altsTitle}>Swap exercise — same muscles</div>
+          {ALTERNATIVES[programEx.originalId || programEx.id].slice(0, 4).map(altId => {
+            const altEx = EXERCISES[altId]
+            return (
+              <button key={altId} className={styles.altRow}
+                onClick={() => { onSwapExercise?.(altId); setShowAlts(false) }}>
+                <span className={styles.altName}>{altEx ? altEx.name : altId.replace(/-/g, ' ')}</span>
+                <span className={styles.altArrow}>Swap →</span>
+              </button>
+            )
+          })}
         </div>
       )}
 

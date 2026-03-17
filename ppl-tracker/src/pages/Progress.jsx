@@ -151,7 +151,8 @@ export default function Progress() {
   const [volRange, setVolRange] = useState(56)
   const [bwRange, setBwRange] = useState(9999)
   const [exRange, setExRange] = useState(9999)
-  const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume'
+  const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
+  const [notesSearch, setNotesSearch] = useState('')
 
   useEffect(() => { loadAll() }, [user])
   useEffect(() => {
@@ -216,22 +217,24 @@ export default function Progress() {
       .limit(200)
     if (!data) return
 
-    // Group by date — collect ALL sets, compute best e1RM and total volume
+    // Group by date — collect ALL sets, compute best e1RM, total volume, avg RPE
     const byDate = {}
     data.forEach(s => {
       const d = s.workout_sessions.date
-      if (!byDate[d]) byDate[d] = { date: d, sets: [], maxWeight: 0, totalVol: 0 }
+      if (!byDate[d]) byDate[d] = { date: d, sets: [], maxWeight: 0, totalVol: 0, rpeSum: 0, rpeCount: 0 }
       byDate[d].sets.push({ weight: s.weight, reps: s.reps, rpe: s.rpe })
       const est = e1rm(s.weight, s.reps)
       if (est > (byDate[d].e1rm||0)) { byDate[d].e1rm = est; byDate[d].weight = s.weight; byDate[d].reps = s.reps }
       if (s.weight > byDate[d].maxWeight) byDate[d].maxWeight = s.weight
       byDate[d].totalVol = (byDate[d].totalVol||0) + s.weight * s.reps
+      if (s.rpe) { byDate[d].rpeSum += s.rpe; byDate[d].rpeCount++ }
     })
     setChartData(Object.values(byDate).map(d => ({
       ...d,
       label: fmt(d.date),
       volume: Math.round(d.totalVol),
       setsCount: d.sets.length,
+      avgRpe: d.rpeCount > 0 ? Math.round(d.rpeSum / d.rpeCount * 10) / 10 : null,
     })))
   }
 
@@ -287,7 +290,7 @@ export default function Progress() {
         <div className={styles.title}>Progress</div>
         <div className={styles.tabsWrap}>
           <div className={styles.tabs}>
-            {['overview', 'volume', 'exercises', 'history', 'achievements'].map(tab => (
+            {['overview', 'volume', 'exercises', 'history', 'notes', 'achievements'].map(tab => (
               <button key={tab}
                 className={`${styles.tab} ${activeTab===tab?styles.tabActive:''}`}
                 onClick={() => setActiveTab(tab)}>
@@ -576,6 +579,7 @@ export default function Progress() {
                     { key: 'e1rm', label: 'Est. 1RM' },
                     { key: 'weight', label: 'Max Weight' },
                     { key: 'volume', label: 'Volume' },
+                    { key: 'avgRpe', label: 'Avg RPE' },
                   ].map(m => (
                     <button key={m.key}
                       className={`${styles.metricBtn} ${chartMetric===m.key?styles.metricActive:''}`}
@@ -632,6 +636,14 @@ export default function Progress() {
                       <span>Session volume</span>
                       <strong>{selectedPoint.data.volume?.toLocaleString()} lbs</strong>
                     </div>
+                    {selectedPoint.data.avgRpe && (
+                      <div className={styles.pointDetailRow}>
+                        <span>Avg RPE</span>
+                        <strong style={{ color: selectedPoint.data.avgRpe >= 9 ? 'var(--danger)' : selectedPoint.data.avgRpe >= 8 ? 'var(--push)' : 'var(--success)' }}>
+                          {selectedPoint.data.avgRpe} / 10
+                        </strong>
+                      </div>
+                    )}
                     <div className={styles.setsBreakdown}>
                       <div className={styles.setsBreakdownLabel}>All sets</div>
                       {selectedPoint.data.sets?.map((s,i) => (
@@ -737,6 +749,57 @@ export default function Progress() {
             </div>
           </>
         )}
+
+        {/* ── NOTES ── */}
+        {activeTab === 'notes' && (() => {
+          const sessionsWithNotes = allSessions.filter(s => s.notes?.trim())
+          const filtered = notesSearch.trim()
+            ? sessionsWithNotes.filter(s =>
+                s.notes.toLowerCase().includes(notesSearch.toLowerCase()) ||
+                (PROGRAM[s.day_key]?.label || '').toLowerCase().includes(notesSearch.toLowerCase())
+              )
+            : sessionsWithNotes
+
+          return (
+            <>
+              <div className={styles.notesSearchWrap}>
+                <input
+                  className={styles.notesSearchInput}
+                  type="search"
+                  placeholder="Search session notes..."
+                  value={notesSearch}
+                  onChange={e => setNotesSearch(e.target.value)}
+                />
+              </div>
+              {filtered.length === 0 ? (
+                <div className={styles.empty}>
+                  {sessionsWithNotes.length === 0
+                    ? 'No session notes yet. Add notes during a workout to see them here.'
+                    : 'No notes match your search.'}
+                </div>
+              ) : (
+                <div className={styles.notesList}>
+                  {filtered.map(s => {
+                    const day = PROGRAM[s.day_key]
+                    return (
+                      <div key={s.id} className={styles.noteCard}>
+                        <div className={styles.noteCardHeader}>
+                          <div className={styles.noteCardDay} style={{ color: day?.color }}>
+                            {day?.label || s.day_key}
+                          </div>
+                          <div className={styles.noteCardDate}>
+                            {new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                          </div>
+                        </div>
+                        <div className={styles.noteCardBody}>{s.notes}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* ── ACHIEVEMENTS ── */}
         {activeTab === 'achievements' && (

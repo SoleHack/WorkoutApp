@@ -5,6 +5,7 @@ import { useWorkout } from '../hooks/useWorkout'
 import { useLastSession } from '../hooks/useLastSession'
 import { useWorkoutNotes } from '../hooks/useWorkoutNotes'
 import { useWorkoutTimer } from '../hooks/useWorkoutTimer'
+import { useOnlineStatus } from '../hooks/useOnlineStatus'
 import ExerciseCard from '../components/ExerciseCard'
 import VideoModal from '../components/VideoModal'
 import WorkoutSummary from '../components/WorkoutSummary'
@@ -16,18 +17,27 @@ export default function Workout() {
   const { dayKey } = useParams()
   const navigate = useNavigate()
   const day = PROGRAM[dayKey]
+  const isOnline = useOnlineStatus()
   const { session, sets, loading, error, startSession, logSet, finishSession } = useWorkout(dayKey)
   const { lastData, lastDate } = useLastSession(dayKey)
   const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
   const { elapsed, formatted: timerFormatted, clearTimer } = useWorkoutTimer(!loading && !!session)
+
   const [activeVideo, setActiveVideo] = useState(null)
   const [finishing, setFinishing] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [sessionPRs, setSessionPRs] = useState([])
+
+  // Exercise swap: { [originalId]: replacementId }
+  const [swappedExercises, setSwappedExercises] = useState({})
+
+  // Superset pairs: { [exIdA]: exIdB, [exIdB]: exIdA }
+  const [supersets, setSupersets] = useState({})
+  const [pairingMode, setPairingMode] = useState(null) // exId being paired
+
   const noteTimer = useRef(null)
-  // Track PRs set this session
-  const prTracker = useRef({}) // { exerciseId: best e1rm so far }
+  const prTracker = useRef({})
 
   useEffect(() => {
     if (day && startSession) startSession()
@@ -38,6 +48,9 @@ export default function Workout() {
   }, [session?.id])
 
   if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
+
+  // Resolve active exercise id (original or swapped)
+  const resolveExId = (originalId) => swappedExercises[originalId] || originalId
 
   const totalSets = day.exercises.reduce((acc, ex) => acc + ex.sets, 0)
   const completedSets = Object.values(sets).reduce((acc, exSets) =>
@@ -51,18 +64,53 @@ export default function Workout() {
     noteTimer.current = setTimeout(() => saveNote(text), 1000)
   }
 
-  // Wrap logSet to detect new PRs in real time
-  const handleLogSet = async (exerciseId, setNum, weight, reps) => {
-    await logSet(exerciseId, setNum, weight, reps)
-
-    // Check if this is a PR for this exercise this session
+  const handleLogSet = async (exerciseId, setNum, weight, reps, rpe) => {
+    await logSet(exerciseId, setNum, weight, reps, rpe)
     const estimated = e1rm(weight || 0, reps)
     const lastBest = lastData[exerciseId]?.maxE1rm || 0
     const sessionBest = prTracker.current[exerciseId] || 0
-
     if (estimated > lastBest && estimated > sessionBest) {
       prTracker.current[exerciseId] = estimated
     }
+  }
+
+  const handleSwapExercise = (originalId, replacementId) => {
+    setSwappedExercises(prev => ({ ...prev, [originalId]: replacementId }))
+  }
+
+  const handleClearSwap = (originalId) => {
+    setSwappedExercises(prev => {
+      const next = { ...prev }
+      delete next[originalId]
+      return next
+    })
+  }
+
+  // Superset pairing
+  const handlePairRequest = (exId) => {
+    if (pairingMode === null) {
+      setPairingMode(exId)
+    } else if (pairingMode === exId) {
+      setPairingMode(null)
+    } else {
+      // Pair the two exercises
+      setSupersets(prev => ({
+        ...prev,
+        [pairingMode]: exId,
+        [exId]: pairingMode,
+      }))
+      setPairingMode(null)
+    }
+  }
+
+  const handleUnpair = (exId) => {
+    setSupersets(prev => {
+      const partner = prev[exId]
+      const next = { ...prev }
+      delete next[exId]
+      if (partner) delete next[partner]
+      return next
+    })
   }
 
   const handleFinish = async () => {
@@ -70,16 +118,12 @@ export default function Workout() {
     await saveNote(note)
     await finishSession()
     clearTimer()
-
-    // Collect PRs for summary
-    const prs = Object.entries(prTracker.current).map(([exerciseId, e1rmVal]) => {
-      // Find the best set for this exercise
+    const prs = Object.entries(prTracker.current).map(([exerciseId]) => {
       const exSets = sets[exerciseId] || []
       const best = exSets.filter(s => s?.completed).reduce((b, s) =>
         e1rm(s.weight || 0, s.reps) > e1rm(b?.weight || 0, b?.reps || 0) ? s : b, null)
       return best ? { exerciseId, weight: best.weight, reps: best.reps } : null
     }).filter(Boolean)
-
     setSessionPRs(prs)
     setShowSummary(true)
     setFinishing(false)
@@ -99,6 +143,22 @@ export default function Workout() {
 
   return (
     <div className={styles.wrap}>
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className={styles.offlineBanner}>
+          📵 Offline — sets are being saved locally and will sync when you reconnect
+        </div>
+      )}
+
+      {/* Pairing mode banner */}
+      {pairingMode && (
+        <div className={styles.pairingBanner}>
+          <span>Tap another exercise to create a superset with <strong>{EXERCISES[pairingMode]?.name}</strong></span>
+          <button onClick={() => setPairingMode(null)} className={styles.pairingCancel}>Cancel</button>
+        </div>
+      )}
+
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
@@ -142,22 +202,52 @@ export default function Workout() {
         {loading ? (
           <div className={styles.loading}>Loading session...</div>
         ) : (
-          day.exercises.map(ex => {
-            const exercise = EXERCISES[ex.id]
+          day.exercises.map((ex, idx) => {
+            const activeExId = resolveExId(ex.id)
+            const exercise = EXERCISES[activeExId]
             if (!exercise) return null
+
+            const isSwapped = swappedExercises[ex.id]
+            const supersetPartner = supersets[ex.id]
+            const isPairingTarget = pairingMode && pairingMode !== ex.id && !supersets[ex.id]
+            const isPairingSource = pairingMode === ex.id
+
             return (
-              <ExerciseCard
-                key={ex.id}
-                exercise={exercise}
-                programEx={ex}
-                dayColor={day.color}
-                sets={sets[ex.id] || []}
-                lastSets={lastData[ex.id]?.sets || []}
-                lastMax={lastData[ex.id]?.maxWeight || null}
-                onLogSet={(setNum, weight, reps) => handleLogSet(ex.id, setNum, weight, reps)}
-                onShowVideo={() => exercise.video && setActiveVideo(exercise)}
-                accent={ex.accent}
-              />
+              <div key={ex.id}>
+                {/* Superset connector line */}
+                {supersetPartner && supersets[supersetPartner] === ex.id && idx > 0 && (
+                  <div className={styles.supersetConnector}>
+                    <div className={styles.supersetLine} style={{ borderColor: day.color }} />
+                    <span className={styles.supersetLabel} style={{ color: day.color }}>SUPERSET</span>
+                    <div className={styles.supersetLine} style={{ borderColor: day.color }} />
+                  </div>
+                )}
+
+                <div className={`${isPairingTarget ? styles.pairingTarget : ''} ${isPairingSource ? styles.pairingSource : ''}`}
+                  style={isPairingTarget ? { outline: `2px dashed ${day.color}`, borderRadius: 10, cursor: 'pointer' } : {}}
+                  onClick={isPairingTarget ? () => handlePairRequest(ex.id) : undefined}
+                >
+                  <ExerciseCard
+                    exercise={exercise}
+                    programEx={{ ...ex, id: activeExId, originalId: ex.id }}
+                    dayColor={day.color}
+                    sets={sets[activeExId] || []}
+                    lastSets={lastData[activeExId]?.sets || []}
+                    lastMax={lastData[activeExId]?.maxWeight || null}
+                    onLogSet={(setNum, weight, reps, rpe) => handleLogSet(activeExId, setNum, weight, reps, rpe)}
+                    onShowVideo={() => exercise.video && setActiveVideo(exercise)}
+                    accent={ex.accent}
+                    isSwapped={!!isSwapped}
+                    originalName={isSwapped ? EXERCISES[ex.id]?.name : null}
+                    onSwapExercise={(replacementId) => handleSwapExercise(ex.id, replacementId)}
+                    onClearSwap={() => handleClearSwap(ex.id)}
+                    supersetPartner={supersetPartner ? EXERCISES[resolveExId(supersetPartner)]?.name : null}
+                    onPairRequest={() => handlePairRequest(ex.id)}
+                    onUnpair={() => handleUnpair(ex.id)}
+                    isPairingMode={!!pairingMode}
+                  />
+                </div>
+              </div>
             )
           })
         )}
