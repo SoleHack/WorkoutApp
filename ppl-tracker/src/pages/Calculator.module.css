@@ -1,0 +1,115 @@
+.wrap { min-height: 100vh; }
+
+.header {
+  padding: 20px 20px 16px;
+  padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px; letter-spacing: 0.04em; line-height: 1;
+  margin-bottom: 4px;
+}
+
+.sub { font-size: 13px; color: var(--muted); }
+
+.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 16px; }
+
+.inputRow { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.inputBlock { display: flex; flex-direction: column; gap: 6px; }
+
+.label {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+
+.input {
+  padding: 14px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; color: var(--text); font-size: 20px;
+  font-family: 'DM Mono', monospace; font-weight: 500; outline: none;
+  text-align: center;
+}
+.input:focus { border-color: var(--border2); }
+
+.formulaRow { display: flex; gap: 8px; }
+.formulaBtn {
+  flex: 1; padding: 8px; background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 6px; color: var(--muted); font-family: 'DM Mono', monospace;
+  font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase;
+  min-height: unset;
+}
+.formulaActive { background: var(--bg3); color: var(--text); border-color: var(--border2); }
+
+.result {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 24px; text-align: center;
+}
+.resultLabel {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted); margin-bottom: 8px;
+}
+.resultVal {
+  font-family: 'Bebas Neue', sans-serif; font-size: 64px;
+  letter-spacing: 0.02em; line-height: 1; color: var(--push);
+}
+.resultUnit { font-size: 28px; color: var(--muted2); }
+.resultSub { font-family: 'DM Mono', monospace; font-size: 14px; color: var(--muted); margin-top: 4px; }
+
+.section { display: flex; flex-direction: column; gap: 10px; }
+.sectionTitle {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.15em; color: var(--muted);
+}
+
+.zones { display: flex; flex-direction: column; gap: 6px; }
+.zone {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 12px 14px;
+  display: grid; grid-template-columns: auto 1fr auto;
+  grid-template-rows: auto auto;
+  column-gap: 12px; align-items: center;
+}
+.zonePct {
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  color: var(--muted); grid-row: 1/3; align-self: center;
+}
+.zoneWeight {
+  font-family: 'DM Mono', monospace; font-size: 20px;
+  font-weight: 500; color: var(--push); grid-column: 2;
+}
+.zoneLabel { font-size: 13px; font-weight: 500; color: var(--text); grid-column: 2; }
+.zoneReps {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted2); grid-column: 3; grid-row: 1; text-align: right;
+}
+.zoneDesc {
+  font-size: 11px; color: var(--muted); grid-column: 3; grid-row: 2; text-align: right;
+}
+
+.table {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden;
+}
+.tableHeader {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 8px 14px; background: var(--bg3);
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+.tableRow {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  padding: 10px 14px; border-top: 1px solid var(--border);
+}
+.tableRowHL { background: rgba(245,158,11,0.06); }
+.tablePct { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted2); }
+.tableWt { font-family: 'DM Mono', monospace; font-size: 14px; font-weight: 500; color: var(--text); }
+.tableKg { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--muted); }
+
+.disclaimer {
+  font-size: 11px; color: var(--muted); line-height: 1.7;
+  padding: 12px 14px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 8px;
+}

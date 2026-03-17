@@ -7,6 +7,8 @@ import Dashboard from './pages/Dashboard'
 import Workout from './pages/Workout'
 import Progress from './pages/Progress'
 import Settings from './pages/Settings'
+import Calculator from './pages/Calculator'
+import Leaderboard from './pages/Leaderboard'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -31,7 +33,9 @@ function AppRoutes() {
         <Route path="/workout/:dayKey" element={<ProtectedRoute><Workout /></ProtectedRoute>} />
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
+      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
   )

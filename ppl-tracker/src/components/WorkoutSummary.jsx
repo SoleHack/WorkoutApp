@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 import Confetti from './Confetti'
 import BodyMap from './BodyMap'
+import { useWorkoutShare } from '../hooks/useWorkoutShare'
 import { EXERCISES, PROGRAM } from '../data/program'
 import styles from './WorkoutSummary.module.css'
 
@@ -10,6 +11,8 @@ const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss }) {
   const navigate = useNavigate()
   const [showConfetti, setShowConfetti] = useState(prs?.length > 0)
+  const [sharing, setSharing] = useState(false)
+  const { generateImage, share } = useWorkoutShare()
   const day = PROGRAM[dayKey]
 
   const totalSets = Object.values(sets).reduce((a, s) => a + (s || []).filter(x => x?.completed).length, 0)
@@ -86,6 +89,21 @@ export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss 
           <div className={styles.mapLabel}>Muscles worked today</div>
           <BodyMap muscles={sessionMuscles} dayColor={day?.color || '#F59E0B'} />
         </div>
+
+        <button
+          className={styles.shareBtn}
+          disabled={sharing}
+          onClick={async () => {
+            setSharing(true)
+            try {
+              const img = await generateImage({ dayKey, sets, duration, prs, day })
+              await share(img, `${day?.label} Complete 💪`)
+            } catch (e) { console.error(e) }
+            setSharing(false)
+          }}
+        >
+          {sharing ? 'Generating...' : '📤 Share Workout'}
+        </button>
 
         <button
           className={styles.doneBtn}

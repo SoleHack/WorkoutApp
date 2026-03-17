@@ -1,0 +1,86 @@
+.wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
+
+.header {
+  padding: 20px 20px 16px;
+  padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 36px; letter-spacing: 0.04em; margin-bottom: 4px;
+}
+.sub { font-size: 13px; color: var(--muted); }
+
+.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 14px; }
+
+.connectCard {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 28px 20px; text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+}
+.connectIcon { font-size: 48px; }
+.connectTitle { font-size: 18px; font-weight: 600; color: var(--text); }
+.connectDesc { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 280px; }
+
+.inputRow { display: flex; gap: 8px; width: 100%; }
+.emailInput {
+  flex: 1; padding: 12px 14px; background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: 14px; outline: none;
+}
+.emailInput:focus { border-color: var(--border2); }
+.connectBtn { padding: 12px 20px; min-height: unset; flex-shrink: 0; }
+.error { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--danger); }
+
+/* Leader banner */
+.leaderBanner {
+  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
+  border-radius: 10px; padding: 16px; text-align: center;
+}
+.leaderLabel {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.12em; color: var(--push); margin-bottom: 4px;
+}
+.leaderName {
+  font-family: 'Bebas Neue', sans-serif; font-size: 40px;
+  color: var(--push); letter-spacing: 0.04em;
+}
+.leaderScore { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+.scoreHeader {
+  display: flex; justify-content: space-between;
+  font-family: 'DM Mono', monospace; font-size: 11px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  padding: 0 4px;
+}
+.scoreMe { color: var(--pull); }
+.scoreThem { color: var(--push); }
+
+.stats { display: flex; flex-direction: column; gap: 8px; }
+
+.statCard {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 14px;
+}
+.statLabel {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--muted); margin-bottom: 8px;
+}
+.statRow { display: flex; align-items: center; justify-content: space-between; }
+.statVal {
+  font-family: 'DM Mono', monospace; font-size: 24px;
+  font-weight: 500; color: var(--muted2); flex: 1;
+}
+.statVal:last-child { text-align: right; }
+.winner { color: var(--success); }
+.statVs {
+  font-family: 'DM Mono', monospace; font-size: 10px;
+  color: var(--muted); padding: 0 12px;
+}
+
+.disconnectBtn {
+  width: 100%; padding: 12px; color: var(--muted); font-size: 13px;
+}

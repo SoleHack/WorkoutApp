@@ -400,3 +400,183 @@
   min-height: unset;
   height: 50px;
 }
+
+/* Action bar */
+.actionBar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  background: var(--bg);
+}
+
+.actionBtn {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  padding: 5px 10px;
+  border-radius: 5px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  min-height: unset;
+  height: 28px;
+}
+.actionBtnActive {
+  background: var(--bg3);
+  color: var(--text);
+  border-color: var(--border2);
+}
+
+.restPicker {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.restLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-right: 2px;
+}
+
+.restOption {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  padding: 4px 7px;
+  border-radius: 4px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  min-height: unset;
+  height: 24px;
+}
+.restOptionActive {
+  font-weight: 600;
+}
+
+/* Warm-up sets */
+.warmupWrap {
+  padding: 10px 14px 6px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  animation: slideDown 0.15s ease;
+}
+
+.warmupTitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.warmupSets { display: flex; flex-direction: column; gap: 4px; }
+
+.warmupRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
+  background: var(--bg2);
+  border-radius: 5px;
+  border: 1px solid var(--border);
+}
+
+.warmupLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  width: 32px;
+}
+
+.warmupWeight {
+  font-family: 'DM Mono', monospace;
+  font-size: 15px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.warmupReps {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--muted2);
+}
+
+/* Alternatives */
+.altsWrap {
+  padding: 10px 14px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  animation: slideDown 0.15s ease;
+}
+
+.altsTitle {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+.altRow {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 5px;
+  text-align: left;
+  min-height: unset;
+}
+
+.altName {
+  font-size: 13px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+
+.altArrow { color: var(--muted); font-size: 14px; }
+
+/* RPE row */
+.rpeRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+}
+
+.rpeLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  margin-right: 4px;
+}
+
+.rpeBtn {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 5px 8px;
+  border-radius: 4px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  color: var(--muted2);
+  min-height: unset;
+  height: 30px;
+  transition: all 0.1s;
+}
+.rpeBtnActive { font-weight: 600; }

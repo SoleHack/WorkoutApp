@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useBodyweight } from '../hooks/useBodyweight'
 import { useBodyMeasurements, useProgressPhotos } from '../hooks/useBodyComposition'
+import { usePushNotifications } from '../hooks/usePushNotifications'
+import { useAppleHealth } from '../hooks/useAppleHealth'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
@@ -27,6 +29,8 @@ export default function Settings() {
   const { entries: bwEntries, logWeight, latest: bwLatest, change: bwChange } = useBodyweight()
   const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements()
   const { photos, uploading, uploadPhoto, deletePhoto } = useProgressPhotos()
+  const { permission, requestPermission } = usePushNotifications()
+  const { isSupported: healthSupported, syncWorkout } = useAppleHealth()
   const [saved, setSaved] = useState(false)
   const [localSchedule, setLocalSchedule] = useState(null)
   const [localUnit, setLocalUnit] = useState(null)
@@ -38,6 +42,7 @@ export default function Settings() {
   const [measurements, setMeasurements] = useState({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
   const [measureSaving, setMeasureSaving] = useState(false)
   const [photoNote, setPhotoNote] = useState('')
+  const [localPartnerMode, setLocalPartnerMode] = useState(null)
 
   const schedule = localSchedule ?? settings.schedule
   const weightUnit = localUnit ?? settings.weightUnit
@@ -308,6 +313,79 @@ export default function Settings() {
             />
           </label>
         </section>
+
+        {/* PARTNER MODE */}
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Partner Mode</div>
+          <div className={styles.sectionDesc}>
+            Allow your training partner to find you by email and compare stats on the Partner tab.
+          </div>
+          <div className={styles.toggleRow}>
+            {[{ label: 'On', value: true }, { label: 'Off', value: false }].map(opt => (
+              <button key={opt.label}
+                className={`${styles.toggleBtn} ${(localPartnerMode ?? false) === opt.value ? styles.toggleActive : ''}`}
+                onClick={async () => {
+                  setLocalPartnerMode(opt.value)
+                  if (opt.value) {
+                    // Register in public_stats
+                    await supabase.from('public_stats').upsert({
+                      user_id: user.id,
+                      email: user.email,
+                      display_name: user.email?.split('@')[0],
+                      partner_mode: true,
+                      updated_at: new Date().toISOString(),
+                    }, { onConflict: 'user_id' })
+                  } else {
+                    await supabase.from('public_stats')
+                      .update({ partner_mode: false })
+                      .eq('user_id', user.id)
+                  }
+                }}>
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          {(localPartnerMode ?? false) && (
+            <div className={styles.partnerEmail}>
+              Your partner email: <strong>{user?.email}</strong>
+            </div>
+          )}
+        </section>
+
+        {/* NOTIFICATIONS */}
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Notifications</div>
+          <div className={styles.sectionDesc}>
+            Get alerted when your rest timer ends — even when your screen is off.
+          </div>
+          {permission === 'granted' ? (
+            <div className={styles.notifGranted}>✓ Notifications enabled</div>
+          ) : (
+            <button className={`btn btn-primary ${styles.notifBtn}`}
+              onClick={requestPermission}>
+              Enable Rest Timer Alerts
+            </button>
+          )}
+        </section>
+
+        {/* APPLE HEALTH */}
+        {healthSupported && (
+          <section className={styles.section}>
+            <div className={styles.sectionTitle}>Apple Health</div>
+            <div className={styles.sectionDesc}>
+              Export your workouts to Apple Health as strength training sessions.
+            </div>
+            <button className={`btn ${styles.exportBtn}`}
+              onClick={() => syncWorkout({
+                dayLabel: 'PPL Workout',
+                duration: 3600,
+                date: new Date().toISOString().split('T')[0],
+                exercises: [],
+              })}>
+              Export Last Workout to Health
+            </button>
+          </section>
+        )}
 
         {/* EXPORT */}
         <section className={styles.section}>

@@ -136,6 +136,22 @@
   margin-bottom: 4px;
 }
 
+.shareBtn {
+  width: 100%;
+  padding: 14px;
+  border: 1px solid var(--border2);
+  border-radius: 10px;
+  background: none;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  min-height: unset;
+  margin-bottom: 10px;
+  transition: background 0.15s;
+}
+.shareBtn:active { background: var(--bg3); }
+
 .doneBtn {
   width: 100%;
   padding: 16px;

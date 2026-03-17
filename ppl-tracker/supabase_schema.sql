@@ -140,3 +140,27 @@ create policy "Users can manage own achievements"
   on achievements for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- RPE column on session_sets
+alter table session_sets add column if not exists rpe integer check (rpe >= 1 and rpe <= 10);
+
+-- Public stats for partner/leaderboard feature
+create table if not exists public_stats (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  email text unique not null,
+  display_name text,
+  partner_mode boolean default false,
+  updated_at timestamptz default now()
+);
+alter table public_stats enable row level security;
+
+-- Anyone can read public_stats (needed for partner lookup)
+create policy "Public stats are readable by all authenticated users"
+  on public_stats for select
+  using (auth.role() = 'authenticated' and partner_mode = true);
+
+-- Users can only write their own
+create policy "Users can manage own public stats"
+  on public_stats for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

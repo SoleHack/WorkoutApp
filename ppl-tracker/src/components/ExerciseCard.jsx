@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TAG_LABELS } from '../data/program'
+import { TAG_LABELS, ALTERNATIVES } from '../data/program'
 import BodyMap from './BodyMap'
 import styles from './ExerciseCard.module.css'
 
@@ -76,22 +76,27 @@ function RestTimer({ seconds, onDone, color }) {
 
 export default function ExerciseCard({
   exercise, programEx, dayColor, sets, lastSets, lastMax,
-  onLogSet, onShowVideo, accent
+  onLogSet, onShowVideo, accent, onSwapExercise
 }) {
   const [activeSet, setActiveSet] = useState(null)
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
+  const [rpe, setRpe] = useState('')
   const [saving, setSaving] = useState(false)
   const [restTimer, setRestTimer] = useState(null)
-  const [mapExpanded, setMapExpanded] = useState(false) // { seconds, key }
+  const [mapExpanded, setMapExpanded] = useState(false)
+  const [showWarmup, setShowWarmup] = useState(false)
+  const [showAlts, setShowAlts] = useState(false)
+  const [customRest, setCustomRest] = useState(null) // override in seconds // { seconds, key }
   const touchStartX = useRef(null)
   const formRef = useRef(null)
 
   const completedCount = sets.filter(s => s?.completed).length
   const allDone = completedCount === programEx.sets
 
-  // Rest time based on tag
-  const restSeconds = programEx.tag === 'compound' ? 150 : 75
+  // Rest time: custom override > tag default
+  const defaultRest = programEx.tag === 'compound' ? 150 : 75
+  const activeRestSeconds = customRest || defaultRest
 
   const handleSetTap = (setNum) => {
     const existing = sets[setNum - 1]
@@ -115,26 +120,16 @@ export default function ExerciseCard({
     const loggedSetNum = activeSet
     const loggedWeight = isNaN(w) ? 0 : w
     const loggedReps = r
+    const loggedRpe = rpe ? parseInt(rpe) : null
 
-    // Haptic feedback
     if ('vibrate' in navigator) navigator.vibrate(50)
 
-    await onLogSet(loggedSetNum, loggedWeight, loggedReps)
+    await onLogSet(loggedSetNum, loggedWeight, loggedReps, loggedRpe)
     setSaving(false)
     setActiveSet(null)
+    setRpe('')
 
-    // Start rest timer
-    setRestTimer({ seconds: restSeconds, key: Date.now() })
-
-    // Auto-advance after timer or immediately find next
-    const updatedSets = [...Array(programEx.sets)].map((_, i) => {
-      if (i + 1 === loggedSetNum) return { completed: true }
-      return sets[i] || null
-    })
-    const nextIncomplete = updatedSets.findIndex(s => !s?.completed)
-    if (nextIncomplete !== -1) {
-      // Don't auto-open next set — let them rest first
-    }
+    setRestTimer({ seconds: activeRestSeconds, key: Date.now() })
   }
 
   const adjustWeight = (delta) => {
@@ -242,6 +237,70 @@ export default function ExerciseCard({
         </div>
       )}
 
+      {/* Warm-up sets */}
+      {showWarmup && lastMax > 0 && (
+        <div className={styles.warmupWrap}>
+          <div className={styles.warmupTitle}>Warm-up sets</div>
+          <div className={styles.warmupSets}>
+            {[
+              { pct: 0.4, reps: 10, label: '40%' },
+              { pct: 0.6, reps: 5,  label: '60%' },
+              { pct: 0.8, reps: 3,  label: '80%' },
+            ].map(ws => {
+              const wsWeight = Math.round(lastMax * ws.pct / 2.5) * 2.5
+              return (
+                <div key={ws.label} className={styles.warmupRow}>
+                  <span className={styles.warmupLabel}>{ws.label}</span>
+                  <span className={styles.warmupWeight} style={{ color: dayColor }}>{wsWeight} lbs</span>
+                  <span className={styles.warmupReps}>× {ws.reps}</span>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Exercise alternatives */}
+      {showAlts && ALTERNATIVES[programEx.id]?.length > 0 && (
+        <div className={styles.altsWrap}>
+          <div className={styles.altsTitle}>Alternatives</div>
+          {ALTERNATIVES[programEx.id].slice(0, 3).map(altId => (
+            <button key={altId} className={styles.altRow}
+              onClick={() => onSwapExercise?.(altId)}>
+              <span className={styles.altName}>{altId.replace(/-/g, ' ')}</span>
+              <span className={styles.altArrow}>→</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Action bar - warm-up / alternatives / rest override */}
+      <div className={styles.actionBar}>
+        {lastMax > 0 && (
+          <button className={`${styles.actionBtn} ${showWarmup ? styles.actionBtnActive : ''}`}
+            onClick={() => setShowWarmup(v => !v)}>
+            🔥 Warm-up
+          </button>
+        )}
+        {ALTERNATIVES[programEx.id]?.length > 0 && (
+          <button className={`${styles.actionBtn} ${showAlts ? styles.actionBtnActive : ''}`}
+            onClick={() => setShowAlts(v => !v)}>
+            🔄 Swap
+          </button>
+        )}
+        <div className={styles.restPicker}>
+          <span className={styles.restLabel}>Rest</span>
+          {[60, 90, 120, 150, 180].map(s => (
+            <button key={s}
+              className={`${styles.restOption} ${activeRestSeconds === s ? styles.restOptionActive : ''}`}
+              style={activeRestSeconds === s ? { color: dayColor, borderColor: dayColor } : {}}
+              onClick={() => setCustomRest(s)}>
+              {s < 60 ? `${s}s` : `${s/60}m`}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Set buttons */}
       <div className={styles.setRow}>
         {[...Array(programEx.sets)].map((_, i) => {
@@ -326,6 +385,19 @@ export default function ExerciseCard({
                 <button type="button" className={styles.stepBtn} onClick={() => adjustReps(1)}>+</button>
               </div>
             </div>
+          </div>
+
+          {/* RPE selector */}
+          <div className={styles.rpeRow}>
+            <span className={styles.rpeLabel}>RPE</span>
+            {[6,7,7.5,8,8.5,9,9.5,10].map(r => (
+              <button key={r} type="button"
+                className={`${styles.rpeBtn} ${rpe == r ? styles.rpeBtnActive : ''}`}
+                style={rpe == r ? { background: dayColor, borderColor: dayColor, color: '#0C0C0B' } : {}}
+                onClick={() => setRpe(rpe == r ? '' : r.toString())}>
+                {r}
+              </button>
+            ))}
           </div>
 
           <div className={styles.logActions}>

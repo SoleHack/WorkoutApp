@@ -34,6 +34,16 @@
 
 html { scroll-behavior: smooth; }
 
+/* Page transitions */
+@keyframes pageIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: pageIn 0.18s ease forwards;
+}
+
 body {
   font-family: 'DM Sans', sans-serif;
   background: var(--bg);
