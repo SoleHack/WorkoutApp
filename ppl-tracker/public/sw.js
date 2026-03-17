@@ -73,6 +73,10 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
+
+  // Only handle http/https — ignore chrome-extension, data, blob etc.
+  if (!url.protocol.startsWith('http')) return
+
   const isSupabase = url.hostname.includes('supabase')
   const isMutation = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(e.request.method)
 

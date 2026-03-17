@@ -76,7 +76,7 @@ export default function Settings() {
   const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements()
   const { photos, uploading, uploadPhoto, deletePhoto } = useProgressPhotos()
   const { permission, requestPermission } = usePushNotifications()
-  const { syncWorkout } = useAppleHealth()
+  const { isSupported: healthSupported, syncWorkout } = useAppleHealth()
 
   // Only truly transient UI state lives here — not settings
   const [saved, setSaved] = useState(false)
