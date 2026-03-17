@@ -113,8 +113,9 @@ export default function Workout() {
     noteTimer.current = setTimeout(() => saveNote(text), 1000)
   }
 
-  const handleLogSet = async (exerciseId, setNum, weight, reps, rpe) => {
-    await logSet(exerciseId, setNum, weight, reps, rpe)
+  const handleLogSet = async (exerciseId, setNum, weight, reps, rpe, clear = false) => {
+    await logSet(exerciseId, setNum, weight, reps, rpe, clear)
+    if (clear) return // don't track PRs on clear
     const estimated = e1rm(weight || 0, reps)
     const lastBest = lastData[exerciseId]?.maxE1rm || 0
     const sessionBest = prTracker.current[exerciseId] || 0
@@ -290,7 +291,7 @@ export default function Workout() {
                     lastSets={lastData[activeExId]?.sets || []}
                     lastMax={lastData[activeExId]?.maxWeight || null}
                     weightUnit={weightUnit}
-                    onLogSet={(setNum, weight, reps, rpe) => handleLogSet(activeExId, setNum, weight, reps, rpe)}
+                    onLogSet={(setNum, weight, reps, rpe, _unused, clear) => handleLogSet(activeExId, setNum, weight, reps, rpe, clear)}
                     onShowVideo={() => exercise.video && setActiveVideo(exercise)}
                     accent={ex.accent}
                     isSwapped={!!isSwapped}
