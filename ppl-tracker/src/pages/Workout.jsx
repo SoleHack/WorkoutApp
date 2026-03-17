@@ -21,13 +21,15 @@ export default function Workout() {
   const navigate = useNavigate()
   const day = PROGRAM[dayKey]
   const isOnline = useOnlineStatus()
-  const { session, sets, loading, error, startSession, logSet, finishSession } = useWorkout(dayKey)
+  const { session, sets, loading, error, startSession, logSet, finishSession, cancelSession } = useWorkout(dayKey)
   const { lastData, lastDate } = useLastSession(dayKey)
   const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
   const { elapsed, formatted: timerFormatted, clearTimer } = useWorkoutTimer(!loading && !!session)
 
   const [activeVideo, setActiveVideo] = useState(null)
   const [finishing, setFinishing] = useState(false)
+  const [cancelling, setCancelling] = useState(false)
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [showSummary, setShowSummary] = useState(false)
   const [sessionPRs, setSessionPRs] = useState([])
@@ -184,6 +186,17 @@ export default function Workout() {
     setFinishing(false)
   }
 
+  const handleCancel = async () => {
+    setCancelling(true)
+    await cancelSession()
+    clearTimer()
+    if (session?.id) {
+      localStorage.removeItem(`swaps-${session.id}`)
+      localStorage.removeItem(`supersets-${session.id}`)
+    }
+    navigate('/')
+  }
+
   if (showSummary) {
     return (
       <WorkoutSummary
@@ -219,6 +232,9 @@ export default function Workout() {
         <div className={styles.headerTop}>
           <button className={styles.back} onClick={() => navigate('/')}>← Back</button>
           <div className={styles.timer}>{timerFormatted}</div>
+          <button className={styles.cancelWorkoutBtn} onClick={() => setShowCancelConfirm(true)}>
+            Cancel
+          </button>
         </div>
         <div className={styles.headerMeta}>
           <div className={styles.dayLabel} style={{ color: day.color }}>{day.day}</div>
@@ -342,6 +358,29 @@ export default function Workout() {
 
       {activeVideo && (
         <VideoModal exercise={activeVideo} dayColor={day.color} onClose={() => setActiveVideo(null)} />
+      )}
+
+      {/* Cancel confirmation */}
+      {showCancelConfirm && (
+        <div className={styles.cancelOverlay}>
+          <div className={styles.cancelSheet}>
+            <div className={styles.cancelTitle}>Cancel workout?</div>
+            <div className={styles.cancelSub}>
+              This will delete the session and all sets logged so far. This cannot be undone.
+            </div>
+            <button
+              className={styles.cancelConfirmBtn}
+              disabled={cancelling}
+              onClick={handleCancel}>
+              {cancelling ? 'Cancelling...' : '🗑 Yes, cancel workout'}
+            </button>
+            <button
+              className={styles.cancelDismissBtn}
+              onClick={() => setShowCancelConfirm(false)}>
+              Keep going
+            </button>
+          </div>
+        </div>
       )}
     </div>
   )

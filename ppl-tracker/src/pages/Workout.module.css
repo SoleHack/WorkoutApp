@@ -226,3 +226,78 @@
   from { opacity: 0; transform: translateY(-4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* Cancel workout button */
+.cancelWorkoutBtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 0;
+  min-height: unset;
+  transition: color 0.15s;
+}
+.cancelWorkoutBtn:hover { color: var(--danger); }
+
+/* Cancel confirmation overlay */
+.cancelOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+}
+
+.cancelSheet {
+  background: var(--bg2);
+  border-radius: 16px 16px 0 0;
+  border: 1px solid var(--border2);
+  width: 100%;
+  padding: 24px 20px calc(env(safe-area-inset-bottom, 0px) + 24px);
+  animation: slideUp 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cancelTitle {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 0.04em;
+  color: var(--danger);
+}
+
+.cancelSub {
+  font-size: 14px;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+.cancelConfirmBtn {
+  width: 100%;
+  padding: 15px;
+  background: rgba(248,113,113,0.12);
+  border: 1px solid rgba(248,113,113,0.35);
+  border-radius: 10px;
+  color: var(--danger);
+  font-size: 15px;
+  font-weight: 600;
+  min-height: unset;
+  transition: background 0.15s;
+}
+.cancelConfirmBtn:active { background: rgba(248,113,113,0.2); }
+
+.cancelDismissBtn {
+  width: 100%;
+  padding: 15px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+  min-height: unset;
+}

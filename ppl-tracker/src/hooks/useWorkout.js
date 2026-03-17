@@ -163,5 +163,17 @@ export function useWorkout(dayKey) {
     if (error) console.error('finishSession error:', error)
   }, [])
 
-  return { session, sets, loading, error, startSession, logSet, finishSession }
+  const cancelSession = useCallback(async () => {
+    const currentSession = sessionRef.current
+    if (!currentSession) return
+    // Delete the session — cascade deletes session_sets too
+    await supabase
+      .from('workout_sessions')
+      .delete()
+      .eq('id', currentSession.id)
+    updateSession(null)
+    updateSets({})
+  }, [])
+
+  return { session, sets, loading, error, startSession, logSet, finishSession, cancelSession }
 }
