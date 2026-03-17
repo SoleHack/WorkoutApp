@@ -396,7 +396,7 @@ export default function Settings() {
         <section className={styles.section}>
           <div className={styles.sectionTitle}>Progress Photos</div>
           <div className={styles.sectionDesc}>
-            Photos are stored privately. Tap two photos to compare side by side.
+            Photos are stored privately in your account.
           </div>
 
           {photos.length >= 2 && <PhotoComparison photos={photos} />}
@@ -404,7 +404,8 @@ export default function Settings() {
           <div className={styles.photoGrid}>
             {photos.slice(0, 9).map(p => (
               <div key={p.id} className={styles.photoThumb}>
-                <img src={p.public_url} alt={p.date} className={styles.photoImg} />
+                <img src={p.public_url} alt={p.date} className={styles.photoImg}
+                  onError={e => { e.target.style.background = 'var(--bg3)' }} />
                 <div className={styles.photoDate}>
                   {new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </div>
@@ -413,16 +414,44 @@ export default function Settings() {
             ))}
           </div>
 
-          <label className={`btn ${styles.photoUploadBtn}`}>
-            {uploading ? 'Uploading...' : '📸 Add Progress Photo'}
-            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
-              onChange={async e => {
-                const file = e.target.files[0]
-                if (file) await uploadPhoto(file, photoNote)
-                e.target.value = ''
-              }}
-            />
-          </label>
+          {uploading && (
+            <div className={styles.uploadingIndicator}>
+              <div className={styles.uploadingSpinner} />
+              Uploading photo...
+            </div>
+          )}
+
+          <div className={styles.photoUploadRow}>
+            {/* Take photo with camera */}
+            <label className={`btn ${styles.photoBtn}`}>
+              📷 Camera
+              <input type="file" accept="image/*,.heic,.heif" capture="environment"
+                style={{ display: 'none' }} disabled={uploading}
+                onChange={async e => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const result = await uploadPhoto(file)
+                  if (result?.error) alert('Upload failed. Check your connection and try again.')
+                  e.target.value = ''
+                }}
+              />
+            </label>
+
+            {/* Choose from photo library */}
+            <label className={`btn ${styles.photoBtn}`}>
+              🖼 Library
+              <input type="file" accept="image/*,.heic,.heif"
+                style={{ display: 'none' }} disabled={uploading}
+                onChange={async e => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const result = await uploadPhoto(file)
+                  if (result?.error) alert('Upload failed. Check your connection and try again.')
+                  e.target.value = ''
+                }}
+              />
+            </label>
+          </div>
         </section>
 
         {/* PARTNER MODE */}

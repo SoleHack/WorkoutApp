@@ -3,6 +3,32 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
+// Convert HEIC/HEIF to JPEG using Canvas API
+// Works in Safari/iOS where HEIC is readable but not uploadable as-is
+async function convertHeicToJpeg(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const canvas = document.createElement('canvas')
+      canvas.width = img.naturalWidth
+      canvas.height = img.naturalHeight
+      const ctx = canvas.getContext('2d')
+      ctx.drawImage(img, 0, 0)
+      URL.revokeObjectURL(url)
+      canvas.toBlob(blob => {
+        if (blob) resolve(new File([blob], file.name.replace(/\.heic$/i, '.jpg'), { type: 'image/jpeg' }))
+        else reject(new Error('Canvas toBlob failed'))
+      }, 'image/jpeg', 0.92)
+    }
+    img.onerror = () => {
+      URL.revokeObjectURL(url)
+      reject(new Error('Image load failed'))
+    }
+    img.src = url
+  })
+}
+
 export function useBodyMeasurements() {
   const { user } = useAuth()
   const [entries, setEntries] = useState([])
@@ -66,14 +92,37 @@ export function useProgressPhotos() {
   const uploadPhoto = useCallback(async (file, notes = '') => {
     setUploading(true)
     const date = getLocalDate()
-    const path = `${user.id}/${date}-${Date.now()}.jpg`
+
+    // Convert HEIC/HEIF to JPEG using Canvas — required for library picks on iPhone
+    let uploadFile = file
+    let mimeType = file.type || 'image/jpeg'
+
+    const isHeic = mimeType.includes('heic') || mimeType.includes('heif')
+      || file.name?.toLowerCase().endsWith('.heic')
+      || file.name?.toLowerCase().endsWith('.heif')
+
+    if (isHeic) {
+      try {
+        uploadFile = await convertHeicToJpeg(file)
+        mimeType = 'image/jpeg'
+      } catch (e) {
+        console.error('HEIC conversion failed, uploading original:', e)
+        // Fall through — try uploading original, may fail
+      }
+    }
+
+    const ext = mimeType.includes('png') ? 'png'
+      : mimeType.includes('webp') ? 'webp'
+      : 'jpg'
+    const path = `${user.id}/${date}-${Date.now()}.${ext}`
 
     const { error: uploadError } = await supabase.storage
       .from('progress-photos')
-      .upload(path, file, { contentType: 'image/jpeg', upsert: false })
+      .upload(path, uploadFile, { contentType: mimeType, upsert: false })
 
     if (uploadError) {
       setUploading(false)
+      console.error('Photo upload error:', uploadError)
       return { error: uploadError }
     }
 
