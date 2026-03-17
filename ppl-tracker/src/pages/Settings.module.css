@@ -582,3 +582,41 @@
   .measureGrid { grid-template-columns: repeat(4, 1fr); }
   .section { padding: clamp(16px, 1.5vw, 24px); background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0; }
 }
+
+/* Display name */
+.displayNameRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.displayNameLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+}
+
+.displayNameInput {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: 'DM Sans', sans-serif;
+  padding: 10px 14px;
+  outline: none;
+  width: 100%;
+  transition: border-color 0.15s;
+}
+.displayNameInput:focus { border-color: var(--border2); }
+.displayNameInput::placeholder { color: var(--muted); }
+
+.displayNameHint {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}

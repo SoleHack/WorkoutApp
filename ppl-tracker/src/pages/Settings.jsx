@@ -460,6 +460,23 @@ export default function Settings() {
           <div className={styles.sectionDesc}>
             Allow your training partner to find you by email and compare stats on the Partner tab.
           </div>
+
+          {/* Display name */}
+          <div className={styles.displayNameRow}>
+            <label className={styles.displayNameLabel}>Your display name</label>
+            <input
+              className={styles.displayNameInput}
+              type="text"
+              placeholder={user?.email?.split('@')[0] || 'Your name'}
+              value={settings.displayName || ''}
+              onChange={e => save({ displayName: e.target.value })}
+              maxLength={30}
+            />
+            <div className={styles.displayNameHint}>
+              This is what your partner sees on the leaderboard
+            </div>
+          </div>
+
           <div className={styles.toggleRow}>
             {[{ label: 'On', value: true }, { label: 'Off', value: false }].map(opt => (
               <button key={opt.label}
@@ -471,7 +488,7 @@ export default function Settings() {
           </div>
           {settings.partnerMode && (
             <div className={styles.partnerEmail}>
-              Your partner email: <strong>{user?.email}</strong>
+              Partners can find you by: <strong>{user?.email}</strong>
             </div>
           )}
         </section>

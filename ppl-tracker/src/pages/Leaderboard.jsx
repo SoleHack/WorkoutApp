@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useSettings } from '../hooks/useSettings.jsx'
 import styles from './Leaderboard.module.css'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
@@ -43,7 +44,6 @@ async function fetchUserStats(userId) {
     acc + (s.session_sets?.reduce((a, set) =>
       a + (set.completed && set.weight && set.reps ? set.weight * set.reps : 0), 0) || 0), 0)
 
-  // Streak
   const today = new Date(); today.setHours(0,0,0,0)
   const dates = [...new Set(sessions.map(s => s.date))].sort((a,b) => b.localeCompare(a))
   let streak = 0
@@ -54,7 +54,6 @@ async function fetchUserStats(userId) {
     else break
   }
 
-  // This week sessions
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
   const thisWeek = sessions.filter(s => new Date(s.date) >= weekAgo).length
 
@@ -63,30 +62,60 @@ async function fetchUserStats(userId) {
 
 export default function Leaderboard() {
   const { user } = useAuth()
-  const [partnerEmail, setPartnerEmail] = useState('')
+  const { settings } = useSettings()
+  const myName = settings.displayName || user?.email?.split('@')[0] || 'You'
   const [partnerUserId, setPartnerUserId] = useState(null)
+  const [partnerName, setPartnerName] = useState('Them')
   const [myStats, setMyStats] = useState(null)
   const [theirStats, setTheirStats] = useState(null)
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [connecting, setConnecting] = useState(false)
   const [error, setError] = useState('')
-  const [myName, setMyName] = useState('You')
-  const [theirName, setTheirName] = useState('Them')
+  const [partnerEmail, setPartnerEmail] = useState('')
 
-  useEffect(() => { if (user) fetchMyStats() }, [user])
+  // Load on mount — restore saved partner if any
+  useEffect(() => {
+    if (!user) return
+    const init = async () => {
+      setLoading(true)
 
-  const fetchMyStats = async () => {
-    const stats = await fetchUserStats(user.id)
-    setMyStats(stats)
-    setMyName(user.email?.split('@')[0] || 'You')
-  }
+      // Fetch my stats
+      const stats = await fetchUserStats(user.id)
+      setMyStats(stats)
+
+      // Check if we have a saved partner
+      const { data: savedSettings } = await supabase
+        .from('user_settings')
+        .select('partner_user_id')
+        .eq('user_id', user.id)
+        .maybeSingle()
+
+      if (savedSettings?.partner_user_id) {
+        setPartnerUserId(savedSettings.partner_user_id)
+        // Fetch display name live from public_stats
+        const { data: partnerPublic } = await supabase
+          .from('public_stats')
+          .select('display_name, email')
+          .eq('user_id', settings.partner_user_id)
+          .maybeSingle()
+        const name = partnerPublic?.display_name
+          || partnerPublic?.email?.split('@')[0]
+          || 'Them'
+        setPartnerName(name)
+        const theirStats = await fetchUserStats(settings.partner_user_id)
+        setTheirStats(theirStats)
+      }
+
+      setLoading(false)
+    }
+    init()
+  }, [user])
 
   const lookupPartner = async () => {
     if (!partnerEmail.trim()) return
-    setLoading(true)
+    setConnecting(true)
     setError('')
 
-    // Look up user by email via auth - requires user to share their user ID
-    // We use a public_profiles approach: user stores their own public stats
     const { data, error: err } = await supabase
       .from('public_stats')
       .select('user_id, display_name')
@@ -95,20 +124,52 @@ export default function Leaderboard() {
 
     if (err || !data) {
       setError('User not found. Ask them to enable Partner Mode in Settings.')
-      setLoading(false)
+      setConnecting(false)
       return
     }
 
+    const name = data.display_name || partnerEmail.split('@')[0]
+
+    // Persist only the partner_user_id — display name is always fetched live
+    await supabase.from('user_settings').upsert({
+      user_id: user.id,
+      partner_user_id: data.user_id,
+    }, { onConflict: 'user_id' })
+
     setPartnerUserId(data.user_id)
-    setTheirName(data.display_name || partnerEmail.split('@')[0])
+    setPartnerName(name)
     const stats = await fetchUserStats(data.user_id)
     setTheirStats(stats)
-    setLoading(false)
+    setConnecting(false)
+  }
+
+  const disconnect = async () => {
+    await supabase.from('user_settings').upsert({
+      user_id: user.id,
+      partner_user_id: null,
+    }, { onConflict: 'user_id' })
+    setTheirStats(null)
+    setPartnerUserId(null)
+    setPartnerEmail('')
+    setPartnerName('Them')
   }
 
   const totalYou = myStats ? myStats.totalSessions + myStats.streak * 2 + myStats.thisWeek * 3 : 0
   const totalThem = theirStats ? theirStats.totalSessions + theirStats.streak * 2 + theirStats.thisWeek * 3 : 0
-  const leader = totalYou > totalThem ? myName : theirName
+  const leader = totalYou >= totalThem ? myName : partnerName
+
+  if (loading) return (
+    <div className={styles.wrap}>
+      <header className={styles.header}>
+        <div className={styles.title}>Partner Mode</div>
+      </header>
+      <main className={styles.main}>
+        <div style={{ color: 'var(--muted)', fontFamily: 'DM Mono, monospace', fontSize: 12, padding: 20 }}>
+          LOADING...
+        </div>
+      </main>
+    </div>
+  )
 
   return (
     <div className={styles.wrap}>
@@ -132,30 +193,29 @@ export default function Leaderboard() {
                 placeholder="partner@email.com"
                 value={partnerEmail}
                 onChange={e => setPartnerEmail(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && lookupPartner()}
               />
               <button className={`btn btn-primary ${styles.connectBtn}`}
-                disabled={loading || !partnerEmail}
+                disabled={connecting || !partnerEmail}
                 onClick={lookupPartner}>
-                {loading ? '...' : 'Connect'}
+                {connecting ? '...' : 'Connect'}
               </button>
             </div>
             {error && <div className={styles.error}>{error}</div>}
           </div>
         ) : (
           <>
-            {/* Leader banner */}
             <div className={styles.leaderBanner}>
               <div className={styles.leaderLabel}>🏆 Current Leader</div>
               <div className={styles.leaderName}>{leader}</div>
               <div className={styles.leaderScore}>
-                {myName}: {totalYou} pts · {theirName}: {totalThem} pts
+                {myName}: {totalYou} pts · {partnerName}: {totalThem} pts
               </div>
             </div>
 
-            {/* Scorecards */}
             <div className={styles.scoreHeader}>
               <span className={styles.scoreMe}>{myName}</span>
-              <span className={styles.scoreThem}>{theirName}</span>
+              <span className={styles.scoreThem}>{partnerName}</span>
             </div>
 
             <div className={styles.stats}>
@@ -170,8 +230,7 @@ export default function Leaderboard() {
                 them={theirStats?.totalVolume?.toLocaleString()} />
             </div>
 
-            <button className={`btn ${styles.disconnectBtn}`}
-              onClick={() => { setTheirStats(null); setPartnerUserId(null); setPartnerEmail('') }}>
+            <button className={`btn ${styles.disconnectBtn}`} onClick={disconnect}>
               Disconnect partner
             </button>
           </>
@@ -180,3 +239,5 @@ export default function Leaderboard() {
     </div>
   )
 }
+
+

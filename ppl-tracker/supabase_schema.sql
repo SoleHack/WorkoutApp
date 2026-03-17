@@ -50,16 +50,24 @@ create policy "Users manage own sets" on session_sets
   );
 
 -- ── user_settings ────────────────────────────────────────────
-create table if not exists user_settings (
-  user_id          uuid references auth.users(id) on delete cascade primary key,
-  schedule         jsonb,
-  weight_unit      text default 'lbs',
-  deload_reminder  boolean default true,
-  week_starts_on   integer default 1,
-  theme            text default 'dark',
-  height_inches    numeric(4,1),
-  sex              text check (sex in ('male','female')) default 'male',
-  updated_at       timestamptz default now()
+-- Migration: add partner columns if upgrading an existing database
+do $$ begin
+  if not exists (select 1 from information_schema.columns where table_name='user_settings' and column_name='partner_user_id') then
+    alter table user_settings add column partner_user_id uuid references auth.users(id) on delete set null;
+    alter table user_settings add column partner_display_name text;
+  end if;
+end $$;
+  user_id              uuid references auth.users(id) on delete cascade primary key,
+  schedule             jsonb,
+  weight_unit          text default 'lbs',
+  deload_reminder      boolean default true,
+  week_starts_on       integer default 1,
+  theme                text default 'dark',
+  height_inches        numeric(4,1),
+  sex                  text check (sex in ('male','female')) default 'male',
+  partner_user_id      uuid references auth.users(id) on delete set null,
+  partner_display_name text,
+  updated_at           timestamptz default now()
 );
 alter table user_settings enable row level security;
 create policy "Users manage own settings" on user_settings
