@@ -1,59 +1,102 @@
 .wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
 
 .header {
-  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 16px;
-  padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
+  padding: clamp(12px, 4vw, 20px);
+  padding-top: max(env(safe-area-inset-top, 0px) + 12px, clamp(12px, 3vh, 20px));
   border-bottom: 1px solid var(--border);
   background: var(--bg);
 }
 
 .title {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 36px; letter-spacing: 0.04em; margin-bottom: 4px;
+  font-size: clamp(28px, 4vw, 40px);
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
-.sub { font-size: 13px; color: var(--muted); }
+.sub { font-size: clamp(12px, 1.5vw, 14px); color: var(--muted); }
 
-.main { padding: 16px 16px 80px; display: flex; flex-direction: column; gap: 14px; }
+.main {
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 80px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 2vw, 16px);
+}
 
 .connectCard {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 12px; padding: 28px 20px; text-align: center;
-  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: clamp(8px, 1.5vw, 14px);
+  padding: clamp(20px, 4vw, 32px) clamp(16px, 3vw, 24px);
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 1.5vw, 14px);
 }
-.connectIcon { font-size: 48px; }
-.connectTitle { font-size: 18px; font-weight: 600; color: var(--text); }
-.connectDesc { font-size: 13px; color: var(--muted); line-height: 1.6; max-width: 280px; }
+.connectIcon { font-size: clamp(36px, 5vw, 52px); }
+.connectTitle { font-size: clamp(16px, 2vw, 20px); font-weight: 600; color: var(--text); }
+.connectDesc {
+  font-size: clamp(12px, 1.5vw, 14px);
+  color: var(--muted);
+  line-height: 1.6;
+  max-width: min(100%, 300px);
+}
 
-.inputRow { display: flex; gap: 8px; width: 100%; }
+.inputRow { display: flex; gap: clamp(6px, 1vw, 10px); width: 100%; }
 .emailInput {
-  flex: 1; padding: 12px 14px; background: var(--bg3);
-  border: 1px solid var(--border); border-radius: 8px;
-  color: var(--text); font-size: 14px; outline: none;
+  flex: 1;
+  padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 16px);
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: clamp(13px, 1.5vw, 15px);
+  outline: none;
 }
 .emailInput:focus { border-color: var(--border2); }
-.connectBtn { padding: 12px 20px; min-height: unset; flex-shrink: 0; }
-.error { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--danger); }
+.connectBtn { padding: clamp(10px, 1.5vw, 14px) clamp(16px, 2vw, 24px); min-height: unset; flex-shrink: 0; }
+.error { font-family: 'DM Mono', monospace; font-size: clamp(10px, 1.2vw, 12px); color: var(--danger); }
 
 /* Leader banner */
 .leaderBanner {
-  background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.25);
-  border-radius: 10px; padding: 16px; text-align: center;
+  background: rgba(245,158,11,0.08);
+  border: 1px solid rgba(245,158,11,0.25);
+  border-radius: clamp(8px, 1.5vw, 12px);
+  padding: clamp(12px, 2vw, 20px);
+  text-align: center;
 }
 .leaderLabel {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.12em; color: var(--push); margin-bottom: 4px;
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(9px, 1vw, 11px);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--push);
+  margin-bottom: 4px;
 }
 .leaderName {
-  font-family: 'Bebas Neue', sans-serif; font-size: 40px;
-  color: var(--push); letter-spacing: 0.04em;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(32px, 4vw, 48px);
+  color: var(--push);
+  letter-spacing: 0.04em;
 }
-.leaderScore { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+.leaderScore { font-family: 'DM Mono', monospace; font-size: clamp(10px, 1.2vw, 12px); color: var(--muted); }
+.scoreBreakdown {
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(8px, 0.9vw, 10px);
+  color: var(--muted);
+  letter-spacing: 0.04em;
+  margin-top: 4px;
+  opacity: 0.7;
+}
 
 .scoreHeader {
-  display: flex; justify-content: space-between;
-  font-family: 'DM Mono', monospace; font-size: 11px;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  padding: 0 4px;
+  display: flex;
+  justify-content: space-between;
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(10px, 1.2vw, 12px);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0 clamp(2px, 0.5vw, 6px);
 }
 .scoreMe { color: var(--pull); }
 .scoreThem { color: var(--push); }
@@ -65,47 +108,54 @@
 }
 
 .statCard {
-  background: var(--bg2); border: 1px solid var(--border);
-  border-radius: 8px; padding: 14px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: clamp(6px, 1vw, 10px);
+  padding: clamp(10px, 2vw, 16px);
 }
 .statLabel {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  text-transform: uppercase; letter-spacing: 0.1em;
-  color: var(--muted); margin-bottom: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(8px, 0.9vw, 10px);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  margin-bottom: clamp(4px, 0.8vw, 8px);
 }
 .statRow { display: flex; align-items: center; justify-content: space-between; }
 .statVal {
-  font-family: 'DM Mono', monospace; font-size: 20px;
-  font-weight: 500; color: var(--muted2); flex: 1;
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(16px, 2.5vw, 22px);
+  font-weight: 500;
+  color: var(--muted2);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .statVal:last-child { text-align: right; }
 .winner { color: var(--success); }
 .statVs {
-  font-family: 'DM Mono', monospace; font-size: 10px;
-  color: var(--muted); padding: 0 12px;
+  font-family: 'DM Mono', monospace;
+  font-size: clamp(9px, 1vw, 11px);
+  color: var(--muted);
+  padding: 0 clamp(6px, 1.5vw, 14px);
+  flex-shrink: 0;
 }
 
 .disconnectBtn {
-  width: 100%; padding: 12px; color: var(--muted); font-size: 13px;
+  width: 100%;
+  padding: clamp(10px, 1.5vw, 14px);
+  color: var(--muted);
+  font-size: clamp(12px, 1.5vw, 14px);
 }
 
 /* ── Responsive ── */
 @media (min-width: 640px) {
-  .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) 80px; }
-  .stats { grid-template-columns: repeat(4, 1fr); gap: clamp(6px, 1vw, 12px); }
+  .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) calc(env(safe-area-inset-bottom, 0px) + 80px); }
+  .stats { grid-template-columns: repeat(4, 1fr); }
 }
 @media (min-width: 1024px) {
   .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
   .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
   .stats { grid-template-columns: repeat(4, 1fr); }
-}
-
-.scoreBreakdown {
-  font-family: 'DM Mono', monospace;
-  font-size: 9px;
-  color: var(--muted);
-  letter-spacing: 0.04em;
-  margin-top: 4px;
-  opacity: 0.7;
 }
