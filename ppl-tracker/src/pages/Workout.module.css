@@ -85,7 +85,7 @@
 }
 
 .main {
-  padding: 16px 16px 100px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 100px;
   max-width: 600px;
   margin: 0 auto;
   display: flex;
@@ -311,12 +311,11 @@
 
 /* ── Responsive ── */
 @media (min-width: 640px) {
-  .main { padding: 16px 32px 80px; }
-  .header { padding: 20px 32px 16px; padding-top: max(env(safe-area-inset-top,0px) + 12px, 20px); }
+  .main { padding: clamp(12px, 2vw, 24px) clamp(16px, 4vw, 40px) 80px; }
+  .header { padding: clamp(16px, 2vh, 24px) clamp(16px, 4vw, 40px) 16px; padding-top: max(env(safe-area-inset-top,0px) + 12px, clamp(16px, 2vh, 24px)); }
 }
-
 @media (min-width: 1024px) {
-  .header { padding: 32px 40px 16px; padding-top: 32px; }
-  .main { padding: 24px 40px 40px; max-width: 900px; }
-  .dayTitle { font-size: 48px; }
+  .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px) 16px; padding-top: clamp(20px, 2.5vh, 36px); }
+  .main { padding: clamp(16px, 2vh, 28px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
+  .dayTitle { font-size: clamp(36px, 4vw, 56px); }
 }

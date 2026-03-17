@@ -1,7 +1,7 @@
 .wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
 
 .header {
-  padding: 20px 20px 16px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 16px;
   padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
   border-bottom: 1px solid var(--border);
   background: var(--bg);
@@ -88,12 +88,10 @@
 
 /* ── Responsive ── */
 @media (min-width: 640px) {
-  .main { padding: 24px 32px 80px; }
-  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) 80px; }
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(6px, 1vw, 12px); }
 }
-
 @media (min-width: 1024px) {
-  .header { padding: 32px 40px 24px; padding-top: 32px; }
-  .main { padding: 32px 40px 40px; max-width: 900px; }
-  .stats { grid-template-columns: 1fr 1fr; }
+  .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
+  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
 }

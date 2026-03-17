@@ -10,17 +10,13 @@
   flex: 1;
   width: 100%;
   overflow-x: hidden;
-  /* Bottom padding for tab bar */
   padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px));
 }
 
-/* On desktop, tab bar is on the left — content shifts right */
 @media (min-width: 1024px) {
-  .layout {
-    flex-direction: row;
-  }
+  .layout { flex-direction: row; }
   .content {
     padding-bottom: 0;
-    padding-left: 220px; /* sidebar width */
+    padding-left: clamp(180px, 15vw, 240px);
   }
 }

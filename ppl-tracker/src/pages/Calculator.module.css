@@ -1,7 +1,7 @@
 .wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
 
 .header {
-  padding: 20px 20px 16px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 16px;
   padding-top: max(env(safe-area-inset-top, 0px) + 12px, 20px);
   border-bottom: 1px solid var(--border);
   background: var(--bg);
@@ -14,7 +14,7 @@
 .sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
 .main {
-  padding: 16px 16px 80px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 80px;
   display: flex; flex-direction: column; gap: 16px;
   /* Prevent horizontal overflow */
   overflow-x: hidden;
@@ -225,15 +225,13 @@
 
 /* ── Responsive ── */
 @media (min-width: 640px) {
-  .main { padding: 24px 32px 80px; }
-  .inputRow { grid-template-columns: 1fr 1fr; max-width: 480px; }
-  .formulaRow { max-width: 480px; }
+  .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) 80px; }
+  .inputRow { grid-template-columns: 1fr 1fr; max-width: min(100%, 480px); }
 }
-
 @media (min-width: 1024px) {
-  .header { padding: 32px 40px 24px; padding-top: 32px; }
-  .main { padding: 32px 40px 40px; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: start; }
+  .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
+  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); display: grid; grid-template-columns: 1fr 1fr; gap: clamp(16px, 2vw, 28px); align-items: start; }
   .inputRow { grid-column: 1; }
   .formulaSection { grid-column: 1; }
-  .result { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: 24px; }
+  .result { grid-column: 2; grid-row: 1 / span 3; position: sticky; top: clamp(16px, 2vh, 28px); }
 }
