@@ -167,21 +167,24 @@
   width: 100%; background: var(--bg2); border: 1px solid var(--border);
   border-radius: 6px; padding: 12px 14px;
   display: flex; justify-content: space-between; align-items: center;
-  gap: 12px; text-align: left; transition: background 0.15s;
+  gap: 12px; text-align: left; transition: background 0.15s; min-height: unset;
 }
 .exRow:active { background: var(--bg3); }
 .exRowActive { background: var(--bg3); }
 
-.exLeft { flex: 1; }
-.exName { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
-.exTarget { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+.exInfo { flex: 1; }
+.exName { font-size: 14px; font-weight: 500; color: var(--text); margin-bottom: 3px; }
+.exSets { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted2); }
 
-.exRight { text-align: right; flex-shrink: 0; }
-.exPR { display: flex; align-items: baseline; gap: 2px; justify-content: flex-end; }
+.exPR { text-align: right; flex-shrink: 0; }
 .exPRNum { font-family: 'DM Mono', monospace; font-size: 20px; font-weight: 500; line-height: 1; }
 .exPRUnit { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
-.exPRLabel { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
-.exNoData { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+.exPR1rm { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+.exArrow {
+  font-size: 10px; color: var(--muted); flex-shrink: 0;
+  transition: color 0.15s;
+}
 
 /* Session history */
 .sessionList { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }

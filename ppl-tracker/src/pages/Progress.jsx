@@ -553,7 +553,7 @@ export default function Progress() {
                     className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
                     style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
                     onClick={() => { setActiveDay(key); setSelectedExId(null) }}>
-                    {PROGRAM[key].day}
+                    {PROGRAM[key].label}
                   </button>
                 ))}
               </div>
@@ -692,7 +692,7 @@ export default function Progress() {
                     className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
                     style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
                     onClick={() => setActiveDay(key)}>
-                    {PROGRAM[key].day}
+                    {PROGRAM[key].label}
                   </button>
                 ))}
               </div>
