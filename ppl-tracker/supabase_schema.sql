@@ -151,7 +151,33 @@ create policy "Public stats readable when partner mode on" on public_stats
 create policy "Users manage own public stats" on public_stats
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
--- ── Storage bucket for progress photos ───────────────────────
+-- ── Partner sync function ────────────────────────────────────
+-- Allows a user to set partner_user_id on another user's row
+-- Called client-side as supabase.rpc('sync_partner', ...)
+create or replace function sync_partner(
+  my_id uuid,
+  their_id uuid,
+  connecting boolean
+)
+returns void
+language plpgsql
+security definer  -- runs as DB owner, bypasses RLS
+as $$
+begin
+  -- Update caller's row
+  insert into user_settings (user_id, partner_user_id)
+    values (my_id, case when connecting then their_id else null end)
+    on conflict (user_id) do update
+      set partner_user_id = case when connecting then their_id else null end;
+
+  -- Update partner's row
+  insert into user_settings (user_id, partner_user_id)
+    values (their_id, case when connecting then my_id else null end)
+    on conflict (user_id) do update
+      set partner_user_id = case when connecting then my_id else null end;
+end;
+$$;
+
 -- Run this in Supabase Dashboard → Storage → New bucket:
 --   Name: progress-photos
 --   Public: true

@@ -130,11 +130,12 @@ export default function Leaderboard() {
 
     const name = data.display_name || partnerEmail.split('@')[0]
 
-    // Persist only the partner_user_id — display name is always fetched live
-    await supabase.from('user_settings').upsert({
-      user_id: user.id,
-      partner_user_id: data.user_id,
-    }, { onConflict: 'user_id' })
+    // Write partner_user_id to BOTH users via RPC (bypasses RLS)
+    await supabase.rpc('sync_partner', {
+      my_id: user.id,
+      their_id: data.user_id,
+      connecting: true,
+    })
 
     setPartnerUserId(data.user_id)
     setPartnerName(name)
@@ -144,10 +145,11 @@ export default function Leaderboard() {
   }
 
   const disconnect = async () => {
-    await supabase.from('user_settings').upsert({
-      user_id: user.id,
-      partner_user_id: null,
-    }, { onConflict: 'user_id' })
+    await supabase.rpc('sync_partner', {
+      my_id: user.id,
+      their_id: partnerUserId,
+      connecting: false,
+    })
     setTheirStats(null)
     setPartnerUserId(null)
     setPartnerEmail('')

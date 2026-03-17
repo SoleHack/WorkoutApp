@@ -222,7 +222,10 @@
 .measureVals { font-size: 12px; color: var(--muted2); }
 
 .measureGrid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
 }
 .measureField { display: flex; flex-direction: column; gap: 4px; }
 .measureLabel {
@@ -573,13 +576,11 @@
 /* ── Responsive ── */
 @media (min-width: 640px) {
   .main { padding: clamp(16px, 3vw, 32px) clamp(16px, 4vw, 40px) 80px; }
-  .measureGrid { grid-template-columns: repeat(4, 1fr); }
   .photoGrid { grid-template-columns: repeat(4, 1fr); }
 }
 @media (min-width: 1024px) {
   .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
   .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
-  .measureGrid { grid-template-columns: repeat(4, 1fr); }
   .section { padding: clamp(16px, 1.5vw, 24px); background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; margin-bottom: 0; }
 }
 
