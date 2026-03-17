@@ -81,7 +81,7 @@ export function useWorkout(dayKey) {
     setLoading(false)
   }, [user, dayKey])
 
-  const logSet = useCallback(async (exerciseId, setNumber, weight, reps, rpe) => {
+  const logSet = useCallback(async (exerciseId, setNumber, weight, reps, rpe, clear = false) => {
     const currentSession = sessionRef.current
     if (!currentSession) {
       setError('Session not ready. Please wait a moment and try again.')
@@ -89,6 +89,21 @@ export function useWorkout(dayKey) {
     }
 
     const existing = setsRef.current[exerciseId]?.[setNumber - 1]
+
+    if (clear) {
+      // Un-log the set
+      updateSets(prev => {
+        const exSets = [...(prev[exerciseId] || [])]
+        exSets[setNumber - 1] = { ...(existing || {}), completed: false, weight: null, reps: null, rpe: null }
+        return { ...prev, [exerciseId]: exSets }
+      })
+      if (existing?.id) {
+        await supabase.from('session_sets')
+          .update({ completed: false, weight: null, reps: null, rpe: null })
+          .eq('id', existing.id)
+      }
+      return
+    }
 
     // Optimistic update
     updateSets(prev => {

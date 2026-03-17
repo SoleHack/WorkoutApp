@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { PROGRAM, EXERCISES } from '../data/program'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
+import { useSettings } from '../hooks/useSettings.jsx'
 import { useWorkout } from '../hooks/useWorkout'
 import { useLastSession } from '../hooks/useLastSession'
 import { useWorkoutNotes } from '../hooks/useWorkoutNotes'
@@ -32,25 +33,43 @@ export default function Workout() {
   const [sessionPRs, setSessionPRs] = useState([])
   const [bestSessionVol, setBestSessionVol] = useState(null)
 
-  // Exercise swap: { [originalId]: replacementId }
+  // Exercise swap: { [originalId]: replacementId } — persisted to localStorage
   const [swappedExercises, setSwappedExercises] = useState({})
-
-  // Superset pairs: { [exIdA]: exIdB, [exIdB]: exIdA }
+  // Superset pairs: { [exIdA]: exIdB, [exIdB]: exIdA } — persisted to localStorage
   const [supersets, setSupersets] = useState({})
-  const [pairingMode, setPairingMode] = useState(null) // exId being paired
+  const [pairingMode, setPairingMode] = useState(null)
 
   const noteTimer = useRef(null)
   const prTracker = useRef({})
 
   const { user } = useAuth()
+  const { settings } = useSettings()
+  const weightUnit = settings.weightUnit || 'lbs'
+  useEffect(() => {
+    if (!session?.id) return
+    try {
+      const stored = localStorage.getItem(`swaps-${session.id}`)
+      if (stored) setSwappedExercises(JSON.parse(stored))
+      const storedSS = localStorage.getItem(`supersets-${session.id}`)
+      if (storedSS) setSupersets(JSON.parse(storedSS))
+    } catch {}
+  }, [session?.id])
+
+  // Save swaps to localStorage whenever they change
+  useEffect(() => {
+    if (!session?.id) return
+    localStorage.setItem(`swaps-${session.id}`, JSON.stringify(swappedExercises))
+  }, [swappedExercises, session?.id])
+
+  // Save supersets to localStorage whenever they change
+  useEffect(() => {
+    if (!session?.id) return
+    localStorage.setItem(`supersets-${session.id}`, JSON.stringify(supersets))
+  }, [supersets, session?.id])
 
   useEffect(() => {
     if (day && startSession) startSession()
   }, [dayKey, startSession])
-
-  useEffect(() => {
-    if (session?.id) loadNote(session.id)
-  }, [session?.id])
 
   // Fetch best session volume for this day (for "vs best" comparison)
   useEffect(() => {
@@ -148,6 +167,11 @@ export default function Workout() {
     await saveNote(note)
     await finishSession(elapsed)
     clearTimer()
+    // Clean up persisted swap/superset state
+    if (session?.id) {
+      localStorage.removeItem(`swaps-${session.id}`)
+      localStorage.removeItem(`supersets-${session.id}`)
+    }
     const prs = Object.entries(prTracker.current).map(([exerciseId]) => {
       const exSets = sets[exerciseId] || []
       const best = exSets.filter(s => s?.completed).reduce((b, s) =>
@@ -265,6 +289,7 @@ export default function Workout() {
                     sets={sets[activeExId] || []}
                     lastSets={lastData[activeExId]?.sets || []}
                     lastMax={lastData[activeExId]?.maxWeight || null}
+                    weightUnit={weightUnit}
                     onLogSet={(setNum, weight, reps, rpe) => handleLogSet(activeExId, setNum, weight, reps, rpe)}
                     onShowVideo={() => exercise.video && setActiveVideo(exercise)}
                     accent={ex.accent}

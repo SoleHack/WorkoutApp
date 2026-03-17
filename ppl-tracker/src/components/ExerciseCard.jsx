@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TAG_LABELS, ALTERNATIVES } from '../data/program'
+import { TAG_LABELS, ALTERNATIVES, EXERCISES } from '../data/program'
+import { unitLabel, calcPlatesLbs, calcPlatesKg, plateColors, lbsToKg, toDisplay, fromDisplay } from '../lib/units'
 import BodyMap from './BodyMap'
 import styles from './ExerciseCard.module.css'
 
@@ -19,17 +20,17 @@ function calcPlates(totalWeight) {
   return result
 }
 
-function PlateDisplay({ weight }) {
+function PlateDisplay({ weight, unit = 'lbs' }) {
   const w = parseFloat(weight)
-  if (!w || w <= 45 || w % 2.5 !== 0) return null
-  const plates = calcPlates(w)
+  if (!w) return null
+  const plates = unit === 'kg' ? calcPlatesKg(w) : calcPlatesLbs(w)
   if (!plates.length) return null
-  const colors = { 45: '#E24B4A', 35: '#378ADD', 25: '#F59E0B', 10: '#4ADE80', 5: '#E8E3D8', 2.5: '#9A9589' }
   return (
     <div className={styles.plates}>
       <span className={styles.platesLabel}>Each side:</span>
       {plates.map((p, i) => (
-        <span key={i} className={styles.plate} style={{ background: colors[p] || '#555', color: p >= 25 ? '#fff' : '#000' }}>
+        <span key={i} className={styles.plate}
+          style={{ background: plateColors[p] || '#555', color: p >= 10 ? '#fff' : '#000' }}>
           {p}
         </span>
       ))}
@@ -76,10 +77,8 @@ function RestTimer({ seconds, onDone, color }) {
 
 export default function ExerciseCard({
   exercise, programEx, dayColor, sets, lastSets, lastMax,
-  onLogSet, onShowVideo, accent,
-  // Swap
+  onLogSet, onShowVideo, accent, weightUnit = 'lbs',
   isSwapped, originalName, onSwapExercise, onClearSwap,
-  // Superset
   supersetPartner, onPairRequest, onUnpair, isPairingMode,
 }) {
   const [activeSet, setActiveSet] = useState(null)
@@ -102,17 +101,39 @@ export default function ExerciseCard({
   const defaultRest = programEx.tag === 'compound' ? 150 : 75
   const activeRestSeconds = customRest || defaultRest
 
+  // Parse the lower end of a rep range like "8-10" → 8, "10–12" → 10, "15" → 15
+  const parseRepRange = (str) => {
+    if (!str) return '10'
+    // Match first number only (before any dash/em-dash/en-dash)
+    const match = str.match(/^(\d+)/)
+    return match ? match[1] : '10'
+  }
+
   const handleSetTap = (setNum) => {
     const existing = sets[setNum - 1]
     const lastSetData = lastSets[setNum - 1]
-    setWeight(existing?.weight?.toString() ?? lastSetData?.weight?.toString() ?? '0')
-    const rawReps = existing?.reps?.toString()
+    const rawW = existing?.weight ?? lastSetData?.weight ?? 0
+    const dispW = rawW > 0 ? toDisplay(rawW, weightUnit) : 0
+    setWeight(dispW.toString())
+    // Use lower bound of rep range as default, not all digits concatenated
+    const repsVal = existing?.reps?.toString()
       || lastSetData?.reps?.toString()
-      || programEx.reps.replace(/[^0-9]/g, '').slice(0, 3)
-      || '10'
-    setReps(rawReps.replace(/[^0-9]/g, '').slice(0, 3) || '10')
+      || parseRepRange(programEx.reps)
+    setReps(repsVal)
     setActiveSet(setNum)
     setRestTimer(null)
+  }
+
+  // Clear a logged set (tap the completed set button again)
+  const handleClearSet = async (setNum) => {
+    const existing = sets[setNum - 1]
+    if (!existing?.id) return
+    // Optimistic update
+    const updatedSets = [...(sets || [])]
+    updatedSets[setNum - 1] = { ...existing, completed: false, weight: null, reps: null }
+    // We need the parent to handle this — call onLogSet with completed=false signal
+    // For now update via direct supabase call pattern: pass null weight/reps
+    await onLogSet(setNum, null, null, null, null, true) // extra arg = clear
   }
 
   const handleLog = async () => {
@@ -122,7 +143,8 @@ export default function ExerciseCard({
     setSaving(true)
 
     const loggedSetNum = activeSet
-    const loggedWeight = isNaN(w) ? 0 : w
+    // Always store in lbs internally
+    const loggedWeight = isNaN(w) ? 0 : weightUnit === 'kg' ? Math.round(w * 2.20462 * 2) / 2 : w
     const loggedReps = r
     const loggedRpe = rpe ? parseInt(rpe) : null
 
@@ -228,9 +250,11 @@ export default function ExerciseCard({
                   completedLastSets.every(s => s.reps >= repTop)
 
                 if (allHitTop && lastMax > 0) {
+                  const dispMax = toDisplay(lastMax, weightUnit)
+                  const dispInc = weightUnit === 'kg' ? Math.round(inc * 0.453592 * 4) / 4 : inc
                   return <>
-                    Last: <strong>{lastMax} lbs</strong>
-                    <span className={styles.progressionHint}> → add {inc} lbs today 🔼</span>
+                    Last: <strong>{dispMax} {unitLabel(weightUnit)}</strong>
+                    <span className={styles.progressionHint}> → add {dispInc} {unitLabel(weightUnit)} today 🔼</span>
                   </>
                 }
 
@@ -240,7 +264,7 @@ export default function ExerciseCard({
                 const shortBy = repTop - avgReps
 
                 return <>
-                  Last: <strong>{lastMax > 0 ? `${lastMax} lbs` : 'BW'}</strong>
+                  Last: <strong>{lastMax > 0 ? `${toDisplay(lastMax, weightUnit)} ${unitLabel(weightUnit)}` : 'BW'}</strong>
                   {shortBy > 0 && lastMax > 0
                     ? <span className={styles.progressionStay}> · {shortBy} rep{shortBy > 1 ? 's' : ''} short — hold weight</span>
                     : <span className={styles.progressionNeutral}> · try to match or beat it</span>
@@ -276,11 +300,12 @@ export default function ExerciseCard({
               { pct: 0.6, reps: 5,  label: '60%' },
               { pct: 0.8, reps: 3,  label: '80%' },
             ].map(ws => {
-              const wsWeight = Math.round(lastMax * ws.pct / 2.5) * 2.5
+              const wsWeightLbs = Math.round(lastMax * ws.pct / 2.5) * 2.5
+              const wsWeight = toDisplay(wsWeightLbs, weightUnit)
               return (
                 <div key={ws.label} className={styles.warmupRow}>
                   <span className={styles.warmupLabel}>{ws.label}</span>
-                  <span className={styles.warmupWeight} style={{ color: dayColor }}>{wsWeight} lbs</span>
+                  <span className={styles.warmupWeight} style={{ color: dayColor }}>{wsWeight} {unitLabel(weightUnit)}</span>
                   <span className={styles.warmupReps}>× {ws.reps}</span>
                 </div>
               )
@@ -341,22 +366,32 @@ export default function ExerciseCard({
           const isDone = s?.completed
           const isActive = activeSet === setNum
           return (
-            <button key={setNum}
-              className={`${styles.setBtn} ${isDone ? styles.setDone : ''} ${isActive ? styles.setActive : ''}`}
-              style={isDone ? { background: dayColor, borderColor: dayColor } : isActive ? { borderColor: dayColor } : {}}
-              onClick={() => handleSetTap(setNum)}>
-              {isDone ? (
-                <span className={styles.setDoneInner}>
-                  <span className={styles.doneWeight}>
-                    {s.weight > 0 ? s.weight : 'BW'}
-                    {s.weight > 0 && <span className={styles.doneUnit}>lbs</span>}
+            <div key={setNum} className={styles.setBtnWrap}>
+              <button
+                className={`${styles.setBtn} ${isDone ? styles.setDone : ''} ${isActive ? styles.setActive : ''}`}
+                style={isDone ? { background: dayColor, borderColor: dayColor } : isActive ? { borderColor: dayColor } : {}}
+                onClick={() => handleSetTap(setNum)}>
+                {isDone ? (
+                  <span className={styles.setDoneInner}>
+                    <span className={styles.doneWeight}>
+                      {s.weight > 0 ? toDisplay(s.weight, weightUnit) : 'BW'}
+                      {s.weight > 0 && <span className={styles.doneUnit}>{unitLabel(weightUnit)}</span>}
+                    </span>
+                    <span className={styles.doneReps}>{s.reps}</span>
                   </span>
-                  <span className={styles.doneReps}>{s.reps}</span>
-                </span>
-              ) : (
-                <span className={styles.setLabel}>Set {setNum}</span>
+                ) : (
+                  <span className={styles.setLabel}>Set {setNum}</span>
+                )}
+              </button>
+              {isDone && (
+                <button
+                  className={styles.clearSetBtn}
+                  onClick={() => handleClearSet(setNum)}
+                  title="Clear this set">
+                  ✕
+                </button>
               )}
-            </button>
+            </div>
           )
         })}
       </div>
@@ -387,7 +422,9 @@ export default function ExerciseCard({
             <div className={styles.logHeaderRight}>
               {lastSets[activeSet - 1] && (
                 <span className={styles.logLastHint}>
-                  Last: {lastSets[activeSet - 1].weight > 0 ? `${lastSets[activeSet - 1].weight}lbs` : 'BW'} × {lastSets[activeSet - 1].reps}
+                  Last: {lastSets[activeSet - 1].weight > 0
+                    ? `${toDisplay(lastSets[activeSet - 1].weight, weightUnit)}${unitLabel(weightUnit)}`
+                    : 'BW'} × {lastSets[activeSet - 1].reps}
                 </span>
               )}
               <span className={styles.swipeHint}>← swipe to close</span>
@@ -396,15 +433,15 @@ export default function ExerciseCard({
 
           <div className={styles.inputsRow}>
             <div className={styles.inputBlock}>
-              <div className={styles.inputLabel}>Weight (lbs)</div>
+              <div className={styles.inputLabel}>Weight ({unitLabel(weightUnit)})</div>
               <div className={styles.stepper}>
-                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(-2.5)}>−</button>
+                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? -1.25 : -2.5)}>−</button>
                 <input className={styles.stepInput} type="number" inputMode="decimal"
-                  step="2.5" min="0" placeholder="0" value={weight}
+                  step={weightUnit === 'kg' ? '1.25' : '2.5'} min="0" placeholder="0" value={weight}
                   onChange={e => setWeight(e.target.value)} />
-                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(2.5)}>+</button>
+                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? 1.25 : 2.5)}>+</button>
               </div>
-              <PlateDisplay weight={weight} />
+              <PlateDisplay weight={weight} unit={weightUnit} />
             </div>
 
             <div className={styles.inputBlock}>

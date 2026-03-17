@@ -387,7 +387,7 @@ export default function Progress() {
                 <div className={styles.chartCardHeader}>
                   <div>
                     <div className={styles.chartTitle}>Weekly volume</div>
-                    <div className={styles.chartSub}>Total lbs moved — tap a bar for details</div>
+                    <div className={styles.chartSub}>Total load moved — tap a bar for details</div>
                   </div>
                   <RangeSelector value={volRange} onChange={setVolRange} options={RANGE_OPTIONS} />
                 </div>
