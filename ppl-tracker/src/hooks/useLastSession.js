@@ -16,7 +16,7 @@ export function useLastSession(dayKey) {
 
   const load = async () => {
     setLoading(true)
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDate()
 
     // Get last 3 completed sessions for this day (for progression analysis)
     const { data: sessions } = await supabase

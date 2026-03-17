@@ -6,6 +6,7 @@ import { useBodyMeasurements, useProgressPhotos } from '../hooks/useBodyComposit
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useAppleHealth } from '../hooks/useAppleHealth'
 import { navyBodyFat, bfCategory, leanMass } from '../lib/bodyFat'
+import { getLocalDate } from '../lib/date.js'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
@@ -134,7 +135,7 @@ export default function Settings() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `ppl-tracker-export-${new Date().toISOString().split('T')[0]}.csv`
+    a.download = `ppl-tracker-export-${getLocalDate()}.csv`
     a.click()
     URL.revokeObjectURL(url)
     setExporting(false)
@@ -478,7 +479,7 @@ export default function Settings() {
             onClick={() => syncWorkout({
               dayLabel: 'PPL Workout',
               duration: 3600,
-              date: new Date().toISOString().split('T')[0],
+              date: getLocalDate(),
               exercises: [],
             })}>
             ↓ Download Health Export

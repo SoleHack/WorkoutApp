@@ -31,7 +31,7 @@ export function useWorkout(dayKey) {
     setLoading(true)
     setError(null)
 
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDate()
 
     const { data: existing, error: fetchErr } = await supabase
       .from('workout_sessions')

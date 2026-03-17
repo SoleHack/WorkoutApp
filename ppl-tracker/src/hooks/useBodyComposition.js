@@ -22,7 +22,7 @@ export function useBodyMeasurements() {
   }
 
   const saveMeasurement = useCallback(async (measurements) => {
-    const date = measurements.date || new Date().toISOString().split('T')[0]
+    const date = measurements.date || getLocalDate()
     const { data, error } = await supabase
       .from('body_measurements')
       .upsert({ user_id: user.id, ...measurements, date }, { onConflict: 'user_id,date' })
@@ -64,7 +64,7 @@ export function useProgressPhotos() {
 
   const uploadPhoto = useCallback(async (file, notes = '') => {
     setUploading(true)
-    const date = new Date().toISOString().split('T')[0]
+    const date = getLocalDate()
     const path = `${user.id}/${date}-${Date.now()}.jpg`
 
     const { error: uploadError } = await supabase.storage

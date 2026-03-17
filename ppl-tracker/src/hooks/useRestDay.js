@@ -7,7 +7,7 @@ export function useRestDay() {
 
   const logRestDay = useCallback(async () => {
     if (!user) return
-    const today = new Date().toISOString().split('T')[0]
+    const today = getLocalDate()
 
     // Insert a special 'rest' day session — completed immediately, no sets needed
     // This keeps the streak alive and signals intentional recovery

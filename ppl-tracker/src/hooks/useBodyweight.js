@@ -22,7 +22,7 @@ export function useBodyweight() {
   }
 
   const logWeight = useCallback(async (weight, date) => {
-    const d = date || new Date().toISOString().split('T')[0]
+    const d = date || getLocalDate()
     const { data, error } = await supabase
       .from('bodyweight')
       .upsert({ user_id: user.id, weight, date: d }, { onConflict: 'user_id,date' })
