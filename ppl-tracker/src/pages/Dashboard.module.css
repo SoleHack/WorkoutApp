@@ -74,7 +74,7 @@
 
 .statDivider { width: 1px; height: 28px; background: var(--border); margin: 0 14px; }
 
-.main { padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 80px; display: flex; flex-direction: column; gap: 24px; }
+.main { padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 80px); display: flex; flex-direction: column; gap: 24px; }
 
 .section { display: flex; flex-direction: column; gap: 10px; }
 

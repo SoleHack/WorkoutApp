@@ -85,7 +85,7 @@
 }
 
 .main {
-  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 100px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 100px);
   max-width: 600px;
   margin: 0 auto;
   display: flex;
@@ -169,7 +169,7 @@
 .offlineBanner {
   background: rgba(248,113,113,0.12);
   border-bottom: 1px solid rgba(248,113,113,0.3);
-  padding: 10px 16px;
+  padding: 10px clamp(12px, 4vw, 16px);
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   color: var(--danger);
@@ -181,7 +181,7 @@
 .pairingBanner {
   background: rgba(56,189,248,0.1);
   border-bottom: 1px solid rgba(56,189,248,0.3);
-  padding: 10px 16px;
+  padding: 10px clamp(12px, 4vw, 16px);
   display: flex;
   align-items: center;
   justify-content: space-between;

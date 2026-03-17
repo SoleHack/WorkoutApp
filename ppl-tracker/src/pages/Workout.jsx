@@ -213,21 +213,6 @@ export default function Workout() {
   return (
     <div className={styles.wrap}>
 
-      {/* Offline banner */}
-      {!isOnline && (
-        <div className={styles.offlineBanner}>
-          📵 Offline — sets are being saved locally and will sync when you reconnect
-        </div>
-      )}
-
-      {/* Pairing mode banner */}
-      {pairingMode && (
-        <div className={styles.pairingBanner}>
-          <span>Tap another exercise to create a superset with <strong>{EXERCISES[pairingMode]?.name}</strong></span>
-          <button onClick={() => setPairingMode(null)} className={styles.pairingCancel}>Cancel</button>
-        </div>
-      )}
-
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <button className={styles.back} onClick={() => navigate('/')}>← Save & Exit</button>
@@ -249,6 +234,21 @@ export default function Workout() {
           </div>
         </div>
       </header>
+
+      {/* Offline banner — below header, safe area already handled by header */}
+      {!isOnline && (
+        <div className={styles.offlineBanner}>
+          📵 Offline — sets are being saved locally and will sync when you reconnect
+        </div>
+      )}
+
+      {/* Pairing mode banner */}
+      {pairingMode && (
+        <div className={styles.pairingBanner}>
+          <span>Tap another exercise to create a superset with <strong>{EXERCISES[pairingMode]?.name}</strong></span>
+          <button onClick={() => setPairingMode(null)} className={styles.pairingCancel}>Cancel</button>
+        </div>
+      )}
 
       {error && (
         <div style={{

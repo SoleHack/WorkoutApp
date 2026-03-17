@@ -14,7 +14,7 @@
 .sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
 
 .main {
-  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) 80px;
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 80px);
   display: flex; flex-direction: column; gap: 16px;
   /* Prevent horizontal overflow */
   overflow-x: hidden;
