@@ -116,7 +116,7 @@ export default function Workout() {
   const handleFinish = async () => {
     setFinishing(true)
     await saveNote(note)
-    await finishSession()
+    await finishSession(elapsed)
     clearTimer()
     const prs = Object.entries(prTracker.current).map(([exerciseId]) => {
       const exSets = sets[exerciseId] || []

@@ -165,7 +165,7 @@ export default function Progress() {
     setLoading(true)
     const { data: sessions } = await supabase
       .from('workout_sessions')
-      .select('*, session_sets(*)')
+      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(*)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(200)
@@ -717,6 +717,12 @@ export default function Progress() {
                 const completedSets = session.session_sets?.filter(s => s.completed) || []
                 const totalVol = completedSets.reduce((acc,s) => acc+(s.weight*s.reps||0), 0)
                 const uniqueExercises = [...new Set(completedSets.map(s => s.exercise_id))]
+                const dur = session.duration_seconds
+                const durStr = dur
+                  ? dur >= 3600
+                    ? `${Math.floor(dur/3600)}h ${Math.floor((dur%3600)/60)}m`
+                    : `${Math.floor(dur/60)}m`
+                  : null
                 return (
                   <div key={session.id} className={styles.sessionCard}>
                     <div className={styles.sessionHeader}>
@@ -725,6 +731,7 @@ export default function Progress() {
                       </div>
                       <div className={styles.sessionMeta}>
                         {completedSets.length} sets · {Math.round(totalVol).toLocaleString()} lbs
+                        {durStr && <span> · {durStr}</span>}
                         {session.completed_at && <span className={styles.sessionDone}> · ✓</span>}
                       </div>
                     </div>

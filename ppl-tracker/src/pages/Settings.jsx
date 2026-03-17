@@ -5,6 +5,7 @@ import { useBodyweight } from '../hooks/useBodyweight'
 import { useBodyMeasurements, useProgressPhotos } from '../hooks/useBodyComposition'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import { useAppleHealth } from '../hooks/useAppleHealth'
+import { navyBodyFat, bfCategory, leanMass } from '../lib/bodyFat'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
@@ -43,6 +44,8 @@ export default function Settings() {
   const [measureSaving, setMeasureSaving] = useState(false)
   const [photoNote, setPhotoNote] = useState('')
   const [localPartnerMode, setLocalPartnerMode] = useState(null)
+  const [heightInput, setHeightInput] = useState('')
+  const [sexInput, setSexInput] = useState('male')
 
   const schedule = localSchedule ?? settings.schedule
   const weightUnit = localUnit ?? settings.weightUnit
@@ -285,6 +288,68 @@ export default function Settings() {
             }}>
             {measureSaving ? 'Saving...' : 'Log Measurements'}
           </button>
+        </section>
+
+        {/* BODY FAT ESTIMATE */}
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Body Fat Estimate</div>
+          <div className={styles.sectionDesc}>
+            Uses the US Navy formula from your waist and neck measurements. Log your height and sex once to enable automatic calculation.
+          </div>
+          <div className={styles.bfSetupRow}>
+            <div className={styles.inputBlock}>
+              <label className={styles.bfLabel}>Height (inches)</label>
+              <input className={styles.bfInput} type="number" inputMode="decimal"
+                placeholder="70" value={heightInput}
+                onChange={e => setHeightInput(e.target.value)} />
+            </div>
+            <div className={styles.inputBlock}>
+              <label className={styles.bfLabel}>Sex</label>
+              <div className={styles.toggleRow}>
+                {['male','female'].map(s => (
+                  <button key={s}
+                    className={`${styles.toggleBtn} ${sexInput===s?styles.toggleActive:''}`}
+                    onClick={() => setSexInput(s)}>
+                    {s.charAt(0).toUpperCase()+s.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Live calculation from latest measurements */}
+          {(() => {
+            const h = parseFloat(heightInput) || null
+            const w = latestMeasurement?.waist
+            const n = latestMeasurement?.neck
+            const hip = latestMeasurement?.hips
+            if (!h || !w || !n) return (
+              <div className={styles.bfMissing}>
+                Log waist + neck measurements and enter height above to see your estimate.
+              </div>
+            )
+            const bf = navyBodyFat({ waist: w, neck: n, hip, height: h, sex: sexInput })
+            const cat = bfCategory(bf, sexInput)
+            const lm = bwLatest && bf ? leanMass(bwLatest.weight, bf) : null
+            if (bf === null) return <div className={styles.bfMissing}>Invalid measurements — check waist &gt; neck.</div>
+            return (
+              <div className={styles.bfResult}>
+                <div className={styles.bfMain}>
+                  <div className={styles.bfNum} style={{ color: cat?.color }}>{bf}%</div>
+                  <div className={styles.bfCat} style={{ color: cat?.color }}>{cat?.label}</div>
+                </div>
+                {lm && (
+                  <div className={styles.bfLean}>
+                    <span className={styles.bfLeanLabel}>Lean mass</span>
+                    <span className={styles.bfLeanVal}>{lm} lbs</span>
+                  </div>
+                )}
+                <div className={styles.bfSource}>
+                  From measurements on {new Date(latestMeasurement.date).toLocaleDateString('en-US',{month:'short',day:'numeric'})} · US Navy formula
+                </div>
+              </div>
+            )
+          })()}
         </section>
 
         {/* PROGRESS PHOTOS */}

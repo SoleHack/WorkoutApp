@@ -164,3 +164,10 @@ create policy "Users can manage own public stats"
   on public_stats for all
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
+
+-- Save workout duration
+alter table workout_sessions add column if not exists duration_seconds integer;
+
+-- Height stored in user_settings for body fat calc
+alter table user_settings add column if not exists height_inches numeric(4,1);
+alter table user_settings add column if not exists sex text check (sex in ('male','female')) default 'male';

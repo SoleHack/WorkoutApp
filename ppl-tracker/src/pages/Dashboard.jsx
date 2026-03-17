@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useTodayWorkout } from '../hooks/useTodayWorkout'
 import { useBodyweight } from '../hooks/useBodyweight'
 import { useAchievements } from '../hooks/useAchievements'
+import { useRestDay } from '../hooks/useRestDay'
 import AchievementToast from '../components/AchievementToast'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Dashboard.module.css'
@@ -30,11 +32,12 @@ function useDeloadCheck(allSessions, deloadEnabled) {
 export default function Dashboard() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
-  const { getTodayKey, settings, loading: settingsLoading } = useSettings()
-  const { lastSession, streak, allSessions, todayCompleted, coreCompletedToday } = useTodayWorkout()
+  const { settings, loading: settingsLoading } = useSettings()
+  const { todayKey: smartTodayKey, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } = useTodayWorkout()
   const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight()
 
-  const todayKey = getTodayKey()
+  // Use smart next-in-sequence scheduling, not fixed day-of-week
+  const todayKey = smartTodayKey
   const isRest = !todayKey || todayKey === 'rest'
   const todayDay = !isRest ? PROGRAM[todayKey] : null
   const showDeload = useDeloadCheck(allSessions, settings.deloadReminder)
@@ -51,6 +54,8 @@ export default function Dashboard() {
     deloadCount: 0,
   }
   const { newlyUnlocked, clearNewlyUnlocked } = useAchievements(achievementStats)
+  const { logRestDay } = useRestDay()
+  const [loggingRest, setLoggingRest] = useState(false)
 
   return (
     <div className={styles.wrap}>
@@ -109,31 +114,49 @@ export default function Dashboard() {
 
           {isRest ? (
             <div className={styles.restCard}>
-              <div className={styles.restTitle}>Rest Day</div>
+              <div className={styles.restTitle}>Rest Day 😴</div>
               <div className={styles.restSub}>Recovery is part of the program. Do your AM Core if you want to stay active.</div>
             </div>
           ) : (
             todayDay && (
-              <button
-                className={`${styles.todayCard} ${todayCompleted ? styles.todayCardDone : ''}`}
-                style={{ '--day-color': todayCompleted ? 'var(--success)' : todayDay.color }}
-                onClick={() => navigate(`/workout/${todayKey}`)}
-              >
-                <div className={styles.todayLeft}>
-                  <div className={styles.todayDayLabel}>{todayDay.day}</div>
-                  <div className={styles.todayTitle}>{todayDay.label}</div>
-                  <div className={styles.todayFocus}>{todayDay.focus}</div>
-                  <div className={styles.todayMeta}>
-                    {todayCompleted
-                      ? <span style={{ color: 'var(--success)' }}>✓ Completed today</span>
-                      : `${todayDay.exercises.length} exercises`
-                    }
+              <>
+                <button
+                  className={`${styles.todayCard} ${todayCompleted ? styles.todayCardDone : ''}`}
+                  style={{ '--day-color': todayCompleted ? 'var(--success)' : todayDay.color }}
+                  onClick={() => navigate(`/workout/${todayKey}`)}
+                >
+                  <div className={styles.todayLeft}>
+                    <div className={styles.todayDayLabel}>{todayDay.day}</div>
+                    <div className={styles.todayTitle}>{todayDay.label}</div>
+                    <div className={styles.todayFocus}>{todayDay.focus}</div>
+                    <div className={styles.todayMeta}>
+                      {todayCompleted
+                        ? <span style={{ color: 'var(--success)' }}>✓ Completed today</span>
+                        : `${todayDay.exercises.length} exercises`
+                      }
+                    </div>
                   </div>
-                </div>
-                <div className={styles.todayArrow} style={{ color: todayCompleted ? 'var(--success)' : todayDay.color }}>
-                  {todayCompleted ? '✓' : '→'}
-                </div>
-              </button>
+                  <div className={styles.todayArrow} style={{ color: todayCompleted ? 'var(--success)' : todayDay.color }}>
+                    {todayCompleted ? '✓' : '→'}
+                  </div>
+                </button>
+                {!todayCompleted && (
+                  <div className={styles.restDayRow}>
+                    <span className={styles.restDayLabel}>Taking a rest day?</span>
+                    <button
+                      className={styles.restDayBtn}
+                      disabled={loggingRest}
+                      onClick={async () => {
+                        setLoggingRest(true)
+                        await logRestDay()
+                        setLoggingRest(false)
+                        window.location.reload()
+                      }}>
+                      {loggingRest ? '...' : 'Log Rest Day'}
+                    </button>
+                  </div>
+                )}
+              </>
             )
           )}
         </section>

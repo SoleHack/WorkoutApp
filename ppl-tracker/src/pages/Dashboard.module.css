@@ -199,3 +199,30 @@
   font-size: 14px; color: var(--muted2); transition: background 0.15s;
 }
 .bottomLink:active { background: var(--bg3); }
+
+/* Rest day logging */
+.restDayRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  margin-top: 6px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.restDayLabel {
+  font-size: 13px;
+  color: var(--muted);
+}
+.restDayBtn {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  padding: 6px 12px;
+  background: var(--bg3);
+  border: 1px solid var(--border2);
+  border-radius: 5px;
+  color: var(--muted2);
+  min-height: unset;
+  letter-spacing: 0.04em;
+}

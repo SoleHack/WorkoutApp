@@ -144,12 +144,15 @@ export function useWorkout(dayKey) {
     }
   }, []) // No dependencies needed — uses refs
 
-  const finishSession = useCallback(async () => {
+  const finishSession = useCallback(async (durationSeconds) => {
     const currentSession = sessionRef.current
     if (!currentSession) return
     const { error } = await supabase
       .from('workout_sessions')
-      .update({ completed_at: new Date().toISOString() })
+      .update({
+        completed_at: new Date().toISOString(),
+        ...(durationSeconds ? { duration_seconds: durationSeconds } : {}),
+      })
       .eq('id', currentSession.id)
     if (error) console.error('finishSession error:', error)
   }, [])
