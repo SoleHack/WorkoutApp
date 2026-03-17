@@ -57,6 +57,9 @@
   margin-bottom: 2px;
 }
 .lastCue strong { color: var(--text); font-weight: 500; }
+.progressionHint { color: var(--pull); }
+.progressionStay { color: var(--muted); }
+.progressionNeutral { color: var(--muted); }
 
 .right {
   display: flex;

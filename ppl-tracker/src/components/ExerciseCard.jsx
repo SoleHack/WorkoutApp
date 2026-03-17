@@ -191,7 +191,38 @@ export default function ExerciseCard({
 
           {lastMax !== null && lastMax !== undefined && (
             <div className={styles.lastCue}>
-              Last: <strong>{lastMax > 0 ? `${lastMax} lbs` : 'BW'}</strong> — {allDone ? 'done!' : 'try to beat it'}
+              {(() => {
+                if (allDone) return <span style={{ color: 'var(--success)' }}>✓ All done — great work</span>
+
+                const exData = lastSets // lastSets is the sets array from last session
+                const repTop = parseInt(programEx.reps.split('–')[1] || programEx.reps) || 10
+                const inc = programEx.tag === 'compound' ? 5 : 2.5
+
+                // Check if all sets from last session hit top of rep range
+                const completedLastSets = (exData || []).filter(s => s?.reps)
+                const allHitTop = completedLastSets.length > 0 &&
+                  completedLastSets.every(s => s.reps >= repTop)
+
+                if (allHitTop && lastMax > 0) {
+                  return <>
+                    Last: <strong>{lastMax} lbs</strong>
+                    <span className={styles.progressionHint}> → add {inc} lbs today 🔼</span>
+                  </>
+                }
+
+                const avgReps = completedLastSets.length
+                  ? Math.round(completedLastSets.reduce((a, s) => a + (s.reps || 0), 0) / completedLastSets.length)
+                  : 0
+                const shortBy = repTop - avgReps
+
+                return <>
+                  Last: <strong>{lastMax > 0 ? `${lastMax} lbs` : 'BW'}</strong>
+                  {shortBy > 0 && lastMax > 0
+                    ? <span className={styles.progressionStay}> · {shortBy} rep{shortBy > 1 ? 's' : ''} short — hold weight</span>
+                    : <span className={styles.progressionNeutral}> · try to match or beat it</span>
+                  }
+                </>
+              })()}
             </div>
           )}
         </div>

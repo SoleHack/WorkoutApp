@@ -3,6 +3,8 @@ import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useTodayWorkout } from '../hooks/useTodayWorkout'
 import { useBodyweight } from '../hooks/useBodyweight'
+import { useAchievements } from '../hooks/useAchievements'
+import AchievementToast from '../components/AchievementToast'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Dashboard.module.css'
 
@@ -30,15 +32,31 @@ export default function Dashboard() {
   const navigate = useNavigate()
   const { getTodayKey, settings, loading: settingsLoading } = useSettings()
   const { lastSession, streak, allSessions, todayCompleted, coreCompletedToday } = useTodayWorkout()
-  const { latest: bwLatest, change: bwChange } = useBodyweight()
+  const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight()
 
   const todayKey = getTodayKey()
   const isRest = !todayKey || todayKey === 'rest'
   const todayDay = !isRest ? PROGRAM[todayKey] : null
   const showDeload = useDeloadCheck(allSessions, settings.deloadReminder)
 
+  const completedSessions = allSessions.filter(s => s.completed_at)
+  const achievementStats = {
+    totalSessions: completedSessions.length,
+    streak,
+    totalPRs: 0,
+    totalVolume: 0,
+    uniqueDays: new Set(completedSessions.map(s => s.day_key)).size,
+    bwEntries: bwEntries?.length || 0,
+    photoCount: 0,
+    deloadCount: 0,
+  }
+  const { newlyUnlocked, clearNewlyUnlocked } = useAchievements(achievementStats)
+
   return (
     <div className={styles.wrap}>
+      {newlyUnlocked.length > 0 && (
+        <AchievementToast achievements={newlyUnlocked} onDone={clearNewlyUnlocked} />
+      )}
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>

@@ -90,3 +90,53 @@ create policy "Users can manage own bodyweight"
 alter table workout_sessions add column if not exists notes text;
 alter table user_settings add column if not exists theme text default 'dark';
 
+
+-- Body measurements
+create table if not exists body_measurements (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  date date not null default current_date,
+  weight numeric(5,1),
+  neck numeric(4,1), chest numeric(4,1), waist numeric(4,1),
+  hips numeric(4,1), left_arm numeric(4,1), right_arm numeric(4,1),
+  left_thigh numeric(4,1), right_thigh numeric(4,1),
+  body_fat numeric(4,1),
+  notes text,
+  created_at timestamptz default now(),
+  unique(user_id, date)
+);
+alter table body_measurements enable row level security;
+create policy "Users can manage own measurements"
+  on body_measurements for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Progress photos (URLs from Supabase Storage)
+create table if not exists progress_photos (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  date date not null default current_date,
+  storage_path text not null,
+  public_url text,
+  notes text,
+  created_at timestamptz default now()
+);
+alter table progress_photos enable row level security;
+create policy "Users can manage own photos"
+  on progress_photos for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Achievements
+create table if not exists achievements (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references auth.users(id) on delete cascade not null,
+  achievement_id text not null,
+  unlocked_at timestamptz default now(),
+  unique(user_id, achievement_id)
+);
+alter table achievements enable row level security;
+create policy "Users can manage own achievements"
+  on achievements for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);

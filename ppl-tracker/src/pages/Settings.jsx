@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useBodyweight } from '../hooks/useBodyweight'
+import { useBodyMeasurements, useProgressPhotos } from '../hooks/useBodyComposition'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
 import { PROGRAM, PROGRAM_ORDER } from '../data/program'
@@ -24,6 +25,8 @@ export default function Settings() {
   const { settings, save, loading } = useSettings()
   const { user, signOut } = useAuth()
   const { entries: bwEntries, logWeight, latest: bwLatest, change: bwChange } = useBodyweight()
+  const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements()
+  const { photos, uploading, uploadPhoto, deletePhoto } = useProgressPhotos()
   const [saved, setSaved] = useState(false)
   const [localSchedule, setLocalSchedule] = useState(null)
   const [localUnit, setLocalUnit] = useState(null)
@@ -32,6 +35,9 @@ export default function Settings() {
   const [bwInput, setBwInput] = useState('')
   const [bwSaving, setBwSaving] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [measurements, setMeasurements] = useState({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
+  const [measureSaving, setMeasureSaving] = useState(false)
+  const [photoNote, setPhotoNote] = useState('')
 
   const schedule = localSchedule ?? settings.schedule
   const weightUnit = localUnit ?? settings.weightUnit
@@ -230,6 +236,77 @@ export default function Settings() {
               </button>
             ))}
           </div>
+        </section>
+
+        {/* BODY MEASUREMENTS */}
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Body Measurements</div>
+          {latestMeasurement && (
+            <div className={styles.measureLatest}>
+              <span className={styles.measureDate}>Last: {new Date(latestMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <span className={styles.measureVals}>
+                {latestMeasurement.waist && `Waist ${latestMeasurement.waist}"`}
+                {latestMeasurement.chest && ` · Chest ${latestMeasurement.chest}"`}
+              </span>
+            </div>
+          )}
+          <div className={styles.measureGrid}>
+            {[
+              { key: 'waist', label: 'Waist' }, { key: 'hips', label: 'Hips' },
+              { key: 'chest', label: 'Chest' }, { key: 'neck', label: 'Neck' },
+              { key: 'left_arm', label: 'L Arm' }, { key: 'right_arm', label: 'R Arm' },
+              { key: 'left_thigh', label: 'L Thigh' }, { key: 'right_thigh', label: 'R Thigh' },
+            ].map(({ key, label }) => (
+              <div key={key} className={styles.measureField}>
+                <label className={styles.measureLabel}>{label} (in)</label>
+                <input
+                  className={styles.measureInput}
+                  type="number" inputMode="decimal" step="0.25" placeholder="—"
+                  value={measurements[key]}
+                  onChange={e => setMeasurements(prev => ({ ...prev, [key]: e.target.value }))}
+                />
+              </div>
+            ))}
+          </div>
+          <button className={`btn btn-primary ${styles.measureSaveBtn}`}
+            disabled={measureSaving}
+            onClick={async () => {
+              setMeasureSaving(true)
+              const clean = {}
+              Object.entries(measurements).forEach(([k, v]) => { if (v) clean[k] = parseFloat(v) })
+              await saveMeasurement(clean)
+              setMeasurements({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
+              setMeasureSaving(false)
+            }}>
+            {measureSaving ? 'Saving...' : 'Log Measurements'}
+          </button>
+        </section>
+
+        {/* PROGRESS PHOTOS */}
+        <section className={styles.section}>
+          <div className={styles.sectionTitle}>Progress Photos</div>
+          <div className={styles.sectionDesc}>
+            Photos are stored privately in your account.
+          </div>
+          <div className={styles.photoGrid}>
+            {photos.slice(0, 6).map(p => (
+              <div key={p.id} className={styles.photoThumb}>
+                <img src={p.public_url} alt={p.date} className={styles.photoImg} />
+                <div className={styles.photoDate}>{new Date(p.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</div>
+                <button className={styles.photoDelete} onClick={() => deletePhoto(p)}>✕</button>
+              </div>
+            ))}
+          </div>
+          <label className={`btn ${styles.photoUploadBtn}`}>
+            {uploading ? 'Uploading...' : '📸 Add Progress Photo'}
+            <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }}
+              onChange={async e => {
+                const file = e.target.files[0]
+                if (file) await uploadPhoto(file, photoNote)
+                e.target.value = ''
+              }}
+            />
+          </label>
         </section>
 
         {/* EXPORT */}

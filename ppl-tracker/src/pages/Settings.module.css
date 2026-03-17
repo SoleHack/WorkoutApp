@@ -213,6 +213,58 @@
   min-height: unset;
 }
 
+/* Body measurements */
+.measureLatest {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: 10px 12px; margin-bottom: 12px;
+  display: flex; gap: 10px; align-items: center;
+}
+.measureDate { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+.measureVals { font-size: 12px; color: var(--muted2); }
+
+.measureGrid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px;
+}
+.measureField { display: flex; flex-direction: column; gap: 4px; }
+.measureLabel {
+  font-family: 'DM Mono', monospace; font-size: 9px;
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.measureInput {
+  padding: 10px 12px; background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: 16px; font-family: 'DM Mono', monospace; outline: none;
+}
+.measureInput:focus { border-color: var(--border2); }
+.measureSaveBtn { width: 100%; padding: 12px; }
+
+/* Progress photos */
+.photoGrid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px;
+}
+.photoThumb {
+  position: relative; aspect-ratio: 3/4; border-radius: 6px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.photoImg { width: 100%; height: 100%; object-fit: cover; }
+.photoDate {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 4px 6px;
+  background: rgba(0,0,0,0.6);
+  font-family: 'DM Mono', monospace; font-size: 8px; color: #fff;
+}
+.photoDelete {
+  position: absolute; top: 4px; right: 4px;
+  background: rgba(0,0,0,0.6); border: none;
+  color: #fff; border-radius: 50%; width: 20px; height: 20px;
+  font-size: 10px; display: flex; align-items: center; justify-content: center;
+  min-height: unset; padding: 0;
+}
+.photoUploadBtn {
+  width: 100%; padding: 12px; text-align: center; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+
 /* Export */
 .exportBtn {
   width: 100%;

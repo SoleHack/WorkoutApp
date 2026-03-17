@@ -7,8 +7,59 @@ import {
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useBodyweight } from '../hooks/useBodyweight'
+import { useVolumeLandmarks } from '../hooks/useVolumeLandmarks'
+import { useAchievements, ACHIEVEMENT_DEFS } from '../hooks/useAchievements'
+import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { EXERCISES, PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Progress.module.css'
+
+function AchievementsTab({ totalSessions, allSessions, prs, totalVolume }) {
+  const streak = 0 // simplified — achievements use approximation
+  const stats = {
+    totalSessions,
+    streak,
+    totalPRs: Object.keys(prs).length,
+    totalVolume,
+    uniqueDays: new Set(allSessions.map(s => s.day_key)).size,
+    bwEntries: 0,
+    photoCount: 0,
+    deloadCount: 0,
+  }
+  const { all } = useAchievements(stats)
+  const unlocked = all.filter(a => a.isUnlocked)
+  const locked = all.filter(a => !a.isUnlocked)
+
+  return (
+    <>
+      <div className={styles.sectionLabel}>
+        Unlocked <span className={styles.sectionSub}>{unlocked.length}/{all.length}</span>
+      </div>
+      <div className={styles.achievementGrid}>
+        {unlocked.map(a => (
+          <div key={a.id} className={`${styles.achievement} ${styles.achievementUnlocked}`}>
+            <div className={styles.achievementIcon}>{a.icon}</div>
+            <div className={styles.achievementTitle}>{a.title}</div>
+            <div className={styles.achievementDesc}>{a.desc}</div>
+          </div>
+        ))}
+      </div>
+      {locked.length > 0 && (
+        <>
+          <div className={styles.sectionLabel} style={{ marginTop: 8 }}>Locked</div>
+          <div className={styles.achievementGrid}>
+            {locked.map(a => (
+              <div key={a.id} className={styles.achievement}>
+                <div className={styles.achievementIcon} style={{ opacity: 0.3 }}>{a.icon}</div>
+                <div className={styles.achievementTitle} style={{ opacity: 0.4 }}>{a.title}</div>
+                <div className={styles.achievementDesc}>{a.desc}</div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </>
+  )
+}
 
 // Epley formula: estimated 1RM
 const e1rm = (weight, reps) => reps === 1 ? weight : Math.round(weight * (1 + reps / 30))
@@ -67,6 +118,8 @@ export default function Progress() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const { entries: bwEntries } = useBodyweight()
+  const { landmarks } = useVolumeLandmarks()
+  const { entries: measureEntries } = useBodyMeasurements()
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(PROGRAM_ORDER[0])
   const [selectedExId, setSelectedExId] = useState(null)
@@ -192,7 +245,7 @@ export default function Progress() {
       <header className={styles.header}>
         <div className={styles.title}>Progress</div>
         <div className={styles.tabs}>
-          {['overview', 'exercises', 'history'].map(tab => (
+          {['overview', 'volume', 'exercises', 'history', 'achievements'].map(tab => (
             <button key={tab}
               className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
               onClick={() => setActiveTab(tab)}>
@@ -305,6 +358,35 @@ export default function Progress() {
                     <Area type="monotone" dataKey="weight" stroke="#4ADE80" strokeWidth={2}
                       fill="url(#bwGrad)"
                       dot={{ fill: '#4ADE80', r: 3, strokeWidth: 0 }}
+                      activeDot={{ r: 5, strokeWidth: 0 }} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
+
+            {/* Waist measurement chart */}
+            {measureEntries.filter(e => e.waist).length > 1 && (
+              <div className={styles.chartCard}>
+                <div className={styles.chartTitle}>Waist measurement</div>
+                <div className={styles.chartSub}>inches over time</div>
+                <ResponsiveContainer width="100%" height={120}>
+                  <AreaChart
+                    data={measureEntries.filter(e => e.waist).slice().reverse().map(e => ({ date: fmt(e.date), waist: e.waist }))}
+                    margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="waistGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#C084FC" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#C084FC" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="date" tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
+                      tickLine={false} axisLine={false} />
+                    <YAxis tick={{ fill: '#6B6860', fontSize: 9, fontFamily: 'DM Mono' }}
+                      tickLine={false} axisLine={false} domain={['dataMin - 1', 'dataMax + 1']} />
+                    <Tooltip content={<ChartTooltip unit="in" />} />
+                    <Area type="monotone" dataKey="waist" stroke="#C084FC" strokeWidth={2}
+                      fill="url(#waistGrad)"
+                      dot={{ fill: '#C084FC', r: 3, strokeWidth: 0 }}
                       activeDot={{ r: 5, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -520,6 +602,64 @@ export default function Progress() {
               })}
             </div>
           </>
+        )}
+
+        {/* ── VOLUME LANDMARKS ── */}
+        {activeTab === 'volume' && (
+          <>
+            <div className={styles.volumeHeader}>
+              <div className={styles.sectionLabel}>Weekly sets per muscle group</div>
+              <div className={styles.volumeDesc}>
+                Based on RP Strength evidence-based targets. MEV = minimum to grow, MAV = optimal range, MRV = maximum recoverable.
+              </div>
+            </div>
+            <div className={styles.landmarkList}>
+              {landmarks.map(l => {
+                const pct = Math.min((l.sets / l.mrv) * 100, 105)
+                const mevPct = (l.mev / l.mrv) * 100
+                const mavPct = (l.mav / l.mrv) * 100
+                const color = l.status === 'over' ? 'var(--danger)'
+                  : l.status === 'mav' ? 'var(--success)'
+                  : l.status === 'mev' ? 'var(--push)'
+                  : 'var(--muted2)'
+                return (
+                  <div key={l.cat} className={styles.landmarkRow}>
+                    <div className={styles.landmarkTop}>
+                      <span className={styles.landmarkName}>{l.label}</span>
+                      <span className={styles.landmarkSets} style={{ color }}>
+                        {l.sets} <span className={styles.landmarkOf}>/ {l.mrv} sets</span>
+                      </span>
+                    </div>
+                    <div className={styles.landmarkBarWrap}>
+                      <div className={styles.landmarkBar}>
+                        <div className={styles.landmarkFill} style={{ width: `${pct}%`, background: color }} />
+                        {/* Zone markers */}
+                        <div className={styles.landmarkMarker} style={{ left: `${mevPct}%` }} title="MEV" />
+                        <div className={styles.landmarkMarker} style={{ left: `${mavPct}%` }} title="MAV" />
+                      </div>
+                    </div>
+                    <div className={styles.landmarkZones}>
+                      <span>0</span>
+                      <span className={styles.landmarkMev}>MEV {l.mev}</span>
+                      <span className={styles.landmarkMav}>MAV {l.mav}</span>
+                      <span className={styles.landmarkMrv}>MRV {l.mrv}</span>
+                    </div>
+                    <div className={styles.landmarkStatus} style={{ color }}>
+                      {l.status === 'over' && '⚠ Above MRV — consider reducing volume'}
+                      {l.status === 'mav' && '✓ In optimal growth range'}
+                      {l.status === 'mev' && '↑ Above minimum — room to add more'}
+                      {l.status === 'below' && `Add ${l.mev - l.sets} more sets to reach MEV`}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </>
+        )}
+
+        {/* ── ACHIEVEMENTS ── */}
+        {activeTab === 'achievements' && (
+          <AchievementsTab totalSessions={totalSessions} allSessions={allSessions} prs={prs} totalVolume={totalVolume} />
         )}
 
       </main>
