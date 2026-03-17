@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { TAG_LABELS, ALTERNATIVES, EXERCISES } from '../data/program'
 import { unitLabel, calcPlatesLbs, calcPlatesKg, plateColors, lbsToKg, toDisplay, fromDisplay } from '../lib/units'
+import { usePushNotifications } from '../hooks/usePushNotifications'
 import BodyMap from './BodyMap'
 import styles from './ExerciseCard.module.css'
 
@@ -96,6 +97,7 @@ export default function ExerciseCard({
 
   const completedCount = sets.filter(s => s?.completed).length
   const allDone = completedCount === programEx.sets
+  const { scheduleRestNotification, cancelRestNotification } = usePushNotifications()
 
   // Rest time: custom override > tag default
   const defaultRest = programEx.tag === 'compound' ? 150 : 75
@@ -156,6 +158,7 @@ export default function ExerciseCard({
     setRpe('')
 
     setRestTimer({ seconds: activeRestSeconds, key: Date.now() })
+    scheduleRestNotification(activeRestSeconds)
   }
 
   const adjustWeight = (delta) => {
@@ -303,11 +306,20 @@ export default function ExerciseCard({
               const wsWeightLbs = Math.round(lastMax * ws.pct / 2.5) * 2.5
               const wsWeight = toDisplay(wsWeightLbs, weightUnit)
               return (
-                <div key={ws.label} className={styles.warmupRow}>
+                <button key={ws.label} className={styles.warmupRow}
+                  onClick={() => {
+                    setWeight(wsWeight.toString())
+                    setReps(ws.reps.toString())
+                    const nextSet = sets.findIndex(s => !s?.completed)
+                    if (nextSet !== -1) setActiveSet(nextSet + 1)
+                    setShowWarmup(false)
+                    setRestTimer(null) // clear rest timer when starting warm-up
+                  }}>
                   <span className={styles.warmupLabel}>{ws.label}</span>
                   <span className={styles.warmupWeight} style={{ color: dayColor }}>{wsWeight} {unitLabel(weightUnit)}</span>
                   <span className={styles.warmupReps}>× {ws.reps}</span>
-                </div>
+                  <span className={styles.warmupFill}>↓ use</span>
+                </button>
               )
             })}
           </div>
@@ -405,7 +417,7 @@ export default function ExerciseCard({
             color={dayColor}
             onDone={() => {}}
           />
-          <button className={styles.skipTimer} onClick={() => setRestTimer(null)}>Skip</button>
+          <button className={styles.skipTimer} onClick={() => { setRestTimer(null); cancelRestNotification() }}>Skip</button>
         </div>
       )}
 

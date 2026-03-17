@@ -437,3 +437,74 @@
   line-height: 1.7;
   white-space: pre-wrap;
 }
+
+/* Split balance */
+.splitBars { display: flex; flex-direction: column; gap: 10px; margin-top: 4px; }
+
+.splitRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.splitLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted2);
+  width: 32px;
+  flex-shrink: 0;
+}
+
+.splitBarWrap {
+  flex: 1;
+  height: 10px;
+  background: var(--bg3);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.splitBar {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.splitCount {
+  font-family: 'DM Mono', monospace;
+  font-size: 14px;
+  font-weight: 600;
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.splitWarning {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--push);
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  letter-spacing: 0.02em;
+}
+
+/* Session notes in history */
+.sessionNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.sessionNoteIcon { font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+
+.sessionNoteText {
+  font-size: 12px;
+  color: var(--muted2);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}

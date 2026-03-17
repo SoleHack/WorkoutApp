@@ -228,6 +228,53 @@ export default function Dashboard() {
           </button>
         </section>
 
+        {/* TRAINING SPLIT BALANCE */}
+        {(() => {
+          const monthStart = new Date()
+          monthStart.setDate(1); monthStart.setHours(0,0,0,0)
+          const monthKey = monthStart.toISOString().split('T')[0]
+          const monthlySessions = completedSessions.filter(s => s.date >= monthKey && s.day_key !== 'core' && s.day_key !== 'rest')
+          if (monthlySessions.length === 0) return null
+
+          const counts = { push: 0, pull: 0, legs: 0 }
+          monthlySessions.forEach(s => {
+            if (s.day_key?.includes('push')) counts.push++
+            else if (s.day_key?.includes('pull')) counts.pull++
+            else if (s.day_key?.includes('legs')) counts.legs++
+          })
+          const max = Math.max(counts.push, counts.pull, counts.legs, 1)
+          const types = [
+            { key: 'push', label: 'Push', color: 'var(--push)', count: counts.push },
+            { key: 'pull', label: 'Pull', color: 'var(--pull)', count: counts.pull },
+            { key: 'legs', label: 'Legs', color: 'var(--legs)', count: counts.legs },
+          ]
+
+          return (
+            <section className={styles.section}>
+              <div className={styles.sectionLabel}>This month's balance</div>
+              <div className={styles.splitCard}>
+                {types.map(t => (
+                  <div key={t.key} className={styles.splitRow}>
+                    <div className={styles.splitLabel} style={{ color: t.color }}>{t.label}</div>
+                    <div className={styles.splitBarWrap}>
+                      <div className={styles.splitBar}
+                        style={{ width: `${(t.count / max) * 100}%`, background: t.color }} />
+                    </div>
+                    <div className={styles.splitCount}>{t.count}</div>
+                  </div>
+                ))}
+                {Math.abs(counts.push - counts.pull) > 1 || Math.abs(counts.push - counts.legs) > 1 ? (
+                  <div className={styles.splitWarning}>
+                    ⚠ Uneven split — aim for equal Push/Pull/Legs sessions
+                  </div>
+                ) : (
+                  <div className={styles.splitOk}>✓ Balanced split</div>
+                )}
+              </div>
+            </section>
+          )
+        })()}
+
       </main>
     </div>
   )

@@ -1,4 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { supabase } from '../lib/supabase'
+import { useAuth } from '../hooks/useAuth'
+import { EXERCISES } from '../data/program'
 import styles from './Calculator.module.css'
 
 const FORMULAS = {
@@ -24,10 +27,45 @@ const TRAINING_ZONES = [
 ]
 
 export default function Calculator() {
+  const { user } = useAuth()
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [formula, setFormula] = useState('epley')
   const [showFormulaInfo, setShowFormulaInfo] = useState(false)
+  const [prs, setPrs] = useState([]) // [{exerciseId, name, weight, reps, e1rm}]
+  const [showPrPicker, setShowPrPicker] = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    const loadPrs = async () => {
+      const { data } = await supabase
+        .from('session_sets')
+        .select('exercise_id, weight, reps, workout_sessions!inner(user_id)')
+        .eq('workout_sessions.user_id', user.id)
+        .eq('completed', true)
+        .gt('weight', 0)
+        .gt('reps', 0)
+        .order('weight', { ascending: false })
+        .limit(500)
+      if (!data) return
+
+      // Build PR map — best e1RM per exercise
+      const e1rmCalc = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
+      const prMap = {}
+      data.forEach(s => {
+        const est = e1rmCalc(s.weight, s.reps)
+        if (!prMap[s.exercise_id] || est > prMap[s.exercise_id].e1rm) {
+          prMap[s.exercise_id] = { weight: s.weight, reps: s.reps, e1rm: est }
+        }
+      })
+      setPrs(Object.entries(prMap)
+        .map(([id, pr]) => ({ exerciseId: id, name: EXERCISES[id]?.name || id, ...pr }))
+        .sort((a, b) => b.e1rm - a.e1rm)
+        .slice(0, 20)
+      )
+    }
+    loadPrs()
+  }, [user])
 
   const w = parseFloat(weight)
   const r = parseInt(reps)
@@ -56,6 +94,33 @@ export default function Calculator() {
               placeholder="8" value={reps} onChange={e => setReps(e.target.value)} />
           </div>
         </div>
+
+        {/* Pre-fill from your PRs */}
+        {prs.length > 0 && (
+          <div className={styles.prPickerWrap}>
+            <button className={styles.prPickerToggle}
+              onClick={() => setShowPrPicker(v => !v)}>
+              🏆 Pre-fill from your PRs {showPrPicker ? '▲' : '▼'}
+            </button>
+            {showPrPicker && (
+              <div className={styles.prPickerList}>
+                {prs.map(pr => (
+                  <button key={pr.exerciseId} className={styles.prPickerRow}
+                    onClick={() => {
+                      setWeight(pr.weight.toString())
+                      setReps(pr.reps.toString())
+                      setShowPrPicker(false)
+                    }}>
+                    <span className={styles.prPickerName}>{pr.name}</span>
+                    <span className={styles.prPickerVal}>
+                      {pr.weight} lbs × {pr.reps} <span className={styles.prPickerE1rm}>≈ {pr.e1rm} 1RM</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Formula selector with explanations */}
         <div className={styles.formulaSection}>

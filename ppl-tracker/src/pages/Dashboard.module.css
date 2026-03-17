@@ -226,3 +226,73 @@
   min-height: unset;
   letter-spacing: 0.04em;
 }
+
+/* Training split balance */
+.splitCard {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.splitRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.splitLabel {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 600;
+  width: 34px;
+  flex-shrink: 0;
+}
+
+.splitBarWrap {
+  flex: 1;
+  height: 8px;
+  background: var(--bg3);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.splitBar {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  min-width: 4px;
+}
+
+.splitCount {
+  font-family: 'DM Mono', monospace;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted2);
+  width: 20px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.splitWarning {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--push);
+  letter-spacing: 0.04em;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.splitOk {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--success);
+  letter-spacing: 0.04em;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
