@@ -106,7 +106,7 @@ export default function Workout() {
       LOADING...
     </div>
   )
-  if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
+  if (!day || !day.exercises) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
 
   // Resolve active exercise id (original or swapped)
   const resolveExId = (originalId) => swappedExercises[originalId] || originalId

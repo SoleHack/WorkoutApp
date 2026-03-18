@@ -2,7 +2,14 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-const ProgramContext = createContext(null)
+const ProgramContext = createContext({
+  programData: null,
+  loading: true,
+  reload: () => {},
+  updateLastCompleted: () => {},
+  programId: null,
+  morningWorkoutId: null,
+})
 
 function buildProgramShape(workouts, programDays, morningWorkoutId) {
   const PROGRAM = {}

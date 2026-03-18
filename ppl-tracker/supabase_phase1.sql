@@ -122,12 +122,13 @@ create policy "Users manage own program days" on program_days
 -- ── user_programs ─────────────────────────────────────────────
 -- Which program each user is actively following
 create table if not exists user_programs (
-  user_id               uuid references auth.users(id) on delete cascade primary key,
+  user_id               uuid references auth.users(id) on delete cascade not null,
   program_id            uuid references programs(id) on delete set null,
   morning_workout_id    uuid references workouts(id) on delete set null,
-  last_completed_slug   text,              -- slug of last completed workout for smart scheduling
+  last_completed_slug   text,
   started_at            timestamptz default now(),
-  updated_at            timestamptz default now()
+  updated_at            timestamptz default now(),
+  primary key (user_id)
 );
 alter table user_programs enable row level security;
 create policy "Users manage own program enrollment" on user_programs
