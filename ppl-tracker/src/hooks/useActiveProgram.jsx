@@ -112,20 +112,26 @@ export function ActiveProgramProvider({ children }) {
       .eq('user_id', user.id)
       .maybeSingle()
 
+    // No enrollment row at all — create an empty one
     if (!enrollment) {
-      const defaultId = '00000000-0000-0000-0000-000000000001'
-      const morningId = '00000000-0000-0000-0001-000000000001'
       await supabase.from('user_programs').upsert({
         user_id: user.id,
-        program_id: defaultId,
-        morning_workout_id: morningId,
+        program_id: null,
+        morning_workout_id: null,
         last_completed_slug: null,
       }, { onConflict: 'user_id' })
-      enrollment = { program_id: defaultId, morning_workout_id: morningId, last_completed_slug: null }
+      enrollment = { program_id: null, morning_workout_id: null, last_completed_slug: null }
     }
 
     setProgramId(enrollment.program_id)
     setMorningWorkoutId(enrollment.morning_workout_id)
+
+    // No program selected yet — nothing to load
+    if (!enrollment.program_id) {
+      setProgramData({ PROGRAM: {}, PROGRAM_ORDER: [], EXERCISES: {}, TAG_LABELS: {}, ALTERNATIVES: {}, SCHEDULE: {}, programDays: [], morningWorkoutId: null, lastCompletedSlug: null, programId: null })
+      setLoading(false)
+      return
+    }
 
     const { data: days } = await supabase
       .from('program_days')
@@ -139,13 +145,17 @@ export function ActiveProgramProvider({ children }) {
     ].filter(Boolean)
     const uniqueIds = [...new Set(workoutIds)]
 
-    const { data: workoutRows } = await supabase
-      .from('workouts')
-      .select(`*, workout_exercises (
-        id, order_index, sets, reps, rest_seconds, tag, notes, accent, exercise_id,
-        exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes)
-      )`)
-      .in('id', uniqueIds)
+    let workoutRows = []
+    if (uniqueIds.length > 0) {
+      const { data } = await supabase
+        .from('workouts')
+        .select(`*, workout_exercises (
+          id, order_index, sets, reps, rest_seconds, tag, notes, accent, exercise_id,
+          exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes)
+        )`)
+        .in('id', uniqueIds)
+      workoutRows = data || []
+    }
 
     const { data: altRows } = await supabase
       .from('exercise_alternatives')
@@ -160,7 +170,7 @@ export function ActiveProgramProvider({ children }) {
       ALTERNATIVES[slug].push(altSlug)
     })
 
-    const built = buildProgramShape(workoutRows || [], days || [], enrollment.morning_workout_id)
+    const built = buildProgramShape(workoutRows, days || [], enrollment.morning_workout_id)
     built.ALTERNATIVES = ALTERNATIVES
     built.lastCompletedSlug = enrollment.last_completed_slug
     built.programId = enrollment.program_id

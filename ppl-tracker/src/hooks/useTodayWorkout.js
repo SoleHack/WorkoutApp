@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = 'core') {
+export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = null) {
   const { user } = useAuth()
   const [todaySlug, setTodaySlug] = useState(null)
   const [lastSession, setLastSession] = useState(null)

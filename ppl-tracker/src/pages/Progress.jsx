@@ -389,42 +389,54 @@ export default function Progress() {
               </div>
             </div>
 
-            {/* Training split balance */}
+            {/* Training split balance — dynamic by day_type */}
             {(() => {
               const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 28)
-              const recent = completedSessions.filter(s => new Date(s.date) >= cutoff && s.day_key !== 'core' && s.day_key !== 'rest')
-              const push = recent.filter(s => s.day_key?.includes('push')).length
-              const pull = recent.filter(s => s.day_key?.includes('pull')).length
-              const legs = recent.filter(s => s.day_key?.includes('legs')).length
-              const total = push + pull + legs
-              if (total === 0) return null
-              const max = Math.max(push, pull, legs, 1)
+              const recent = completedSessions.filter(s =>
+                new Date(s.date) >= cutoff && s.day_key !== 'rest'
+                && !Object.values(PROGRAM).find(w => w.isMorningRoutine && w.slug === s.day_key)
+              )
+              if (recent.length === 0) return null
+              const typeCounts = {}
+              recent.forEach(s => {
+                const w = PROGRAM[s.day_key]
+                const t = w?.colorClass || w?.day_type || 'custom'
+                if (t !== 'custom') typeCounts[t] = (typeCounts[t] || 0) + 1
+              })
+              const types = Object.entries(typeCounts)
+              if (types.length === 0) return null
+              const max = Math.max(...types.map(([,c]) => c), 1)
+              const typeColors = {
+                push: 'var(--push)', pull: 'var(--pull)', legs: 'var(--legs)',
+                upper: 'var(--push)', lower: 'var(--legs)', full: 'var(--pull)',
+                core: '#E2D9C8',
+              }
+              const isBalanced = types.length < 2 ||
+                Math.max(...types.map(([,c]) => c)) - Math.min(...types.map(([,c]) => c)) <= 2
+              const minType = types.sort((a,b) => a[1]-b[1])[0]?.[0]
               return (
                 <div className={styles.chartCard}>
                   <div className={styles.chartTitle}>Training split balance</div>
-                  <div className={styles.chartSub}>Last 4 weeks — ideally equal across Push / Pull / Legs</div>
+                  <div className={styles.chartSub}>Last 4 weeks by workout type</div>
                   <div className={styles.splitBars}>
-                    {[
-                      { label: 'Push', count: push, color: 'var(--push)' },
-                      { label: 'Pull', count: pull, color: 'var(--pull)' },
-                      { label: 'Legs', count: legs, color: 'var(--legs)' },
-                    ].map(({ label, count, color }) => (
-                      <div key={label} className={styles.splitRow}>
-                        <div className={styles.splitLabel}>{label}</div>
-                        <div className={styles.splitBarWrap}>
-                          <div className={styles.splitBar}
-                            style={{ width: `${(count / max) * 100}%`, background: color }} />
+                    {types.map(([type, count]) => {
+                      const color = typeColors[type] || 'var(--muted2)'
+                      const label = type.charAt(0).toUpperCase() + type.slice(1)
+                      return (
+                        <div key={type} className={styles.splitRow}>
+                          <div className={styles.splitLabel}>{label}</div>
+                          <div className={styles.splitBarWrap}>
+                            <div className={styles.splitBar}
+                              style={{ width: `${(count / max) * 100}%`, background: color }} />
+                          </div>
+                          <div className={styles.splitCount} style={{ color }}>{count}</div>
                         </div>
-                        <div className={styles.splitCount} style={{ color }}>{count}</div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
-                  {(Math.abs(push - pull) > 2 || Math.abs(push - legs) > 2 || Math.abs(pull - legs) > 2) && (
+                  {!isBalanced && minType && (
                     <div className={styles.splitWarning}>
-                      ⚠ Split is unbalanced — consider adding more {
-                        push < pull && push < legs ? 'Push' :
-                        pull < push && pull < legs ? 'Pull' : 'Legs'
-                      } sessions
+                      ⚠ Split is unbalanced — consider adding more {minType.charAt(0).toUpperCase() + minType.slice(1)} sessions
                     </div>
                   )}
                 </div>

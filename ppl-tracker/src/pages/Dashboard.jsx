@@ -75,7 +75,7 @@ export default function Dashboard() {
   })
 
   const { todaySlug, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } =
-    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM), SCHEDULE, morningSlug || 'core')
+    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM), SCHEDULE, morningSlug)
 
   const todayKey = todaySlug
   const isRest = !todayKey || todayKey === 'rest'
@@ -105,12 +105,27 @@ export default function Dashboard() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>
-            <div className={styles.headerLabel}>6-Day Recomp · PPL ×2</div>
-            <h1 className={styles.h1}>
-              <span style={{ color: 'var(--push)' }}>Push</span>
-              <span style={{ color: 'var(--pull)' }}> Pull</span>
-              <span style={{ color: 'var(--legs)' }}> Legs</span>
-            </h1>
+            {programData?.programId ? (
+              <>
+                <div className={styles.headerLabel}>
+                  {programData.programDays?.length > 0
+                    ? `${PROGRAM_ORDER.length}-Day Program`
+                    : 'Active Program'}
+                </div>
+                <h1 className={styles.h1}>
+                  {PROGRAM_ORDER.slice(0, 3).map((key, i) => (
+                    <span key={key} style={{ color: PROGRAM[key]?.color }}>
+                      {i > 0 ? ' ' : ''}{PROGRAM[key]?.label || key}
+                    </span>
+                  ))}
+                </h1>
+              </>
+            ) : (
+              <>
+                <div className={styles.headerLabel}>No program active</div>
+                <h1 className={styles.h1} style={{ fontSize: 'clamp(22px,4vw,36px)' }}>Get Started</h1>
+              </>
+            )}
           </div>
         </div>
 
@@ -150,7 +165,24 @@ export default function Dashboard() {
 
       <main className={styles.main}>
 
+        {/* NO PROGRAM — prompt user to set one up */}
+        {!programLoading && !programData?.programId && (
+          <section className={styles.section}>
+            <div className={styles.noProgramCard}>
+              <div className={styles.noProgramIcon}>🏋️</div>
+              <div className={styles.noProgramTitle}>No active program</div>
+              <div className={styles.noProgramDesc}>
+                Create a workout program to get started. Build your schedule, assign workouts to each day, and track your progress.
+              </div>
+              <button className="btn btn-primary" onClick={() => navigate('/programs')}>
+                Set Up Program →
+              </button>
+            </div>
+          </section>
+        )}
+
         {/* TODAY'S WORKOUT */}
+        {programData?.programId && (
         <section className={styles.section}>
           <div className={styles.sectionLabel}>Today's workout</div>
 
@@ -202,6 +234,7 @@ export default function Dashboard() {
             )
           )}
         </section>
+        )}
 
         {/* FULL PROGRAM — from schedule, includes rest days */}
         {scheduleGrid.some(s => !s.isRest) && (
@@ -266,21 +299,33 @@ export default function Dashboard() {
           const monthStart = new Date()
           monthStart.setDate(1); monthStart.setHours(0,0,0,0)
           const monthKey = monthStart.toISOString().split('T')[0]
-          const monthlySessions = completedSessions.filter(s => s.date >= monthKey && s.day_key !== 'core' && s.day_key !== 'rest')
+          const monthlySessions = completedSessions.filter(s =>
+            s.date >= monthKey && s.day_key !== morningSlug && s.day_key !== 'rest'
+          )
           if (monthlySessions.length === 0) return null
 
-          const counts = { push: 0, pull: 0, legs: 0 }
+          // Use workout day_type from active program — not slug name sniffing
+          const typeCounts = {}
           monthlySessions.forEach(s => {
-            if (s.day_key?.includes('push')) counts.push++
-            else if (s.day_key?.includes('pull')) counts.pull++
-            else if (s.day_key?.includes('legs')) counts.legs++
+            const w = PROGRAM[s.day_key]
+            const t = w?.colorClass || w?.day_type || 'custom'
+            typeCounts[t] = (typeCounts[t] || 0) + 1
           })
-          const max = Math.max(counts.push, counts.pull, counts.legs, 1)
-          const types = [
-            { key: 'push', label: 'Push', color: 'var(--push)', count: counts.push },
-            { key: 'pull', label: 'Pull', color: 'var(--pull)', count: counts.pull },
-            { key: 'legs', label: 'Legs', color: 'var(--legs)', count: counts.legs },
-          ]
+          const typeColors = {
+            push: 'var(--push)', pull: 'var(--pull)', legs: 'var(--legs)',
+            upper: 'var(--push)', lower: 'var(--legs)', full: 'var(--pull)',
+            core: '#E2D9C8', custom: 'var(--muted2)',
+          }
+          const types = Object.entries(typeCounts)
+            .filter(([t]) => t !== 'custom')
+            .map(([t, count]) => ({
+              key: t, count,
+              label: t.charAt(0).toUpperCase() + t.slice(1),
+              color: typeColors[t] || 'var(--muted2)',
+            }))
+          if (types.length === 0) return null
+          const max = Math.max(...types.map(t => t.count), 1)
+          const isBalanced = types.length < 2 || Math.max(...types.map(t => t.count)) - Math.min(...types.map(t => t.count)) <= 1
 
           return (
             <section className={styles.section}>
@@ -296,10 +341,8 @@ export default function Dashboard() {
                     <div className={styles.splitCount}>{t.count}</div>
                   </div>
                 ))}
-                {Math.abs(counts.push - counts.pull) > 1 || Math.abs(counts.push - counts.legs) > 1 ? (
-                  <div className={styles.splitWarning}>
-                    ⚠ Uneven split — aim for equal Push/Pull/Legs sessions
-                  </div>
+                {!isBalanced ? (
+                  <div className={styles.splitWarning}>⚠ Uneven split — aim for equal sessions per type</div>
                 ) : (
                   <div className={styles.splitOk}>✓ Balanced split</div>
                 )}
