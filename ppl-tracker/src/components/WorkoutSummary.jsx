@@ -26,7 +26,7 @@ export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss,
 
   // Build muscle map
   const allMuscles = { primary: new Set(), secondary: new Set() }
-  day?.exercises.forEach(ex => {
+  ;(day?.exercises || []).forEach(ex => {
     const exercise = EXERCISES[ex.id]
     if (!exercise?.muscles) return
     const exSets = sets[ex.id] || []

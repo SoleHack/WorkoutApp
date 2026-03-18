@@ -158,7 +158,7 @@ export default function Dashboard() {
                     <div className={styles.todayMeta}>
                       {todayCompleted
                         ? <span style={{ color: 'var(--success)' }}>✓ Completed today</span>
-                        : `${todayDay.exercises.length} exercises`
+                        : `${todayDay.exercises?.length || 0} exercises`
                       }
                     </div>
                   </div>
@@ -193,6 +193,7 @@ export default function Dashboard() {
           <div className={styles.grid}>
             {PROGRAM_ORDER.map(key => {
               const day = PROGRAM[key]
+              if (!day) return null
               const isToday = key === todayKey
               return (
                 <button
@@ -223,7 +224,7 @@ export default function Dashboard() {
               <div className={styles.coreSub}>
                 {coreCompletedToday
                   ? <span style={{ color: 'var(--success)' }}>✓ Done today — great start</span>
-                  : `Daily · ${PROGRAM.core.exercises.length} exercises · 10–15 min`
+                  : `Daily · ${PROGRAM.core?.exercises?.length || 6} exercises · 10–15 min`
                 }
               </div>
             </div>
