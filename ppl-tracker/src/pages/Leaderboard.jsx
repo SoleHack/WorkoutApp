@@ -6,23 +6,24 @@ import styles from './Leaderboard.module.css'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 
-function StatCard({ label, you, them, higherIsBetter = true, unit = '', zeroIsGood = false }) {
+function StatCard({ label, you, them, higherIsBetter = true, unit = '' }) {
   const youNum = parseFloat(you) || 0
   const themNum = parseFloat(them) || 0
   const youWins = higherIsBetter ? youNum >= themNum : (youNum <= themNum && youNum > 0)
   const themWins = higherIsBetter ? themNum > youNum : (themNum < youNum && themNum > 0)
 
-  const fmt = (v) => v != null && v !== '' ? `${v}${unit}` : '—'
+  const fmt = (v) => (v != null && v !== '' && v !== 0 && v !== '0') ? String(v) : '—'
+  const displayLabel = unit ? `${label} (${unit})` : label
 
   return (
     <div className={styles.statCard}>
-      <div className={styles.statLabel}>{label}</div>
+      <div className={styles.statLabel}>{displayLabel}</div>
       <div className={styles.statRow}>
         <div className={`${styles.statVal} ${youWins && youNum > 0 ? styles.winner : ''}`}>
           {fmt(you)}
         </div>
         <div className={styles.statVs}>vs</div>
-        <div className={`${styles.statVal} ${themWins && themNum > 0 ? styles.winner : ''}`}>
+        <div className={`${styles.statVal} ${styles.statValThem} ${themWins && themNum > 0 ? styles.winner : ''}`}>
           {fmt(them)}
         </div>
       </div>
