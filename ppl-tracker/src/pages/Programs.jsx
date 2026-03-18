@@ -30,7 +30,7 @@ export default function Programs() {
     else { setView('list'); setSelectedProgramId(null) }
   }
 
-  if (view === 'workout') return <WorkoutEditorView workoutId={selectedWorkoutId} onBack={goBack} />
+  if (view === 'workout') return <WorkoutEditorView workoutId={selectedWorkoutId} onBack={goBack} onOpenWorkout={openWorkout} />
   if (view === 'program') return <ProgramEditorView programId={selectedProgramId} onBack={goBack} onOpenWorkout={openWorkout} />
   return <ProgramsListView onOpenProgram={openProgram} />
 }
@@ -397,19 +397,32 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
 }
 
 // ── Workout editor ────────────────────────────────────────────
-function WorkoutEditorView({ workoutId, onBack }) {
+function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
   const { workout, exercises, loading, addExercise, updateExercise, removeExercise, reorderExercises, updateWorkout } = useWorkoutEditor(workoutId)
+  const { cloneWorkout } = useWorkouts()
   const [showPicker, setShowPicker] = useState(false)
   const [editingEx, setEditingEx] = useState(null)
   const [confirm, setConfirm] = useState(null)
-  const [dragging, setDragging] = useState(null)
   const [editName, setEditName] = useState(false)
   const [name, setName] = useState('')
+  const [cloning, setCloning] = useState(false)
+
+  const isSystem = workout && !workout.user_id
 
   const handleSaveName = async () => {
     if (!name.trim()) return
     await updateWorkout({ name: name.trim() })
     setEditName(false)
+  }
+
+  const handleCloneToEdit = async () => {
+    setCloning(true)
+    try {
+      const cloned = await cloneWorkout(workoutId, workout.name)
+      if (onOpenWorkout) onOpenWorkout(cloned.id)
+    } finally {
+      setCloning(false)
+    }
   }
 
   const handleAddExercise = async (ex) => {
@@ -431,8 +444,27 @@ function WorkoutEditorView({ workoutId, onBack }) {
 
   return (
     <PageShell title={workout?.name || 'Workout'} onBack={onBack}>
-      {/* Rename */}
-      {editName ? (
+
+      {/* System workout guard */}
+      {isSystem && (
+        <div className={styles.systemBanner}>
+          <div className={styles.systemBannerIcon}>🔒</div>
+          <div className={styles.systemBannerText}>
+            <div className={styles.systemBannerTitle}>System Workout</div>
+            <div className={styles.systemBannerDesc}>
+              This workout is part of the default program and can't be edited directly.
+              Clone it to create your own editable version.
+            </div>
+          </div>
+          <button className={`btn btn-primary ${styles.cloneBtn}`}
+            onClick={handleCloneToEdit} disabled={cloning}>
+            {cloning ? '...' : 'Clone to Edit'}
+          </button>
+        </div>
+      )}
+
+      {/* Rename — only for user-owned workouts */}
+      {!isSystem && (editName ? (
         <div className={styles.nameEdit}>
           <input className={styles.createInput} autoFocus value={name}
             onChange={e => setName(e.target.value)}
@@ -446,23 +478,25 @@ function WorkoutEditorView({ workoutId, onBack }) {
         <button className={styles.editNameBtn} onClick={() => { setEditName(true); setName(workout?.name || '') }}>
           ✎ Rename workout
         </button>
-      )}
+      ))}
 
       {/* Exercise list */}
       <div className={styles.exList}>
         {exercises.map((ex, idx) => (
           <div key={ex.id} className={styles.exRow}>
-            {/* Drag handles */}
-            <div className={styles.exDragArea}>
-              {idx > 0 && (
-                <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx - 1)}>↑</button>
-              )}
-              {idx < exercises.length - 1 && (
-                <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx + 1)}>↓</button>
-              )}
-            </div>
+            {/* Reorder — hidden for system workouts */}
+            {!isSystem && (
+              <div className={styles.exDragArea}>
+                {idx > 0 && (
+                  <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx - 1)}>↑</button>
+                )}
+                {idx < exercises.length - 1 && (
+                  <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx + 1)}>↓</button>
+                )}
+              </div>
+            )}
 
-            <div className={styles.exInfo} onClick={() => setEditingEx(editingEx?.id === ex.id ? null : ex)}>
+            <div className={styles.exInfo} onClick={() => !isSystem && setEditingEx(editingEx?.id === ex.id ? null : ex)}>
               <div className={styles.exName}>{ex.exercise?.name || 'Unknown'}</div>
               <div className={styles.exParams}>
                 {ex.sets}×{ex.reps} · {ex.rest_seconds}s rest · <span className={styles.exTag}>{ex.tag}</span>
@@ -470,10 +504,13 @@ function WorkoutEditorView({ workoutId, onBack }) {
               {ex.notes && <div className={styles.exNote}>{ex.notes}</div>}
             </div>
 
-            <button className={styles.exDelete} onClick={() => setConfirm(ex.id)}>✕</button>
+            {/* Delete — hidden for system workouts */}
+            {!isSystem && (
+              <button className={styles.exDelete} onClick={() => setConfirm(ex.id)}>✕</button>
+            )}
 
-            {/* Inline editor */}
-            {editingEx?.id === ex.id && (
+            {/* Inline editor — only for user workouts */}
+            {!isSystem && editingEx?.id === ex.id && (
               <div className={styles.exEditor}>
                 <div className={styles.exEditorRow}>
                   <div className={styles.exEditorField}>
@@ -507,9 +544,12 @@ function WorkoutEditorView({ workoutId, onBack }) {
           </div>
         ))}
 
-        <button className={`btn ${styles.createBtn}`} onClick={() => setShowPicker(true)}>
-          + Add Exercise
-        </button>
+        {/* Add exercise — only for user workouts */}
+        {!isSystem && (
+          <button className={`btn ${styles.createBtn}`} onClick={() => setShowPicker(true)}>
+            + Add Exercise
+          </button>
+        )}
       </div>
 
       {/* Exercise picker */}

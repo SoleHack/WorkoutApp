@@ -250,7 +250,43 @@ export function useWorkouts() {
     await load()
   }, [user, load])
 
-  return { workouts, loading, load, createWorkout, updateWorkout, deleteWorkout }
+  const cloneWorkout = useCallback(async (sourceId, newName) => {
+    // Fetch source workout with exercises
+    const { data: src } = await supabase
+      .from('workouts')
+      .select('*, workout_exercises(*, exercise:exercises(*))')
+      .eq('id', sourceId)
+      .single()
+    if (!src) throw new Error('Source workout not found')
+
+    const slug = `${(newName || src.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
+    const { data: newW } = await supabase.from('workouts').insert({
+      user_id: user.id,
+      name: newName || `${src.name} (copy)`,
+      slug,
+      day_type: src.day_type,
+      color: src.color,
+      focus: src.focus,
+      is_morning_routine: src.is_morning_routine,
+    }).select().single()
+
+    const exRows = (src.workout_exercises || []).map(we => ({
+      workout_id: newW.id,
+      exercise_id: we.exercise_id,
+      order_index: we.order_index,
+      sets: we.sets,
+      reps: we.reps,
+      rest_seconds: we.rest_seconds,
+      tag: we.tag,
+      notes: we.notes,
+      accent: we.accent,
+    }))
+    if (exRows.length) await supabase.from('workout_exercises').insert(exRows)
+    await load()
+    return newW
+  }, [user, load])
+
+  return { workouts, loading, load, createWorkout, updateWorkout, deleteWorkout, cloneWorkout }
 }
 
 // ── Single workout editor ─────────────────────────────────────
