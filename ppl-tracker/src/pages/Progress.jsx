@@ -693,9 +693,9 @@ export default function Progress() {
                 {PROGRAM_ORDER.map(key => (
                   <button key={key}
                     className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
-                    style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
+                    style={activeDay===key?{color:PROGRAM[key]?.color,borderBottomColor:PROGRAM[key]?.color}:{}}
                     onClick={() => { setActiveDay(key); setSelectedExId(null) }}>
-                    {PROGRAM[key].label}
+                    {PROGRAM[key]?.label || key}
                   </button>
                 ))}
               </div>
@@ -841,9 +841,9 @@ export default function Progress() {
                 {PROGRAM_ORDER.map(key => (
                   <button key={key}
                     className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
-                    style={activeDay===key?{color:PROGRAM[key].color,borderBottomColor:PROGRAM[key].color}:{}}
+                    style={activeDay===key?{color:PROGRAM[key]?.color,borderBottomColor:PROGRAM[key]?.color}:{}}
                     onClick={() => setActiveDay(key)}>
-                    {PROGRAM[key].label}
+                    {PROGRAM[key]?.label || key}
                   </button>
                 ))}
               </div>

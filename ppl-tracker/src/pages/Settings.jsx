@@ -55,18 +55,6 @@ function PhotoComparison({ photos }) {
     </div>
   )
 }
-const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
-const SHORT_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-const DAY_OPTIONS = [
-  { value: 'rest', label: 'Rest', color: 'var(--muted)' },
-  ...PROGRAM_ORDER.map(key => ({ value: key, label: PROGRAM[key].label, color: PROGRAM[key].color }))
-]
-
-function getColor(dayKey) {
-  if (!dayKey || dayKey === 'rest') return 'var(--muted)'
-  return PROGRAM[dayKey]?.color || 'var(--muted)'
-}
 
 export default function Settings() {
   const navigate = useNavigate()
@@ -92,10 +80,6 @@ export default function Settings() {
   useEffect(() => {
     if (settings.heightInches) setHeightInput(settings.heightInches.toString())
   }, [settings.heightInches])
-
-  const handleScheduleChange = (dayIndex, value) => {
-    save({ schedule: { ...settings.schedule, [dayIndex]: value } })
-  }
 
   const handleSave = async () => {
     setSaved(true)

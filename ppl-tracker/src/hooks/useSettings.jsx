@@ -2,21 +2,9 @@ import { useState, useEffect, useCallback, createContext, useContext } from 'rea
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
-const DEFAULT_SCHEDULE = {
-  0: 'rest',
-  1: 'push-a',
-  2: 'pull-a',
-  3: 'legs-a',
-  4: 'push-b',
-  5: 'pull-b',
-  6: 'legs-b',
-}
-
 const DEFAULT_SETTINGS = {
-  schedule:       DEFAULT_SCHEDULE,
   weightUnit:     'lbs',
   deloadReminder: true,
-  weekStartsOn:   1,
   theme:          'dark',
   heightInches:   null,
   sex:            'male',
@@ -45,10 +33,8 @@ export function SettingsProvider({ children }) {
     ])
 
     setSettings({
-      schedule:       s?.schedule        || DEFAULT_SCHEDULE,
       weightUnit:     s?.weight_unit     || 'lbs',
       deloadReminder: s?.deload_reminder ?? true,
-      weekStartsOn:   s?.week_starts_on  ?? 1,
       theme:          s?.theme           || 'dark',
       heightInches:   s?.height_inches   || null,
       sex:            s?.sex             || 'male',
@@ -62,20 +48,16 @@ export function SettingsProvider({ children }) {
     const next = { ...settings, ...updates }
     setSettings(next)
 
-    // Core settings → user_settings
     await supabase.from('user_settings').upsert({
       user_id:         user.id,
-      schedule:        next.schedule,
       weight_unit:     next.weightUnit,
       deload_reminder: next.deloadReminder,
-      week_starts_on:  next.weekStartsOn,
       theme:           next.theme,
       height_inches:   next.heightInches,
       sex:             next.sex,
       updated_at:      new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
-    // Partner mode + display name → public_stats
     if ('partnerMode' in updates || 'displayName' in updates) {
       await supabase.from('public_stats').upsert({
         user_id:      user.id,
@@ -87,13 +69,8 @@ export function SettingsProvider({ children }) {
     }
   }, [settings, user])
 
-  const getTodayKey = useCallback(() => {
-    const dayOfWeek = new Date().getDay()
-    return settings.schedule[dayOfWeek] || 'rest'
-  }, [settings.schedule])
-
   return (
-    <SettingsContext.Provider value={{ settings, loading, save, getTodayKey }}>
+    <SettingsContext.Provider value={{ settings, loading, save }}>
       {children}
     </SettingsContext.Provider>
   )

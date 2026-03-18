@@ -19,7 +19,7 @@ const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 export default function Workout() {
   const { dayKey } = useParams()
   const navigate = useNavigate()
-  const { programData } = useActiveProgram()
+  const { programData, loading: programLoading } = useActiveProgram()
   const PROGRAM = programData?.PROGRAM || {}
   const EXERCISES = programData?.EXERCISES || {}
   const day = PROGRAM[dayKey]
@@ -101,6 +101,11 @@ export default function Workout() {
     fetchBest()
   }, [user, dayKey])
 
+  if (programLoading) return (
+    <div style={{ padding: 40, color: 'var(--muted)', fontFamily: 'DM Mono, monospace', fontSize: 12 }}>
+      LOADING...
+    </div>
+  )
   if (!day) return <div style={{ padding: 40, color: 'var(--muted)' }}>Day not found.</div>
 
   // Resolve active exercise id (original or swapped)
