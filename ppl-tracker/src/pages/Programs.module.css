@@ -177,6 +177,12 @@
 }
 .schedClear:hover { color: var(--danger); }
 
+.schedEdit {
+  background: none; border: none; color: var(--muted); min-height: unset;
+  padding: 0 4px; font-size: 12px; flex-shrink: 0;
+}
+.schedEdit:hover { color: var(--text); }
+
 /* ── Morning routine ──────────────────────────────────────── */
 .morningCard {
   padding: clamp(12px, 2vw, 16px); background: var(--bg3);

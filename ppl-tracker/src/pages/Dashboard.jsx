@@ -57,9 +57,25 @@ export default function Dashboard() {
 
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
+  const SCHEDULE = programData?.SCHEDULE || {}
+
+  // Morning workout from active program — dynamic, not hardcoded to 'core'
+  const morningWorkoutId = programData?.morningWorkoutId
+  const morningSlug = morningWorkoutId
+    ? Object.keys(PROGRAM).find(k => PROGRAM[k].id === morningWorkoutId) || null
+    : null
+  const morningWorkout = morningSlug ? PROGRAM[morningSlug] : null
+
+  // Schedule grid: 7 day slots from program_days
+  const DAY_NAMES_SHORT = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun']
+  const scheduleGrid = Array.from({ length: 7 }, (_, i) => {
+    const slug = SCHEDULE[i]
+    const isRest = !slug || slug === 'rest'
+    return { dayIndex: i, dayName: DAY_NAMES_SHORT[i], slug: isRest ? 'rest' : slug, day: isRest ? null : (PROGRAM[slug] || null), isRest }
+  })
 
   const { todaySlug, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } =
-    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM))
+    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM), SCHEDULE, morningSlug || 'core')
 
   const todayKey = todaySlug
   const isRest = !todayKey || todayKey === 'rest'
@@ -187,52 +203,63 @@ export default function Dashboard() {
           )}
         </section>
 
-        {/* FULL PROGRAM */}
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>Full program</div>
-          <div className={styles.grid}>
-            {PROGRAM_ORDER.map(key => {
-              const day = PROGRAM[key]
-              if (!day) return null
-              const isToday = key === todayKey
-              return (
-                <button
-                  key={key}
-                  className={`${styles.dayCard} ${isToday ? styles.dayCardToday : ''}`}
-                  style={{ '--day-color': day.color }}
-                  onClick={() => navigate(`/workout/${key}`)}
-                >
-                  <div className={styles.dayLabel}>{day.day}</div>
-                  <div className={styles.dayTitle}>{day.label}</div>
-                  <div className={styles.dayFocus}>{day.focus}</div>
-                  {isToday && <div className={styles.todayBadge}>Today</div>}
-                </button>
-              )
-            })}
-          </div>
-        </section>
+        {/* FULL PROGRAM — from schedule, includes rest days */}
+        {scheduleGrid.some(s => !s.isRest) && (
+          <section className={styles.section}>
+            <div className={styles.sectionLabel}>Full program</div>
+            <div className={styles.grid}>
+              {scheduleGrid.map(slot => {
+                const isToday = slot.dayIndex === (new Date().getDay() === 0 ? 6 : new Date().getDay() - 1)
+                if (slot.isRest) return (
+                  <div key={slot.dayIndex}
+                    className={`${styles.dayCard} ${styles.dayCardRest} ${isToday ? styles.dayCardToday : ''}`}>
+                    <div className={styles.dayLabel}>{slot.dayName}</div>
+                    <div className={styles.dayTitle}>Rest</div>
+                    {isToday && <div className={styles.todayBadge}>Today</div>}
+                  </div>
+                )
+                if (!slot.day) return null
+                return (
+                  <button
+                    key={slot.dayIndex}
+                    className={`${styles.dayCard} ${isToday ? styles.dayCardToday : ''}`}
+                    style={{ '--day-color': slot.day.color }}
+                    onClick={() => navigate(`/workout/${slot.slug}`)}
+                  >
+                    <div className={styles.dayLabel}>{slot.dayName}</div>
+                    <div className={styles.dayTitle}>{slot.day.label}</div>
+                    <div className={styles.dayFocus}>{slot.day.focus}</div>
+                    {isToday && <div className={styles.todayBadge}>Today</div>}
+                  </button>
+                )
+              })}
+            </div>
+          </section>
+        )}
 
-        {/* MORNING CORE */}
-        <section className={styles.section}>
-          <div className={styles.sectionLabel}>Morning routine</div>
-          <button
-            className={`${styles.coreCard} ${coreCompletedToday ? styles.coreCardDone : ''}`}
-            onClick={() => navigate('/workout/core')}
-          >
-            <div>
-              <div className={styles.coreTitle}>AM Core</div>
-              <div className={styles.coreSub}>
-                {coreCompletedToday
-                  ? <span style={{ color: 'var(--success)' }}>✓ Done today — great start</span>
-                  : `Daily · ${PROGRAM.core?.exercises?.length || 6} exercises · 10–15 min`
-                }
+        {/* MORNING ROUTINE — dynamic from active program */}
+        {morningWorkout && morningSlug && (
+          <section className={styles.section}>
+            <div className={styles.sectionLabel}>Morning routine</div>
+            <button
+              className={`${styles.coreCard} ${coreCompletedToday ? styles.coreCardDone : ''}`}
+              onClick={() => navigate(`/workout/${morningSlug}`)}
+            >
+              <div>
+                <div className={styles.coreTitle}>{morningWorkout.label}</div>
+                <div className={styles.coreSub}>
+                  {coreCompletedToday
+                    ? <span style={{ color: 'var(--success)' }}>✓ Done today — great start</span>
+                    : `Daily · ${morningWorkout.exercises?.length || 0} exercises · 10–15 min`
+                  }
+                </div>
               </div>
-            </div>
-            <div className={styles.coreArrow} style={{ color: coreCompletedToday ? 'var(--success)' : undefined }}>
-              {coreCompletedToday ? '✓' : '→'}
-            </div>
-          </button>
-        </section>
+              <div className={styles.coreArrow} style={{ color: coreCompletedToday ? 'var(--success)' : undefined }}>
+                {coreCompletedToday ? '✓' : '→'}
+              </div>
+            </button>
+          </section>
+        )}
 
         {/* TRAINING SPLIT BALANCE */}
         {(() => {

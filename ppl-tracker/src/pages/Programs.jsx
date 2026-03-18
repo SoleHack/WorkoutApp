@@ -278,10 +278,11 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
                 {assigned ? (
                   <div className={styles.schedAssigned}
                     style={{ borderColor: assigned.color, color: assigned.color }}>
-                    <span className={styles.schedAssignedName} onClick={() => onOpenWorkout(assigned.id)}>
+                    <span className={styles.schedAssignedName} onClick={() => setDayPicker(i)}>
                       {assigned.name}
                     </span>
-                    <button className={styles.schedClear} onClick={() => handleClearDay(i)}>✕</button>
+                    <button className={styles.schedEdit} onClick={() => onOpenWorkout(assigned.id)} title="Edit workout">✎</button>
+                    <button className={styles.schedClear} onClick={() => handleClearDay(i)} title="Remove">✕</button>
                   </div>
                 ) : isRest ? (
                   <div className={styles.schedRest}>
