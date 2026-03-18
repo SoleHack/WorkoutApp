@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { PROGRAM, EXERCISES } from '../data/program'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
+import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import { useWorkout } from '../hooks/useWorkout'
 import { useLastSession } from '../hooks/useLastSession'
 import { useWorkoutNotes } from '../hooks/useWorkoutNotes'
@@ -19,6 +19,9 @@ const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 export default function Workout() {
   const { dayKey } = useParams()
   const navigate = useNavigate()
+  const { programData } = useActiveProgram()
+  const PROGRAM = programData?.PROGRAM || {}
+  const EXERCISES = programData?.EXERCISES || {}
   const day = PROGRAM[dayKey]
   const isOnline = useOnlineStatus()
   const { session, sets, loading, error, startSession, logSet, finishSession, cancelSession } = useWorkout(dayKey)

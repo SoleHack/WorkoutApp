@@ -1,5 +1,4 @@
 import { useMemo } from 'react'
-import { EXERCISES } from '../data/program'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 

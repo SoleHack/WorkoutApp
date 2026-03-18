@@ -2,11 +2,10 @@ import { getLocalDate } from '../lib/date.js'
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
-import { PROGRAM_ORDER } from '../data/program'
 
-export function useTodayWorkout() {
+export function useTodayWorkout(workoutOrder, workouts) {
   const { user } = useAuth()
-  const [todayKey, setTodayKey] = useState(null)
+  const [todaySlug, setTodaySlug] = useState(null)
   const [lastSession, setLastSession] = useState(null)
   const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -15,7 +14,7 @@ export function useTodayWorkout() {
   const [coreCompletedToday, setCoreCompletedToday] = useState(false)
 
   const load = useCallback(async () => {
-    if (!user) return
+    if (!user || !workoutOrder?.length) return
     setLoading(true)
     const today = getLocalDate()
 
@@ -27,7 +26,7 @@ export function useTodayWorkout() {
       .limit(60)
 
     if (!data || data.length === 0) {
-      setTodayKey(PROGRAM_ORDER[0])
+      setTodaySlug(workoutOrder[0])
       setLoading(false)
       return
     }
@@ -40,29 +39,28 @@ export function useTodayWorkout() {
     )
     setCoreCompletedToday(coreDoneToday)
 
-    // Last completed non-core session
-    const lastCompleted = data.find(s => s.completed_at && s.day_key !== 'core' && s.day_key !== 'rest')
+    // Last completed non-core, non-rest session
+    const lastCompleted = data.find(s =>
+      s.completed_at && s.day_key !== 'core' && s.day_key !== 'rest'
+    )
     setLastSession(lastCompleted || data[0])
 
-    // Smart scheduler: advance to next day after last completed
-    let nextKey = PROGRAM_ORDER[0]
+    // Smart scheduler — advance to next after last completed
+    let nextSlug = workoutOrder[0]
     if (lastCompleted) {
-      const lastIdx = PROGRAM_ORDER.indexOf(lastCompleted.day_key)
+      const lastIdx = workoutOrder.indexOf(lastCompleted.day_key)
       if (lastIdx !== -1) {
-        nextKey = PROGRAM_ORDER[(lastIdx + 1) % PROGRAM_ORDER.length]
+        nextSlug = workoutOrder[(lastIdx + 1) % workoutOrder.length]
       }
     }
 
-    // If the next day was already completed TODAY, keep showing it (let user see it's done)
-    // If it was completed on a DIFFERENT day, that means we should advance again
-    // This handles the edge case where someone does two workouts in one day
     const nextCompletedToday = data.some(s =>
-      s.day_key === nextKey && s.date === today && s.completed_at
+      s.day_key === nextSlug && s.date === today && s.completed_at
     )
-    setTodayKey(nextKey)
+    setTodaySlug(nextSlug)
     setTodayCompleted(nextCompletedToday)
 
-    // Streak: count consecutive days with at least one completed session
+    // Streak — consecutive days with at least one completed session
     const todayDate = new Date(); todayDate.setHours(0,0,0,0)
     const completedDates = [...new Set(
       data.filter(s => s.completed_at && s.day_key !== 'core').map(s => s.date)
@@ -70,20 +68,20 @@ export function useTodayWorkout() {
 
     let currentStreak = 0
     for (let i = 0; i < completedDates.length; i++) {
-      const d = new Date(completedDates[i] + 'T12:00:00') // noon to avoid DST issues
-      d.setHours(0,0,0,0)
-      const expected = new Date(todayDate)
-      expected.setDate(todayDate.getDate() - i)
+      const d = new Date(completedDates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
+      const expected = new Date(todayDate); expected.setDate(todayDate.getDate() - i)
       if (d.getTime() === expected.getTime()) currentStreak++
       else break
     }
     setStreak(currentStreak)
     setLoading(false)
-  }, [user])
+  }, [user, workoutOrder])
 
-  useEffect(() => { if (user) load() }, [user, load])
+  useEffect(() => {
+    if (workoutOrder?.length) load()
+  }, [user, workoutOrder, load])
 
-  // Re-fetch when app regains focus (handles coming back the next day)
+  // Re-fetch when app regains focus
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible' && user) load()
@@ -92,5 +90,20 @@ export function useTodayWorkout() {
     return () => document.removeEventListener('visibilitychange', handleVisibility)
   }, [user, load])
 
-  return { todayKey, lastSession, streak, loading, allSessions, todayCompleted, coreCompletedToday, refresh: load }
+  // Get today's workout object from workouts array
+  const todayWorkout = todaySlug
+    ? workouts?.find(w => w?.slug === todaySlug) || null
+    : null
+
+  return {
+    todaySlug,
+    todayWorkout,
+    lastSession,
+    streak,
+    loading,
+    allSessions,
+    todayCompleted,
+    coreCompletedToday,
+    refresh: load
+  }
 }

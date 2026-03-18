@@ -25,14 +25,13 @@ const TABS = [
     )
   },
   {
-    key: 'calculator', path: '/calculator',
-    label: '1RM',
+    key: 'programs', path: '/programs',
+    label: 'Programs',
     icon: (a) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth={a?2:1.5}
+        <rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth={a?2:1.5}
           fill={a?'currentColor':'none'} fillOpacity={a?.1:0}/>
-        <path d="M8 8h8M8 12h4M8 16h2" stroke="currentColor" strokeWidth={a?2:1.5} strokeLinecap="round"/>
-        <circle cx="16" cy="15" r="1.5" fill="currentColor" fillOpacity={a?1:.5}/>
+        <path d="M3 9h18M9 9v12" stroke="currentColor" strokeWidth={a?2:1.5} strokeLinecap="round"/>
       </svg>
     )
   },
@@ -71,7 +70,7 @@ export default function TabBar() {
 
   const getActive = (tab) => {
     if (tab.key === 'home') return location.pathname === '/' || isInWorkout
-    return location.pathname === tab.path
+    return location.pathname.startsWith(tab.path) && tab.path !== '/'
   }
 
   return (

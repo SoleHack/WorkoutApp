@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SettingsProvider } from './hooks/useSettings.jsx'
+import { ActiveProgramProvider } from './hooks/useActiveProgram.jsx'
 import AppLayout from './components/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -8,6 +9,7 @@ import Workout from './pages/Workout'
 import Progress from './pages/Progress'
 import Settings from './pages/Settings'
 import Calculator from './pages/Calculator'
+import Programs from './pages/Programs'
 import Leaderboard from './pages/Leaderboard'
 
 function ProtectedRoute({ children }) {
@@ -34,8 +36,9 @@ function AppRoutes() {
         <Route path="/progress" element={<ProtectedRoute><Progress /></ProtectedRoute>} />
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/calculator" element={<ProtectedRoute><Calculator /></ProtectedRoute>} />
-      <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/programs" element={<ProtectedRoute><Programs /></ProtectedRoute>} />
+        <Route path="/leaderboard" element={<ProtectedRoute><Leaderboard /></ProtectedRoute>} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AppLayout>
   )
@@ -45,9 +48,11 @@ export default function App() {
   return (
     <AuthProvider>
       <SettingsProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
+        <ActiveProgramProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </ActiveProgramProvider>
       </SettingsProvider>
     </AuthProvider>
   )

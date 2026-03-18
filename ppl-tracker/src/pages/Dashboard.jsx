@@ -6,8 +6,8 @@ import { useTodayWorkout } from '../hooks/useTodayWorkout'
 import { useBodyweight } from '../hooks/useBodyweight'
 import { useAchievements } from '../hooks/useAchievements'
 import { useRestDay } from '../hooks/useRestDay'
+import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import AchievementToast from '../components/AchievementToast'
-import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Dashboard.module.css'
 
 function formatDate(dateStr) {
@@ -52,11 +52,16 @@ export default function Dashboard() {
   const { signOut } = useAuth()
   const navigate = useNavigate()
   const { settings, loading: settingsLoading } = useSettings()
-  const { todayKey: smartTodayKey, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } = useTodayWorkout()
+  const { programData, loading: programLoading } = useActiveProgram()
   const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight()
 
-  // Use smart next-in-sequence scheduling, not fixed day-of-week
-  const todayKey = smartTodayKey
+  const PROGRAM = programData?.PROGRAM || {}
+  const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
+
+  const { todaySlug, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } =
+    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM))
+
+  const todayKey = todaySlug
   const isRest = !todayKey || todayKey === 'rest'
   const todayDay = !isRest ? PROGRAM[todayKey] : null
   const showDeload = useDeloadCheck(allSessions, settings.deloadReminder)

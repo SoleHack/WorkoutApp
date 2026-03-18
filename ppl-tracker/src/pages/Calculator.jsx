@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../hooks/useAuth'
-import { EXERCISES } from '../data/program'
+import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import styles from './Calculator.module.css'
 
 const FORMULAS = {
@@ -26,8 +26,10 @@ const TRAINING_ZONES = [
   { pct: 55, label: 'Recovery',      reps: '20+',   desc: 'Warm-up, deload weeks' },
 ]
 
-export default function Calculator() {
+export default function Calculator({ embedded = false }) {
   const { user } = useAuth()
+  const { programData } = useActiveProgram()
+  const EXERCISES = programData?.EXERCISES || {}
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
   const [formula, setFormula] = useState('epley')
@@ -74,11 +76,12 @@ export default function Calculator() {
 
   return (
     <div className={styles.wrap}>
-      <header className={styles.header}>
-        <div className={styles.title}>1RM Calculator</div>
-        <div className={styles.sub}>Enter any weight and rep count to estimate your one-rep max</div>
-      </header>
-
+      {!embedded && (
+        <header className={styles.header}>
+          <div className={styles.title}>1RM Calculator</div>
+          <div className={styles.sub}>Enter any weight and rep count to estimate your one-rep max</div>
+        </header>
+      )}
       <main className={styles.main}>
 
         {/* Inputs — stacked on mobile */}

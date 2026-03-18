@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { TAG_LABELS, ALTERNATIVES, EXERCISES } from '../data/program'
+import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import { unitLabel, calcPlatesLbs, calcPlatesKg, plateColors, lbsToKg, toDisplay, fromDisplay } from '../lib/units'
 import { usePushNotifications } from '../hooks/usePushNotifications'
 import BodyMap from './BodyMap'
@@ -82,6 +82,10 @@ export default function ExerciseCard({
   isSwapped, originalName, onSwapExercise, onClearSwap,
   supersetPartner, onPairRequest, onUnpair, isPairingMode,
 }) {
+  const { programData } = useActiveProgram()
+  const TAG_LABELS = programData?.TAG_LABELS || {}
+  const ALTERNATIVES = programData?.ALTERNATIVES || {}
+  const EXERCISES = programData?.EXERCISES || {}
   const [activeSet, setActiveSet] = useState(null)
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')

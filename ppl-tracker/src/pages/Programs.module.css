@@ -1,0 +1,55 @@
+.wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
+
+.header {
+  padding: clamp(12px, 4vw, 20px);
+  padding-top: max(env(safe-area-inset-top, 0px) + 12px, clamp(12px, 3vh, 20px));
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(28px, 4vw, 40px);
+  letter-spacing: 0.04em;
+}
+
+.sub { font-size: clamp(12px, 1.5vw, 14px); color: var(--muted); }
+
+.main {
+  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 80px);
+}
+
+.comingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2vw, 16px);
+  padding: clamp(40px, 8vw, 80px) clamp(20px, 4vw, 40px);
+  text-align: center;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: clamp(10px, 2vw, 16px);
+  margin-top: clamp(16px, 3vw, 32px);
+}
+
+.comingSoonIcon { font-size: clamp(40px, 6vw, 64px); }
+
+.comingSoonTitle {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: clamp(24px, 3vw, 36px);
+  letter-spacing: 0.06em;
+  color: var(--text);
+}
+
+.comingSoonDesc {
+  font-size: clamp(13px, 1.5vw, 15px);
+  color: var(--muted2);
+  line-height: 1.6;
+  max-width: min(100%, 400px);
+}
+
+@media (min-width: 1024px) {
+  .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
+  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
+}

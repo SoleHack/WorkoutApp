@@ -11,7 +11,8 @@ import { useAchievements } from '../hooks/useAchievements'
 import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { navyBodyFat } from '../lib/bodyFat'
 import { useSettings } from '../hooks/useSettings.jsx'
-import { EXERCISES, PROGRAM, PROGRAM_ORDER } from '../data/program'
+import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
+import Calculator from './Calculator'
 import styles from './Progress.module.css'
 
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
@@ -135,9 +136,13 @@ const EX_RANGE_OPTIONS = [
 export default function Progress() {
   const { user } = useAuth()
   const { entries: bwEntries } = useBodyweight()
-  const { landmarks } = useVolumeLandmarks()
   const { entries: measureEntries } = useBodyMeasurements()
   const { settings } = useSettings()
+  const { programData } = useActiveProgram()
+  const PROGRAM = programData?.PROGRAM || {}
+  const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
+  const EXERCISES = programData?.EXERCISES || {}
+  const { landmarks } = useVolumeLandmarks(EXERCISES)
 
   // Build body fat trend from measurement entries
   const bfTrendData = (() => {
@@ -153,7 +158,7 @@ export default function Progress() {
   })()
 
   const [activeTab, setActiveTab] = useState('overview')
-  const [activeDay, setActiveDay] = useState(PROGRAM_ORDER[0])
+  const [activeDay, setActiveDay] = useState(null)  // initialized after program loads
   const [selectedExId, setSelectedExId] = useState(null)
   const [allSessions, setAllSessions] = useState([])
   const [prs, setPrs] = useState({})
@@ -171,6 +176,9 @@ export default function Progress() {
   const [notesSearch, setNotesSearch] = useState('')
 
   useEffect(() => { loadAll() }, [user])
+  useEffect(() => {
+    if (PROGRAM_ORDER.length > 0 && !activeDay) setActiveDay(PROGRAM_ORDER[0])
+  }, [PROGRAM_ORDER, activeDay])
   useEffect(() => {
     if (selectedExId) loadChart(selectedExId)
     else setChartData([])
@@ -314,7 +322,7 @@ export default function Progress() {
         <div className={styles.title}>Progress</div>
         <div className={styles.tabsWrap}>
           <div className={styles.tabs}>
-            {['overview', 'volume', 'exercises', 'history', 'notes', 'achievements'].map(tab => (
+            {['overview', 'volume', 'exercises', 'history', 'notes', '1rm', 'achievements'].map(tab => (
               <button key={tab}
                 className={`${styles.tab} ${activeTab===tab?styles.tabActive:''}`}
                 onClick={() => setActiveTab(tab)}>
@@ -949,6 +957,9 @@ export default function Progress() {
         {activeTab === 'achievements' && (
           <AchievementsTab totalSessions={totalSessions} allSessions={allSessions} prs={prs} totalVolume={totalVolume} />
         )}
+
+        {/* ── 1RM ── */}
+        {activeTab === '1rm' && <Calculator embedded />}
 
       </main>
     </div>

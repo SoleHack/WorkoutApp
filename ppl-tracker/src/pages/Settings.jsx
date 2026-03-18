@@ -9,7 +9,6 @@ import { navyBodyFat, bfCategory, leanMass } from '../lib/bodyFat'
 import { getLocalDate } from '../lib/date.js'
 import { useAuth } from '../hooks/useAuth'
 import { supabase } from '../lib/supabase'
-import { PROGRAM, PROGRAM_ORDER } from '../data/program'
 import styles from './Settings.module.css'
 
 // Side-by-side photo comparison picker
@@ -188,52 +187,6 @@ export default function Settings() {
             >
               {bwSaving ? '...' : 'Log'}
             </button>
-          </div>
-        </section>
-
-        {/* WEEKLY SCHEDULE */}
-        <section className={styles.section}>
-          <div className={styles.sectionTitle}>Weekly Schedule</div>
-          <div className={styles.sectionDesc}>
-            Set which workout falls on each day. Determines "Today's Workout" on the home screen.
-          </div>
-
-          <div className={styles.scheduleGrid}>
-            {DAYS.map((dayName, i) => {
-              const assigned = settings.schedule[i] || 'rest'
-              return (
-                <div key={i} className={styles.scheduleRow}>
-                  <div className={styles.dayName}>{dayName}</div>
-                  <div className={styles.daySelect}>
-                    <select
-                      className={styles.select}
-                      value={assigned}
-                      style={{ color: getColor(assigned) }}
-                      onChange={e => handleScheduleChange(i, e.target.value)}
-                    >
-                      {DAY_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-          {/* Week preview */}
-          <div className={styles.weekPreview}>
-            {SHORT_DAYS.map((d, i) => {
-              const assigned = settings.schedule[i] || 'rest'
-              const label = assigned === 'rest' ? '—' : PROGRAM[assigned]?.label || '—'
-              const isToday = new Date().getDay() === i
-              return (
-                <div key={i} className={`${styles.previewDay} ${isToday ? styles.previewToday : ''}`}>
-                  <div className={styles.previewShort}>{d}</div>
-                  <div className={styles.previewLabel} style={{ color: getColor(assigned) }}>{label}</div>
-                </div>
-              )
-            })}
           </div>
         </section>
 
