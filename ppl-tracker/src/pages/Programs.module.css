@@ -1,3 +1,4 @@
+/* ── Shell ────────────────────────────────────────────────── */
 .wrap { min-height: 100vh; animation: pageIn 0.18s ease forwards; }
 
 .header {
@@ -5,51 +6,383 @@
   padding-top: max(env(safe-area-inset-top, 0px) + 12px, clamp(12px, 3vh, 20px));
   border-bottom: 1px solid var(--border);
   background: var(--bg);
+  position: sticky; top: 0; z-index: 10;
 }
 
-.title {
+.headerTop { display: flex; align-items: center; gap: clamp(8px, 2vw, 16px); min-height: 32px; }
+.back {
+  background: none; border: none; color: var(--muted);
+  font-family: 'DM Mono', monospace; font-size: clamp(11px, 1.5vw, 13px);
+  min-height: unset; padding: 0; flex-shrink: 0;
+}
+.back:hover { color: var(--text); }
+
+.headerTitle {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(28px, 4vw, 40px);
+  font-size: clamp(24px, 4vw, 36px);
   letter-spacing: 0.04em;
+  flex: 1;
 }
-
-.sub { font-size: clamp(12px, 1.5vw, 14px); color: var(--muted); }
+.sub { font-size: clamp(11px, 1.5vw, 13px); color: var(--muted); margin-top: 2px; }
+.headerActions { flex-shrink: 0; }
 
 .main {
   padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 80px);
+  display: flex; flex-direction: column; gap: clamp(12px, 2vw, 20px);
+  max-width: min(100%, 680px);
 }
 
-.comingSoon {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: clamp(10px, 2vw, 16px);
-  padding: clamp(40px, 8vw, 80px) clamp(20px, 4vw, 40px);
-  text-align: center;
-  background: var(--bg2);
-  border: 1px solid var(--border);
-  border-radius: clamp(10px, 2vw, 16px);
-  margin-top: clamp(16px, 3vw, 32px);
+.loader {
+  font-family: 'DM Mono', monospace; font-size: 12px;
+  color: var(--muted); letter-spacing: 0.1em; padding: clamp(20px, 4vw, 40px);
 }
 
-.comingSoonIcon { font-size: clamp(40px, 6vw, 64px); }
+/* ── Active banner ────────────────────────────────────────── */
+.activeBanner {
+  display: flex; align-items: center; gap: 8px;
+  font-size: clamp(12px, 1.5vw, 14px); color: var(--muted2);
+  padding: clamp(8px, 1.5vw, 12px) clamp(12px, 2vw, 16px);
+  background: rgba(74,222,128,0.06); border: 1px solid rgba(74,222,128,0.2);
+  border-radius: 8px;
+}
+.activeDot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
 
-.comingSoonTitle {
-  font-family: 'Bebas Neue', sans-serif;
-  font-size: clamp(24px, 3vw, 36px);
-  letter-spacing: 0.06em;
-  color: var(--text);
+/* ── Program cards ────────────────────────────────────────── */
+.cardList { display: flex; flex-direction: column; gap: clamp(6px, 1vw, 10px); }
+
+.programCard {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: clamp(8px, 1.5vw, 12px);
+  overflow: hidden;
+}
+.programCardActive { border-color: rgba(74,222,128,0.4); }
+
+.programCardMain {
+  padding: clamp(12px, 2vw, 16px) clamp(14px, 2.5vw, 20px);
+  cursor: pointer;
+}
+.programCardMain:hover { background: var(--bg3); }
+
+.programCardName {
+  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  font-size: clamp(14px, 2vw, 17px); color: var(--text);
+}
+.programCardMeta {
+  font-size: clamp(11px, 1.3vw, 13px); color: var(--muted);
+  margin-top: 2px; text-transform: capitalize;
 }
 
-.comingSoonDesc {
+.programCardActions {
+  display: flex; gap: clamp(6px, 1vw, 10px);
+  padding: clamp(8px, 1.5vw, 12px) clamp(14px, 2.5vw, 20px);
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+/* ── Chips ────────────────────────────────────────────────── */
+.actionChip {
+  background: var(--bg3); border: 1px solid var(--border);
+  border-radius: 6px; padding: clamp(4px, 0.8vw, 6px) clamp(10px, 1.5vw, 14px);
+  font-size: clamp(11px, 1.3vw, 13px); color: var(--text);
+  font-family: 'DM Mono', monospace; min-height: unset;
+  transition: background 0.12s;
+}
+.actionChip:hover { background: var(--bg); }
+.actionChipDanger { color: var(--danger); border-color: rgba(248,113,113,0.3); }
+.activeChip {
+  font-size: clamp(11px, 1.3vw, 13px); color: var(--success);
+  font-family: 'DM Mono', monospace;
+  padding: clamp(4px, 0.8vw, 6px) 0;
+}
+
+/* ── Create / forms ───────────────────────────────────────── */
+.createBtn {
+  width: 100%; padding: clamp(12px, 1.8vw, 16px);
   font-size: clamp(13px, 1.5vw, 15px);
-  color: var(--muted2);
-  line-height: 1.6;
-  max-width: min(100%, 400px);
+  border: 1px dashed var(--border); background: none; color: var(--muted2);
+}
+.createBtn:hover { border-color: var(--border2); color: var(--text); background: var(--bg2); }
+
+.createForm { display: flex; flex-direction: column; gap: clamp(8px, 1.5vw, 12px); }
+
+.createInput {
+  width: 100%; padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 16px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: clamp(14px, 1.8vw, 16px);
+  font-family: 'DM Sans', sans-serif; outline: none;
+}
+.createInput:focus { border-color: var(--border2); }
+
+.createBtns { display: flex; gap: clamp(6px, 1vw, 10px); }
+.createBtns button { flex: 1; padding: clamp(10px, 1.5vw, 14px); }
+
+.nameEdit { display: flex; flex-direction: column; gap: clamp(8px, 1.5vw, 12px); }
+.editNameBtn {
+  background: none; border: none; color: var(--muted);
+  font-size: clamp(12px, 1.3vw, 13px); font-family: 'DM Mono', monospace;
+  min-height: unset; padding: clamp(4px, 0.8vw, 8px) 0; text-align: left;
+}
+.editNameBtn:hover { color: var(--text); }
+
+/* ── Schedule grid ────────────────────────────────────────── */
+.schedSection, .morningSection, .workoutsSection {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: clamp(8px, 1.5vw, 12px);
+  padding: clamp(14px, 2.5vw, 20px);
+  display: flex; flex-direction: column; gap: clamp(10px, 1.5vw, 16px);
 }
 
+.schedTitle {
+  font-family: 'DM Mono', monospace; font-size: clamp(9px, 1vw, 11px);
+  text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+}
+
+.schedGrid { display: flex; flex-direction: column; gap: clamp(6px, 1vw, 10px); }
+
+.schedDay { display: flex; align-items: center; gap: clamp(8px, 1.5vw, 14px); }
+.schedDayName {
+  font-family: 'DM Mono', monospace; font-size: clamp(10px, 1.2vw, 12px);
+  color: var(--muted); width: clamp(28px, 3vw, 36px); flex-shrink: 0;
+}
+
+.schedAssigned {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(6px, 1vw, 10px) clamp(10px, 1.5vw, 14px);
+  background: var(--bg3); border: 1px solid; border-radius: 8px;
+  gap: 8px;
+}
+.schedAssignedName {
+  font-size: clamp(12px, 1.5vw, 14px); font-weight: 500; cursor: pointer; flex: 1;
+}
+.schedAssignedName:hover { text-decoration: underline; }
+
+.schedRest {
+  flex: 1; display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(6px, 1vw, 10px) clamp(10px, 1.5vw, 14px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  font-size: clamp(12px, 1.5vw, 14px); color: var(--muted);
+}
+
+.schedEmpty {
+  flex: 1; padding: clamp(6px, 1vw, 10px) clamp(10px, 1.5vw, 14px);
+  background: none; border: 1px dashed var(--border); border-radius: 8px;
+  font-size: clamp(12px, 1.5vw, 14px); color: var(--muted); text-align: left;
+  min-height: unset;
+}
+.schedEmpty:hover { border-color: var(--border2); color: var(--text); }
+
+.schedClear {
+  background: none; border: none; color: var(--muted); min-height: unset;
+  padding: 0 4px; font-size: 12px; flex-shrink: 0;
+}
+.schedClear:hover { color: var(--danger); }
+
+/* ── Morning routine ──────────────────────────────────────── */
+.morningCard {
+  padding: clamp(12px, 2vw, 16px); background: var(--bg3);
+  border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer;
+}
+.morningCard:hover { border-color: var(--border2); }
+.morningName { font-size: clamp(13px, 1.8vw, 15px); font-weight: 500; color: var(--text); }
+.morningChange { font-size: clamp(11px, 1.3vw, 12px); color: var(--muted); margin-top: 4px; }
+.morningEmpty { font-size: clamp(13px, 1.5vw, 14px); color: var(--muted); }
+
+/* ── Workouts list ────────────────────────────────────────── */
+.workoutsList { display: flex; flex-direction: column; gap: clamp(4px, 0.8vw, 8px); }
+
+.workoutRow {
+  display: flex; align-items: center; gap: clamp(10px, 1.5vw, 14px);
+  padding: clamp(10px, 1.5vw, 14px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer;
+}
+.workoutRow:hover { border-color: var(--border2); }
+
+.workoutDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.workoutRowName { font-size: clamp(13px, 1.8vw, 15px); font-weight: 500; color: var(--text); flex: 1; }
+.workoutRowMeta { font-size: clamp(11px, 1.3vw, 12px); color: var(--muted); }
+.workoutRowArrow { color: var(--muted); font-size: 14px; }
+
+/* ── Activate button ──────────────────────────────────────── */
+.activateBtn {
+  padding: clamp(6px, 1vw, 10px) clamp(12px, 2vw, 18px);
+  border-radius: 8px; font-size: clamp(12px, 1.3vw, 13px);
+  background: var(--bg3); border: 1px solid var(--border);
+  color: var(--text); font-family: 'DM Mono', monospace;
+  min-height: unset;
+}
+.activateBtnActive {
+  background: rgba(74,222,128,0.1); border-color: rgba(74,222,128,0.4); color: var(--success);
+}
+
+/* ── Exercise list ────────────────────────────────────────── */
+.exList { display: flex; flex-direction: column; gap: clamp(6px, 1vw, 10px); }
+
+.exRow {
+  background: var(--bg2); border: 1px solid var(--border);
+  border-radius: clamp(8px, 1.5vw, 12px);
+  overflow: hidden;
+  display: flex; flex-direction: column;
+}
+
+.exRowTop { display: flex; align-items: stretch; }
+.exDragArea {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px;
+  padding: clamp(8px, 1vw, 12px) clamp(6px, 0.8vw, 10px);
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.reorderBtn {
+  background: none; border: none; color: var(--muted); min-height: unset;
+  padding: 2px 6px; font-size: 14px; line-height: 1;
+}
+.reorderBtn:hover { color: var(--text); }
+
+.exInfo {
+  flex: 1; padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 16px);
+  cursor: pointer;
+}
+.exInfo:hover { background: var(--bg3); }
+
+.exName { font-size: clamp(13px, 1.8vw, 15px); font-weight: 500; color: var(--text); }
+.exParams { font-size: clamp(11px, 1.3vw, 12px); color: var(--muted); margin-top: 3px; }
+.exTag {
+  font-family: 'DM Mono', monospace; font-size: clamp(9px, 1vw, 10px);
+  text-transform: uppercase; letter-spacing: 0.06em;
+}
+.exNote { font-size: clamp(11px, 1.3vw, 12px); color: var(--muted2); margin-top: 4px; font-style: italic; }
+
+.exDelete {
+  background: none; border: none; color: var(--muted);
+  padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 14px);
+  font-size: 13px; min-height: unset; flex-shrink: 0;
+}
+.exDelete:hover { color: var(--danger); }
+
+/* Inline editor */
+.exEditor {
+  border-top: 1px solid var(--border);
+  padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 16px);
+  display: flex; flex-direction: column; gap: clamp(8px, 1.2vw, 12px);
+  background: var(--bg3);
+}
+.exEditorRow { display: flex; gap: clamp(8px, 1.2vw, 12px); }
+.exEditorField { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.exEditorField label {
+  font-family: 'DM Mono', monospace; font-size: clamp(8px, 0.9vw, 10px);
+  text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted);
+}
+.exEditorField input {
+  padding: clamp(6px, 1vw, 10px); background: var(--bg2);
+  border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: clamp(13px, 1.5vw, 15px); outline: none; width: 100%;
+}
+.exEditorField input:focus { border-color: var(--border2); }
+
+.tagRow { display: flex; gap: clamp(4px, 0.8vw, 8px); flex-wrap: wrap; }
+.notesInput {
+  width: 100%; padding: clamp(8px, 1.2vw, 12px);
+  background: var(--bg2); border: 1px solid var(--border); border-radius: 6px;
+  color: var(--text); font-size: clamp(12px, 1.5vw, 14px); outline: none;
+  font-family: 'DM Sans', sans-serif;
+}
+.notesInput:focus { border-color: var(--border2); }
+.notesInput::placeholder { color: var(--muted); }
+
+/* ── Type/tag chips ───────────────────────────────────────── */
+.typeRow { display: flex; gap: clamp(4px, 0.8vw, 8px); flex-wrap: wrap; }
+.typeChip {
+  padding: clamp(4px, 0.6vw, 6px) clamp(8px, 1.2vw, 12px);
+  border-radius: 6px; background: var(--bg3); border: 1px solid var(--border);
+  font-size: clamp(11px, 1.2vw, 13px); color: var(--muted);
+  font-family: 'DM Mono', monospace; min-height: unset;
+  transition: all 0.12s;
+}
+.typeChipActive { color: var(--text); border-color: var(--border2); background: var(--bg); }
+
+/* ── Modal ────────────────────────────────────────────────── */
+.overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+  z-index: 400; display: flex; align-items: flex-end; justify-content: center;
+}
+.modal {
+  background: var(--bg2); border-radius: 16px 16px 0 0;
+  border: 1px solid var(--border2); width: 100%; max-width: 640px;
+  max-height: 80vh; display: flex; flex-direction: column;
+  animation: slideUp 0.2s ease;
+}
+.modalFull { max-height: 92vh; }
+
+.modalHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: clamp(14px, 2vw, 20px) clamp(16px, 2.5vw, 24px);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.modalTitle {
+  font-family: 'DM Sans', sans-serif; font-weight: 600;
+  font-size: clamp(15px, 2vw, 18px); color: var(--text);
+}
+.modalClose {
+  background: none; border: none; color: var(--muted); font-size: 16px;
+  min-height: unset; padding: 4px 8px;
+}
+.modalClose:hover { color: var(--text); }
+.modalBody {
+  overflow-y: auto; padding: clamp(12px, 2vw, 20px) clamp(16px, 2.5vw, 24px);
+  display: flex; flex-direction: column; gap: clamp(10px, 1.5vw, 16px);
+  flex: 1;
+}
+.modalDesc { font-size: clamp(13px, 1.5vw, 14px); color: var(--muted2); }
+
+/* ── Picker ───────────────────────────────────────────────── */
+.pickerSearch { flex-shrink: 0; }
+.searchInput {
+  width: 100%; padding: clamp(10px, 1.5vw, 14px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  color: var(--text); font-size: clamp(14px, 1.8vw, 16px); outline: none;
+}
+.searchInput:focus { border-color: var(--border2); }
+
+.muscleFilters {
+  display: flex; gap: clamp(4px, 0.8vw, 8px); flex-wrap: wrap; flex-shrink: 0;
+}
+.muscleChip {
+  padding: clamp(4px, 0.6vw, 6px) clamp(8px, 1.2vw, 12px);
+  border-radius: 20px; background: var(--bg3); border: 1px solid var(--border);
+  font-size: clamp(10px, 1.2vw, 12px); color: var(--muted);
+  font-family: 'DM Mono', monospace; min-height: unset; white-space: nowrap;
+}
+.muscleChipActive { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+.pickerList { display: flex; flex-direction: column; gap: clamp(4px, 0.8vw, 8px); }
+
+.pickerRow {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: clamp(8px, 1.2vw, 14px);
+  padding: clamp(10px, 1.5vw, 14px) clamp(12px, 2vw, 16px);
+  background: var(--bg3); border: 1px solid var(--border); border-radius: 8px;
+  text-align: left; min-height: unset; width: 100%;
+}
+.pickerRow:hover { border-color: var(--border2); background: var(--bg); }
+.pickerRest { color: var(--muted); justify-content: flex-start; gap: 12px; }
+.pickerName { font-size: clamp(13px, 1.8vw, 15px); font-weight: 500; color: var(--text); }
+.pickerMeta { font-size: clamp(11px, 1.3vw, 12px); color: var(--muted); margin-top: 2px; }
+.addChip {
+  font-size: clamp(11px, 1.2vw, 12px); color: var(--success);
+  font-family: 'DM Mono', monospace; flex-shrink: 0;
+}
+
+.emptyMsg { font-size: clamp(13px, 1.5vw, 14px); color: var(--muted); text-align: center; padding: 20px; }
+
+@media (min-width: 640px) {
+  .schedGrid { display: grid; grid-template-columns: 1fr 1fr; }
+  .overlay { align-items: center; }
+  .modal { border-radius: 16px; }
+}
 @media (min-width: 1024px) {
   .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
-  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
+  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 760px); }
 }
