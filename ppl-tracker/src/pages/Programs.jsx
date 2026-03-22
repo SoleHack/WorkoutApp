@@ -444,6 +444,8 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
   const [confirm, setConfirm] = useState(null)
   const [editName, setEditName] = useState(false)
   const [name, setName] = useState('')
+  const [editFocus, setEditFocus] = useState(false)
+  const [focusVal, setFocusVal] = useState('')
   const [cloning, setCloning] = useState(false)
 
   const { containerProps, handleProps, itemProps, draggingIndex } = useDragReorder(
@@ -457,6 +459,11 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
     if (!name.trim()) return
     await updateWorkout({ name: name.trim() })
     setEditName(false)
+  }
+
+  const handleSaveFocus = async () => {
+    await updateWorkout({ focus: focusVal.trim() })
+    setEditFocus(false)
   }
 
   const handleCloneToEdit = async () => {
@@ -521,6 +528,26 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
       ) : (
         <button className={styles.editNameBtn} onClick={() => { setEditName(true); setName(workout?.name || '') }}>
           ✎ Rename workout
+        </button>
+      ))}
+
+      {/* Focus line — inline edit */}
+      {!isSystem && (editFocus ? (
+        <div className={styles.nameEdit}>
+          <input className={styles.createInput} autoFocus
+            value={focusVal}
+            placeholder="e.g. Chest · Shoulders · Triceps"
+            onChange={e => setFocusVal(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') handleSaveFocus(); if (e.key === 'Escape') setEditFocus(false) }} />
+          <div className={styles.createBtns}>
+            <button className="btn btn-primary" onClick={handleSaveFocus}>Save</button>
+            <button className="btn" onClick={() => setEditFocus(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <button className={styles.editNameBtn}
+          onClick={() => { setEditFocus(true); setFocusVal(workout?.focus || '') }}>
+          ✎ {workout?.focus ? `Focus: ${workout.focus}` : 'Add focus description'}
         </button>
       ))}
 
