@@ -81,7 +81,7 @@ export function useProgressPhotos() {
     setLoading(true)
     const { data } = await supabase
       .from('progress_photos')
-      .select('id, created_at, photo_url, thumbnail_url, weight, body_fat, notes')
+      .select('id, date, storage_path, public_url, notes, created_at')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(52)
