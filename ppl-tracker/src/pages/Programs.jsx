@@ -162,18 +162,34 @@ function ProgramsListView({ onOpenProgram }) {
 // ── Program editor ────────────────────────────────────────────
 function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
   const { program, days, loading, assignWorkout, setRestDay, updateProgram } = useProgramEditor(programId)
-  const { workouts, load: reloadWorkouts, createWorkout } = useWorkouts()
-  const { programs, activeId, activateProgram } = usePrograms()
+  const { workouts, load: reloadWorkouts, createWorkout, cloneWorkout } = useWorkouts()
+  const { programs, activeId, activateProgram, cloneProgram } = usePrograms()
   const { reload: reloadActive, morningWorkoutId } = useActiveProgram()
   const [editName, setEditName] = useState(false)
   const [name, setName] = useState('')
-  const [dayPicker, setDayPicker] = useState(null)  // day_index being assigned
+  const [dayPicker, setDayPicker] = useState(null)
   const [morningPicker, setMorningPicker] = useState(false)
   const [creatingWorkout, setCreatingWorkout] = useState(false)
   const [newWorkoutName, setNewWorkoutName] = useState('')
   const [newWorkoutType, setNewWorkoutType] = useState('custom')
+  const [cloning, setCloning] = useState(false)
 
   const isActive = program?.id === activeId
+  const isSystem = program && !program.user_id
+
+  const handleCloneProgram = async () => {
+    setCloning(true)
+    try {
+      const cloned = await cloneProgram(programId, program.name)
+      // Auto-activate the clone and navigate into it
+      await activateProgram(cloned.id)
+      reloadActive()
+      onBack()
+      // Navigate into the clone — parent will handle via list refresh
+    } finally {
+      setCloning(false)
+    }
+  }
 
   const handleSaveName = async () => {
     if (!name.trim()) return
@@ -247,8 +263,25 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
         </button>
       }
     >
-      {/* Program name edit */}
-      {editName ? (
+      {/* System program guard */}
+      {isSystem && (
+        <div className={styles.systemBanner}>
+          <div className={styles.systemBannerIcon}>🔒</div>
+          <div className={styles.systemBannerText}>
+            <div className={styles.systemBannerTitle}>System Program</div>
+            <div className={styles.systemBannerDesc}>
+              This is a default program and can't be edited directly. Clone it to create your own editable version with all the same workouts and schedule.
+            </div>
+          </div>
+          <button className={`btn btn-primary ${styles.cloneBtn}`}
+            onClick={handleCloneProgram} disabled={cloning}>
+            {cloning ? '...' : 'Clone to Edit'}
+          </button>
+        </div>
+      )}
+
+      {/* Rename — only for user-owned programs */}
+      {!isSystem && (editName ? (
         <div className={styles.nameEdit}>
           <input className={styles.createInput} autoFocus value={name}
             onChange={e => setName(e.target.value)}
@@ -262,7 +295,7 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
         <button className={styles.editNameBtn} onClick={() => { setEditName(true); setName(program?.name || '') }}>
           ✎ Rename program
         </button>
-      )}
+      ))}
 
       {/* Weekly schedule */}
       <div className={styles.schedSection}>
@@ -278,21 +311,25 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
                 {assigned ? (
                   <div className={styles.schedAssigned}
                     style={{ borderColor: assigned.color, color: assigned.color }}>
-                    <span className={styles.schedAssignedName} onClick={() => setDayPicker(i)}>
+                    <span className={styles.schedAssignedName}
+                      onClick={() => !isSystem && setDayPicker(i)}
+                      style={isSystem ? { cursor: 'default' } : {}}>
                       {assigned.name}
                     </span>
-                    <button className={styles.schedEdit} onClick={() => onOpenWorkout(assigned.id)} title="Edit workout">✎</button>
-                    <button className={styles.schedClear} onClick={() => handleClearDay(i)} title="Remove">✕</button>
+                    {!isSystem && <button className={styles.schedEdit} onClick={() => onOpenWorkout(assigned.id)} title="Edit workout">✎</button>}
+                    {!isSystem && <button className={styles.schedClear} onClick={() => handleClearDay(i)} title="Remove">✕</button>}
                   </div>
                 ) : isRest ? (
                   <div className={styles.schedRest}>
                     <span>Rest</span>
-                    <button className={styles.schedClear} onClick={() => handleClearDay(i)}>✕</button>
+                    {!isSystem && <button className={styles.schedClear} onClick={() => handleClearDay(i)}>✕</button>}
                   </div>
-                ) : (
+                ) : !isSystem ? (
                   <button className={styles.schedEmpty} onClick={() => setDayPicker(i)}>
                     + Assign
                   </button>
+                ) : (
+                  <div className={styles.schedEmpty} style={{ cursor: 'default', opacity: 0.4 }}>Empty</div>
                 )}
               </div>
             )
@@ -303,7 +340,9 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
       {/* Morning routine */}
       <div className={styles.morningSection}>
         <div className={styles.schedTitle}>Morning Routine</div>
-        <div className={styles.morningCard} onClick={() => setMorningPicker(true)}>
+        <div className={styles.morningCard}
+          onClick={() => !isSystem && setMorningPicker(true)}
+          style={isSystem ? { cursor: 'default' } : {}}>
           {morningWorkout ? (
             <>
               <div className={styles.morningName}>{morningWorkout.name}</div>
@@ -345,11 +384,11 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
                 <button className="btn" onClick={() => { setCreatingWorkout(false); setNewWorkoutName('') }}>Cancel</button>
               </div>
             </div>
-          ) : (
+          ) : !isSystem ? (
             <button className={`btn ${styles.createBtn}`} onClick={() => setCreatingWorkout(true)}>
               + New Workout
             </button>
-          )}
+          ) : null}
         </div>
       </div>
 

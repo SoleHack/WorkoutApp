@@ -73,6 +73,23 @@ export default function Settings() {
   const [exporting, setExporting] = useState(false)
   const [measurements, setMeasurements] = useState({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
   const [measureSaving, setMeasureSaving] = useState(false)
+  const [measureSaved, setMeasureSaved] = useState(false)
+
+  // Populate form with latest measurement values when they load
+  useEffect(() => {
+    if (latestMeasurement) {
+      setMeasurements({
+        waist:       latestMeasurement.waist       ? String(latestMeasurement.waist)       : '',
+        hips:        latestMeasurement.hips        ? String(latestMeasurement.hips)        : '',
+        chest:       latestMeasurement.chest       ? String(latestMeasurement.chest)       : '',
+        neck:        latestMeasurement.neck        ? String(latestMeasurement.neck)        : '',
+        left_arm:    latestMeasurement.left_arm    ? String(latestMeasurement.left_arm)    : '',
+        right_arm:   latestMeasurement.right_arm   ? String(latestMeasurement.right_arm)   : '',
+        left_thigh:  latestMeasurement.left_thigh  ? String(latestMeasurement.left_thigh)  : '',
+        right_thigh: latestMeasurement.right_thigh ? String(latestMeasurement.right_thigh) : '',
+      })
+    }
+  }, [latestMeasurement])
   const [photoNote, setPhotoNote] = useState('')
   const [heightInput, setHeightInput] = useState('')
 
@@ -224,10 +241,20 @@ export default function Settings() {
           <div className={styles.sectionTitle}>Body Measurements</div>
           {latestMeasurement && (
             <div className={styles.measureLatest}>
-              <span className={styles.measureDate}>Last: {new Date(latestMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
+              <span className={styles.measureDate}>
+                Last logged: {new Date(latestMeasurement.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+              </span>
               <span className={styles.measureVals}>
-                {latestMeasurement.waist && `Waist ${latestMeasurement.waist}"`}
-                {latestMeasurement.chest && ` · Chest ${latestMeasurement.chest}"`}
+                {[
+                  latestMeasurement.waist      && `Waist ${latestMeasurement.waist}"`,
+                  latestMeasurement.hips       && `Hips ${latestMeasurement.hips}"`,
+                  latestMeasurement.chest      && `Chest ${latestMeasurement.chest}"`,
+                  latestMeasurement.neck       && `Neck ${latestMeasurement.neck}"`,
+                  latestMeasurement.left_arm   && `L Arm ${latestMeasurement.left_arm}"`,
+                  latestMeasurement.right_arm  && `R Arm ${latestMeasurement.right_arm}"`,
+                  latestMeasurement.left_thigh && `L Thigh ${latestMeasurement.left_thigh}"`,
+                  latestMeasurement.right_thigh && `R Thigh ${latestMeasurement.right_thigh}"`,
+                ].filter(Boolean).join(' · ')}
               </span>
             </div>
           )}
@@ -256,10 +283,11 @@ export default function Settings() {
               const clean = {}
               Object.entries(measurements).forEach(([k, v]) => { if (v) clean[k] = parseFloat(v) })
               await saveMeasurement(clean)
-              setMeasurements({ waist: '', hips: '', chest: '', neck: '', left_arm: '', right_arm: '', left_thigh: '', right_thigh: '' })
               setMeasureSaving(false)
+              setMeasureSaved(true)
+              setTimeout(() => setMeasureSaved(false), 2500)
             }}>
-            {measureSaving ? 'Saving...' : 'Log Measurements'}
+            {measureSaving ? 'Saving...' : measureSaved ? '✓ Saved' : 'Log Measurements'}
           </button>
         </section>
 

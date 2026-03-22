@@ -105,26 +105,15 @@ export default function Dashboard() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>
+            <h1 className={styles.h1}>PPL Tracker</h1>
             {programData?.programId ? (
-              <>
-                <div className={styles.headerLabel}>
-                  {programData.programDays?.length > 0
-                    ? `${PROGRAM_ORDER.length}-Day Program`
-                    : 'Active Program'}
-                </div>
-                <h1 className={styles.h1}>
-                  {PROGRAM_ORDER.slice(0, 3).map((key, i) => (
-                    <span key={key} style={{ color: PROGRAM[key]?.color }}>
-                      {i > 0 ? ' ' : ''}{PROGRAM[key]?.label || key}
-                    </span>
-                  ))}
-                </h1>
-              </>
+              <div className={styles.headerLabel}>
+                {programData.programDays?.filter(d => !d.is_rest).length > 0
+                  ? `${PROGRAM_ORDER.length}-Day · ${Object.values(PROGRAM).find(w => !w.isMorningRoutine)?.colorClass?.toUpperCase() || ''} Program`
+                  : 'Active Program'}
+              </div>
             ) : (
-              <>
-                <div className={styles.headerLabel}>No program active</div>
-                <h1 className={styles.h1} style={{ fontSize: 'clamp(22px,4vw,36px)' }}>Get Started</h1>
-              </>
+              <div className={styles.headerLabel}>No program active</div>
             )}
           </div>
         </div>
@@ -149,7 +138,9 @@ export default function Dashboard() {
                 </span>
               )}
             </div>
-            <div className={styles.statLabel}>Weight (lbs)</div>
+            <div className={styles.statLabel}>
+              Weight (lbs){bwChange !== null ? <span style={{ fontSize: 10, color: 'var(--muted)', display: 'block' }}>vs prev weigh-in</span> : null}
+            </div>
           </div>
         </div>
 
