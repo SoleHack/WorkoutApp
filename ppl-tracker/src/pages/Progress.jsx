@@ -169,7 +169,7 @@ export default function Progress() {
   const [loading, setLoading] = useState(true)
   const [hoveredCell, setHoveredCell] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
-  const [volRange, setVolRange] = useState(56)
+  const [volRange, setVolRange] = useState(9999)
   const [bwRange, setBwRange] = useState(9999)
   const [exRange, setExRange] = useState(9999)
   const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
@@ -454,8 +454,9 @@ export default function Progress() {
                 </div>
               )
             })()}
+            <div className={styles.chartsGrid}>
             {filteredVol.length > 0 && (
-              <div className={styles.chartCard}>
+              <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
                 <div className={styles.chartCardHeader}>
                   <div>
                     <div className={styles.chartTitle}>Weekly volume</div>
@@ -502,7 +503,7 @@ export default function Progress() {
 
             {/* Bodyweight */}
             {filteredBw.length > 1 && (
-              <div className={styles.chartCard}>
+              <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
                 <div className={styles.chartCardHeader}>
                   <div>
                     <div className={styles.chartTitle}>Bodyweight</div>
@@ -545,7 +546,7 @@ export default function Progress() {
 
             {/* Body fat trend */}
             {bfTrendData.length > 1 && (
-              <div className={styles.chartCard}>
+              <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
                 <div className={styles.chartCardHeader}>
                   <div>
                     <div className={styles.chartTitle}>Body fat %</div>
@@ -581,7 +582,7 @@ export default function Progress() {
 
             {/* Waist measurement */}
             {measureEntries.filter(e => e.waist).length > 1 && (
-              <div className={styles.chartCard}>
+              <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
                 <div className={styles.chartTitle}>Waist measurement</div>
                 <div className={styles.chartSub}>inches over time</div>
                 <ResponsiveContainer width="100%" height={160}>
@@ -605,6 +606,8 @@ export default function Progress() {
                 </ResponsiveContainer>
               </div>
             )}
+
+            </div>{/* end chartsGrid */}
 
             {/* Recent PRs */}
             {recentPrs.length > 0 && (
