@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { usePrograms, useWorkouts, useProgramEditor, useWorkoutEditor, useExerciseLibrary } from '../hooks/usePrograms'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import { supabase } from '../lib/supabase'
+import { useDragReorder } from '../hooks/useDragReorder'
 import styles from './Programs.module.css'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -445,6 +446,11 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
   const [name, setName] = useState('')
   const [cloning, setCloning] = useState(false)
 
+  const { containerProps, handleProps, itemProps, draggingIndex } = useDragReorder(
+    exercises,
+    (fromIdx, toIdx) => reorderExercises(fromIdx, toIdx)
+  )
+
   const isSystem = workout && !workout.user_id
 
   const handleSaveName = async () => {
@@ -519,19 +525,14 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
       ))}
 
       {/* Exercise list */}
-      <div className={styles.exList}>
+      <div className={styles.exList} {...(!isSystem ? containerProps : {})}>
         {exercises.map((ex, idx) => (
-          <div key={ex.id} className={styles.exRow}>
-            {/* Horizontal row: drag | info | delete */}
+          <div key={ex.id} className={styles.exRow} {...(!isSystem ? itemProps(idx) : {})}>
+            {/* Horizontal row: handle | info | delete */}
             <div className={styles.exRowTop}>
               {!isSystem && (
-                <div className={styles.exDragArea}>
-                  <button className={styles.reorderBtn}
-                    style={{ opacity: idx === 0 ? 0.2 : 1, pointerEvents: idx === 0 ? 'none' : 'auto' }}
-                    onClick={() => reorderExercises(idx, idx - 1)}>↑</button>
-                  <button className={styles.reorderBtn}
-                    style={{ opacity: idx === exercises.length - 1 ? 0.2 : 1, pointerEvents: idx === exercises.length - 1 ? 'none' : 'auto' }}
-                    onClick={() => reorderExercises(idx, idx + 1)}>↓</button>
+                <div className={styles.exDragArea} {...handleProps(idx)}>
+                  <span className={styles.dragHandle}>⠿</span>
                 </div>
               )}
 
