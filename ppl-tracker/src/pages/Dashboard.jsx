@@ -185,7 +185,7 @@ export default function Dashboard() {
 
         {/* TODAY'S WORKOUT */}
         {programData?.programId && (
-        <section className={styles.section}>
+        <section className={`${styles.section} ${styles.sectionToday}`}>
           <div className={styles.sectionLabel}>Today's workout</div>
 
           {isRest ? (
@@ -240,7 +240,7 @@ export default function Dashboard() {
 
         {/* FULL PROGRAM — from schedule, includes rest days */}
         {scheduleGrid.some(s => !s.isRest) && (
-          <section className={styles.section}>
+          <section className={`${styles.section} ${styles.sectionProgram}`}>
             <div className={styles.sectionLabel}>Full program</div>
             <div className={styles.grid}>
               {scheduleGrid.map(slot => {
@@ -274,7 +274,7 @@ export default function Dashboard() {
 
         {/* MORNING ROUTINE — dynamic from active program */}
         {morningWorkout && morningSlug && (
-          <section className={styles.section}>
+          <section className={`${styles.section} ${styles.sectionMorning}`}>
             <div className={styles.sectionLabel}>Morning routine</div>
             <button
               className={`${styles.coreCard} ${coreCompletedToday ? styles.coreCardDone : ''}`}
@@ -330,7 +330,7 @@ export default function Dashboard() {
           const isBalanced = types.length < 2 || Math.max(...types.map(t => t.count)) - Math.min(...types.map(t => t.count)) <= 1
 
           return (
-            <section className={styles.section}>
+            <section className={`${styles.section} ${styles.sectionSplit}`}>
               <div className={styles.sectionLabel}>This month's balance</div>
               <div className={styles.splitCard}>
                 {types.map(t => (

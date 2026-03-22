@@ -318,8 +318,6 @@
 }
 @media (min-width: 1024px) {
   .header { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); padding-top: clamp(20px, 2.5vh, 36px); }
-  .main { padding: clamp(20px, 2.5vh, 36px) clamp(24px, 3vw, 48px); max-width: min(90%, 960px); }
-  .grid { grid-template-columns: repeat(3, 1fr); gap: clamp(8px, 1vw, 14px); }
   .h1 { font-size: clamp(36px, 4vw, 60px); }
 }
 .dayCardRest {
@@ -354,21 +352,57 @@
   max-width: min(100%, 380px);
 }
 
-/* ── Desktop two-column layout ───────────────────────────── */
-@media (min-width: 900px) {
+/* ── Desktop layout (sidebar kicks in at 1024px) ──────────── */
+@media (min-width: 1024px) {
+  /* Hide the h1 — sidebar already shows app name */
+  .h1 { display: none; }
+  .headerLabel { margin-top: 0; }
+
+  /* Header — compact, no title taking space */
+  .header {
+    padding: 20px 40px 0;
+  }
+
+  /* Stats row — tighter, left-aligned, not spread across full width */
+  .statsRow {
+    justify-content: flex-start;
+    gap: 0;
+    padding: 14px 0;
+  }
+  .stat { flex: unset; min-width: 140px; }
+  .statVal { font-size: 15px; }
+  .statDivider { margin: 0 20px; }
+
+  /* Main — proper two column grid */
   .main {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: clamp(12px, 2vw, 20px);
+    grid-template-columns: minmax(300px, 1fr) minmax(340px, 1.5fr);
+    grid-template-rows: auto auto auto;
+    gap: 24px;
     align-items: start;
+    padding: 28px 40px 48px;
+    max-width: 1200px;
   }
-  /* Today's workout always full width */
-  .main > .section:first-of-type,
-  .main > .noProgramCard {
-    grid-column: 1 / -1;
-  }
-  /* Split balance full width */
-  .main > .section:last-of-type {
-    grid-column: 1 / -1;
-  }
+
+  /* No-program — full width */
+  .main > .noProgramCard { grid-column: 1 / -1; }
+
+  /* Today — left col, row 1 */
+  .sectionToday { grid-column: 1; grid-row: 1; }
+
+  /* Program grid — right col, rows 1–2 */
+  .sectionProgram { grid-column: 2; grid-row: 1 / 3; }
+
+  /* Morning — left col, row 2 */
+  .sectionMorning { grid-column: 1; grid-row: 2; }
+
+  /* Split balance — full width, row 3 */
+  .sectionSplit { grid-column: 1 / -1; grid-row: 3; }
+
+  /* Program grid — single row of 7 on desktop */
+  .grid { grid-template-columns: repeat(7, 1fr) !important; }
+
+  /* Today card — more comfortable */
+  .todayCard { padding: 24px; }
+  .todayTitle { font-size: clamp(40px, 3.5vw, 56px); }
 }
