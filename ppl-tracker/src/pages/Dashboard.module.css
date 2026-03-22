@@ -98,11 +98,13 @@
 .todayCard {
   width: 100%; background: var(--bg2);
   border: 1px solid var(--day-color);
-  border-radius: 10px; padding: 20px; text-align: left;
+  border-radius: 14px; padding: clamp(16px,3vw,24px); text-align: left;
   display: flex; justify-content: space-between; align-items: center; gap: 16px;
-  transition: opacity 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 0 0 0 var(--day-color);
 }
-.todayCard:active { opacity: 0.85; }
+.todayCard:hover { box-shadow: 0 4px 20px rgba(0,0,0,0.3); transform: translateY(-1px); }
+.todayCard:active { opacity: 0.85; transform: scale(0.99); }
 .todayCardDone { background: rgba(74,222,128,0.05); }
 
 .todayLeft { flex: 1; }
@@ -114,7 +116,7 @@
 }
 
 .todayTitle {
-  font-family: 'Bebas Neue', sans-serif; font-size: 40px;
+  font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 6vw, 52px);
   letter-spacing: 0.04em; line-height: 1; color: var(--text); margin-bottom: 6px;
 }
 
@@ -123,15 +125,27 @@
 .todayArrow { font-size: 28px; flex-shrink: 0; }
 
 /* Grid */
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(6px, 1.5vw, 12px);
+}
+@media (min-width: 640px) {
+  .grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 900px) {
+  .grid { grid-template-columns: repeat(6, 1fr); }
+}
 
 .dayCard {
   background: var(--bg2); border: 1px solid var(--border);
-  border-left: 3px solid var(--day-color); border-radius: 8px;
-  padding: 14px 12px; text-align: left; transition: background 0.15s;
+  border-left: 3px solid var(--day-color); border-radius: 10px;
+  padding: clamp(10px, 2vw, 16px) clamp(10px, 2vw, 14px);
+  text-align: left; transition: all 0.18s ease;
   display: flex; flex-direction: column; gap: 2px; position: relative;
 }
-.dayCard:active { background: var(--bg3); }
+.dayCard:hover { background: var(--bg3); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+.dayCard:active { transform: scale(0.97); }
 .dayCardToday { border-color: var(--day-color); }
 
 .dayLabel {
@@ -338,4 +352,23 @@
   color: var(--muted2);
   line-height: 1.6;
   max-width: min(100%, 380px);
+}
+
+/* ── Desktop two-column layout ───────────────────────────── */
+@media (min-width: 900px) {
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(12px, 2vw, 20px);
+    align-items: start;
+  }
+  /* Today's workout always full width */
+  .main > .section:first-of-type,
+  .main > .noProgramCard {
+    grid-column: 1 / -1;
+  }
+  /* Split balance full width */
+  .main > .section:last-of-type {
+    grid-column: 1 / -1;
+  }
 }

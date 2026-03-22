@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { usePrograms, useWorkouts, useProgramEditor, useWorkoutEditor, useExerciseLibrary } from '../hooks/usePrograms'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
+import { supabase } from '../lib/supabase'
 import styles from './Programs.module.css'
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
@@ -212,9 +213,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
   }
 
   const handleSetMorning = async (workoutId) => {
-    // Update user_programs morning_workout_id
-    const { createClient } = await import('../lib/supabase.js')
-    const { supabase } = await import('../lib/supabase.js')
     const { data: { user } } = await supabase.auth.getUser()
     await supabase.from('user_programs').upsert({
       user_id: user.id,

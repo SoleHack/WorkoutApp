@@ -8,6 +8,7 @@ import { useAchievements } from '../hooks/useAchievements'
 import { useRestDay } from '../hooks/useRestDay'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import AchievementToast from '../components/AchievementToast'
+import Onboarding from '../components/Onboarding'
 import styles from './Dashboard.module.css'
 
 function formatDate(dateStr) {
@@ -49,7 +50,16 @@ function useDeloadCheck(allSessions, deloadEnabled) {
 }
 
 export default function Dashboard() {
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (!user) return false
+    const key = `onboarding_done_${user.id}`
+    return !localStorage.getItem(key)
+  })
+  const handleOnboardingDone = () => {
+    localStorage.setItem(`onboarding_done_${user?.id}`, '1')
+    setShowOnboarding(false)
+  }
   const navigate = useNavigate()
   const { settings, loading: settingsLoading } = useSettings()
   const { programData, loading: programLoading } = useActiveProgram()
@@ -99,6 +109,7 @@ export default function Dashboard() {
 
   return (
     <div className={styles.wrap}>
+      {showOnboarding && <Onboarding onDone={handleOnboardingDone} />}
       {newlyUnlocked.length > 0 && (
         <AchievementToast achievements={newlyUnlocked} onDone={clearNewlyUnlocked} />
       )}

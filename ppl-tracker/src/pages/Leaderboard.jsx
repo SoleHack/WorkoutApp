@@ -280,10 +280,10 @@ export default function Leaderboard() {
       <main className={styles.main}>
         {!theirStats ? (
           <div className={styles.connectCard}>
-            <div className={styles.connectIcon}>👥</div>
-            <div className={styles.connectTitle}>Connect with a partner</div>
-            <div className={styles.connectDesc}>
-              Ask your partner to enable Partner Mode in Settings, then enter their email below.
+            <div className="emptyStateIcon">🏆</div>
+            <div className="emptyStateTitle">Train together</div>
+            <div className="emptyStateDesc">
+              Challenge a friend. Compare streaks, volume, and consistency — side by side.
             </div>
             <div className={styles.inputRow}>
               <input
@@ -297,10 +297,13 @@ export default function Leaderboard() {
               <button className={`btn btn-primary ${styles.connectBtn}`}
                 disabled={connecting || !partnerEmail}
                 onClick={lookupPartner}>
-                {connecting ? '...' : 'Connect'}
+                {connecting ? '...' : 'Connect →'}
               </button>
             </div>
             {error && <div className={styles.error}>{error}</div>}
+            <div className={styles.connectHint}>
+              Your partner needs Partner Mode enabled in their Settings first.
+            </div>
           </div>
         ) : (
           <>

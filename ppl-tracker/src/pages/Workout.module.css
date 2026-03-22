@@ -48,7 +48,7 @@
 
 .dayTitle {
   font-family: 'Bebas Neue', sans-serif;
-  font-size: 40px;
+  font-size: clamp(36px, 6vw, 52px);
   letter-spacing: 0.04em;
   line-height: 1;
   margin-bottom: 4px;
@@ -57,25 +57,29 @@
 .focus { font-size: 12px; color: var(--muted); }
 
 .progressWrap {
-  padding: 12px 20px;
+  padding: 10px 20px;
   display: flex;
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  position: sticky;
+  top: calc(var(--header-h, 120px));
+  z-index: 9;
 }
 
 .progressBar {
   flex: 1;
-  height: 3px;
+  height: 5px;
   background: var(--border);
-  border-radius: 2px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .progressFill {
   height: 100%;
-  border-radius: 2px;
-  transition: width 0.3s ease;
+  border-radius: 3px;
+  transition: width 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .progressLabel {
@@ -85,12 +89,23 @@
 }
 
 .main {
-  padding: clamp(12px, 4vw, 20px) clamp(12px, 4vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 100px);
-  max-width: 600px;
+  padding: clamp(12px, 3vw, 20px) clamp(12px, 3vw, 20px) calc(env(safe-area-inset-bottom, 0px) + 100px);
+  max-width: 900px;
   margin: 0 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+@media (min-width: 720px) {
+  .main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  .main > *:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }
 
 .loading {
@@ -103,17 +118,21 @@
 
 .finishBtn {
   width: 100%;
-  margin-top: 4px;
-  padding: 14px;
-  font-size: 15px;
+  margin-top: 8px;
+  padding: 18px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 14px !important;
+  letter-spacing: 0.03em;
 }
 
 .allDoneBanner {
   background: rgba(74,222,128,0.08);
   border: 1px solid rgba(74,222,128,0.25);
-  border-radius: 8px;
-  padding: 14px 16px;
+  border-radius: 14px;
+  padding: 20px 16px;
   text-align: center;
+  animation: slideUp 0.3s ease;
 }
 
 .allDoneTitle {

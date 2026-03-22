@@ -338,6 +338,18 @@ export default function Progress() {
         {/* ── OVERVIEW ── */}
         {activeTab === 'overview' && (
           <>
+            {/* Empty state */}
+            {!loading && totalSessions === 0 && (
+              <div className="emptyState">
+                <div className="emptyStateIcon">📊</div>
+                <div className="emptyStateTitle">No sessions yet</div>
+                <div className="emptyStateDesc">
+                  Complete your first workout and your progress will appear here — consistency charts, volume trends, and PRs.
+                </div>
+              </div>
+            )}
+            {totalSessions > 0 && (
+            <>
             <div className={styles.statsGrid}>
               <div className={styles.statCard}>
                 <div className={styles.statNum}>{totalSessions}</div>
@@ -638,8 +650,7 @@ export default function Progress() {
               </>
             )}
 
-            {!loading && totalSessions === 0 && (
-              <div className={styles.empty}>Complete your first workout to see progress data here.</div>
+            </>
             )}
           </>
         )}
