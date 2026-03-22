@@ -522,32 +522,33 @@ function WorkoutEditorView({ workoutId, onBack, onOpenWorkout }) {
       <div className={styles.exList}>
         {exercises.map((ex, idx) => (
           <div key={ex.id} className={styles.exRow}>
-            {/* Reorder — hidden for system workouts */}
-            {!isSystem && (
-              <div className={styles.exDragArea}>
-                {idx > 0 && (
-                  <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx - 1)}>↑</button>
-                )}
-                {idx < exercises.length - 1 && (
-                  <button className={styles.reorderBtn} onClick={() => reorderExercises(idx, idx + 1)}>↓</button>
-                )}
-              </div>
-            )}
+            {/* Horizontal row: drag | info | delete */}
+            <div className={styles.exRowTop}>
+              {!isSystem && (
+                <div className={styles.exDragArea}>
+                  <button className={styles.reorderBtn}
+                    style={{ opacity: idx === 0 ? 0.2 : 1, pointerEvents: idx === 0 ? 'none' : 'auto' }}
+                    onClick={() => reorderExercises(idx, idx - 1)}>↑</button>
+                  <button className={styles.reorderBtn}
+                    style={{ opacity: idx === exercises.length - 1 ? 0.2 : 1, pointerEvents: idx === exercises.length - 1 ? 'none' : 'auto' }}
+                    onClick={() => reorderExercises(idx, idx + 1)}>↓</button>
+                </div>
+              )}
 
-            <div className={styles.exInfo} onClick={() => !isSystem && setEditingEx(editingEx?.id === ex.id ? null : ex)}>
-              <div className={styles.exName}>{ex.exercise?.name || 'Unknown'}</div>
-              <div className={styles.exParams}>
-                {ex.sets}×{ex.reps} · {ex.rest_seconds}s rest · <span className={styles.exTag}>{ex.tag}</span>
+              <div className={styles.exInfo} onClick={() => !isSystem && setEditingEx(editingEx?.id === ex.id ? null : ex)}>
+                <div className={styles.exName}>{ex.exercise?.name || 'Unknown'}</div>
+                <div className={styles.exParams}>
+                  {ex.sets}×{ex.reps} · {ex.rest_seconds}s rest · <span className={styles.exTag}>{ex.tag}</span>
+                </div>
+                {ex.notes && <div className={styles.exNote}>{ex.notes}</div>}
               </div>
-              {ex.notes && <div className={styles.exNote}>{ex.notes}</div>}
+
+              {!isSystem && (
+                <button className={styles.exDelete} onClick={() => setConfirm(ex.id)}>✕</button>
+              )}
             </div>
 
-            {/* Delete — hidden for system workouts */}
-            {!isSystem && (
-              <button className={styles.exDelete} onClick={() => setConfirm(ex.id)}>✕</button>
-            )}
-
-            {/* Inline editor — only for user workouts */}
+            {/* Inline editor — expands below the row */}
             {!isSystem && editingEx?.id === ex.id && (
               <div className={styles.exEditor}>
                 <div className={styles.exEditorRow}>
