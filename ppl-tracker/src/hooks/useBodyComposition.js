@@ -40,7 +40,7 @@ export function useBodyMeasurements() {
     setLoading(true)
     const { data } = await supabase
       .from('body_measurements')
-      .select('*')
+      .select('id, date, waist, hips, chest, neck, left_arm, right_arm, left_thigh, right_thigh')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(52)
@@ -81,7 +81,7 @@ export function useProgressPhotos() {
     setLoading(true)
     const { data } = await supabase
       .from('progress_photos')
-      .select('*')
+      .select('id, date, waist, hips, chest, neck, left_arm, right_arm, left_thigh, right_thigh')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(52)

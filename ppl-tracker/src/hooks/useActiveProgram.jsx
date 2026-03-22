@@ -112,13 +112,10 @@ export function ActiveProgramProvider({ children }) {
       .eq('user_id', user.id)
       .maybeSingle()
 
-    // No enrollment row at all — create an empty one
     if (!enrollment) {
       await supabase.from('user_programs').upsert({
-        user_id: user.id,
-        program_id: null,
-        morning_workout_id: null,
-        last_completed_slug: null,
+        user_id: user.id, program_id: null,
+        morning_workout_id: null, last_completed_slug: null,
       }, { onConflict: 'user_id' })
       enrollment = { program_id: null, morning_workout_id: null, last_completed_slug: null }
     }
@@ -126,18 +123,23 @@ export function ActiveProgramProvider({ children }) {
     setProgramId(enrollment.program_id)
     setMorningWorkoutId(enrollment.morning_workout_id)
 
-    // No program selected yet — nothing to load
     if (!enrollment.program_id) {
       setProgramData({ PROGRAM: {}, PROGRAM_ORDER: [], EXERCISES: {}, TAG_LABELS: {}, ALTERNATIVES: {}, SCHEDULE: {}, programDays: [], morningWorkoutId: null, lastCompletedSlug: null, programId: null })
       setLoading(false)
       return
     }
 
-    const { data: days } = await supabase
-      .from('program_days')
-      .select('*')
-      .eq('program_id', enrollment.program_id)
-      .order('day_index')
+    // Parallel: fetch program_days + alternatives simultaneously
+    const [{ data: days }, { data: altRows }] = await Promise.all([
+      supabase
+        .from('program_days')
+        .select('id, day_index, workout_id, is_rest')  // was select('*')
+        .eq('program_id', enrollment.program_id)
+        .order('day_index'),
+      supabase
+        .from('exercise_alternatives')
+        .select('exercise:exercise_id (slug), alternative:alternative_id (slug)'),
+    ])
 
     const workoutIds = [
       ...(days || []).filter(d => d.workout_id).map(d => d.workout_id),
@@ -149,17 +151,16 @@ export function ActiveProgramProvider({ children }) {
     if (uniqueIds.length > 0) {
       const { data } = await supabase
         .from('workouts')
-        .select(`*, workout_exercises (
-          id, order_index, sets, reps, rest_seconds, tag, notes, accent, exercise_id,
-          exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes)
-        )`)
+        .select(`
+          id, name, slug, day_type, color, focus, is_morning_routine,
+          workout_exercises (
+            id, order_index, sets, reps, rest_seconds, tag, notes, accent, exercise_id,
+            exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes)
+          )
+        `)
         .in('id', uniqueIds)
       workoutRows = data || []
     }
-
-    const { data: altRows } = await supabase
-      .from('exercise_alternatives')
-      .select('exercise:exercise_id (slug), alternative:alternative_id (slug)')
 
     const ALTERNATIVES = {}
     ;(altRows || []).forEach(row => {
@@ -183,8 +184,15 @@ export function ActiveProgramProvider({ children }) {
 
   useEffect(() => { load() }, [load])
 
+  // Re-fetch on visibility change but throttle to max once per 2 minutes
   useEffect(() => {
-    const onVisibility = () => { if (document.visibilityState === 'visible' && user) load() }
+    let lastFetch = 0
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible' && user) {
+        const now = Date.now()
+        if (now - lastFetch > 120_000) { lastFetch = now; load() }
+      }
+    }
     document.addEventListener('visibilitychange', onVisibility)
     return () => document.removeEventListener('visibilitychange', onVisibility)
   }, [user, load])

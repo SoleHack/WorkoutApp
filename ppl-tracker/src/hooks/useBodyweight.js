@@ -8,39 +8,35 @@ export function useBodyweight() {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (user) load() }, [user])
-
-  const load = async () => {
+  const load = useCallback(async () => {
+    if (!user) return
     setLoading(true)
     const { data } = await supabase
       .from('bodyweight')
-      .select('*')
+      .select('id, date, weight')   // was select('*')
       .eq('user_id', user.id)
       .order('date', { ascending: true })
-      .limit(52) // 1 year of weekly weigh-ins
+      .limit(90)                     // 3 months max, was unbounded
     setEntries(data || [])
     setLoading(false)
-  }
-
-  const logWeight = useCallback(async (weight, date) => {
-    const d = date || getLocalDate()
-    const { data, error } = await supabase
-      .from('bodyweight')
-      .upsert({ user_id: user.id, weight, date: d }, { onConflict: 'user_id,date' })
-      .select()
-      .single()
-    if (!error && data) {
-      setEntries(prev => {
-        const filtered = prev.filter(e => e.date !== d)
-        return [...filtered, data].sort((a, b) => a.date.localeCompare(b.date))
-      })
-    }
-    return { error }
   }, [user])
 
-  const latest = entries[entries.length - 1]
+  useEffect(() => { if (user) load() }, [user, load])
+
+  const logWeight = useCallback(async (weight) => {
+    const today = getLocalDate()
+    await supabase.from('bodyweight').upsert(
+      { user_id: user.id, date: today, weight },
+      { onConflict: 'user_id,date' }
+    )
+    await load()
+  }, [user, load])
+
+  const latest   = entries[entries.length - 1]
   const previous = entries[entries.length - 2]
-  const change = latest && previous ? (latest.weight - previous.weight).toFixed(1) : null
+  const change   = latest && previous
+    ? (latest.weight - previous.weight).toFixed(1)
+    : null
 
   return { entries, loading, logWeight, latest, change }
 }

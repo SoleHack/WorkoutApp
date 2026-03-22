@@ -41,7 +41,7 @@ export function useVolumeLandmarks(exercises = {}) {
 
     const { data: sessions } = await supabase
       .from('workout_sessions')
-      .select('*, session_sets(*)')
+      .select('session_sets(completed, exercise_id)')
       .eq('user_id', user.id)
       .gte('date', weekStartStr)
 

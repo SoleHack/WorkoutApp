@@ -28,7 +28,7 @@ export function SettingsProvider({ children }) {
   const load = async () => {
     setLoading(true)
     const [{ data: s }, { data: p }] = await Promise.all([
-      supabase.from('user_settings').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex').eq('user_id', user.id).maybeSingle(),
       supabase.from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
     ])
 

@@ -76,55 +76,58 @@ export function usePrograms() {
   }, [user])
 
   const cloneProgram = useCallback(async (sourceId, newName) => {
-    // Fetch source program with all days
     const { data: src } = await supabase
       .from('programs')
-      .select('*, program_days(*, workouts(*, workout_exercises(*, exercise:exercises(*))))')
+      .select('name, description, split_type, program_days(day_index, is_rest, workout_id, workouts(id, name, slug, day_type, color, focus, is_morning_routine, workout_exercises(exercise_id, order_index, sets, reps, rest_seconds, tag, notes, accent)))')
       .eq('id', sourceId)
       .single()
     if (!src) throw new Error('Source not found')
 
-    // Create new program
+    // 1 — Create the new program
     const { data: newProg } = await supabase.from('programs').insert({
+      user_id: user.id, name: newName,
+      description: src.description, split_type: src.split_type,
+    }).select('id').single()
+
+    // Collect unique workouts across all days (avoid duplicates)
+    const uniqueWorkouts = {}
+    ;(src.program_days || []).forEach(pd => {
+      if (pd.workouts) uniqueWorkouts[pd.workouts.id] = pd.workouts
+    })
+    const workoutList = Object.values(uniqueWorkouts)
+
+    // 2 — Batch insert all workouts at once
+    const ts = Date.now()
+    const workoutInserts = workoutList.map((w, i) => ({
       user_id: user.id,
-      name: newName,
-      description: src.description,
-      split_type: src.split_type,
-    }).select().single()
+      name: w.name,
+      slug: `${w.slug}-${ts}-${i}`,
+      day_type: w.day_type, color: w.color,
+      focus: w.focus, is_morning_routine: w.is_morning_routine,
+    }))
+    const { data: newWorkouts } = await supabase
+      .from('workouts').insert(workoutInserts).select('id, slug')
 
-    // Clone workouts and their exercises
+    // Build old-id → new-id map by matching slug prefix
     const workoutIdMap = {}
-    for (const day of (src.program_days || [])) {
-      if (!day.workouts) continue
-      const w = day.workouts
-      const { data: newWorkout } = await supabase.from('workouts').insert({
-        user_id: user.id,
-        name: w.name,
-        slug: `${w.slug}-${Date.now()}`,
-        day_type: w.day_type,
-        color: w.color,
-        focus: w.focus,
-        is_morning_routine: w.is_morning_routine,
-      }).select().single()
+    workoutList.forEach((w, i) => {
+      workoutIdMap[w.id] = newWorkouts[i].id
+    })
 
-      workoutIdMap[w.id] = newWorkout.id
-
-      // Clone exercises
-      const exRows = (w.workout_exercises || []).map(we => ({
-        workout_id: newWorkout.id,
+    // 3 — Batch insert all exercises across all workouts at once
+    const allExRows = workoutList.flatMap(w =>
+      (w.workout_exercises || []).map(we => ({
+        workout_id: workoutIdMap[w.id],
         exercise_id: we.exercise_id,
         order_index: we.order_index,
-        sets: we.sets,
-        reps: we.reps,
+        sets: we.sets, reps: we.reps,
         rest_seconds: we.rest_seconds,
-        tag: we.tag,
-        notes: we.notes,
-        accent: we.accent,
+        tag: we.tag, notes: we.notes, accent: we.accent,
       }))
-      if (exRows.length) await supabase.from('workout_exercises').insert(exRows)
-    }
+    )
+    if (allExRows.length) await supabase.from('workout_exercises').insert(allExRows)
 
-    // Clone program days
+    // 4 — Batch insert program days
     const dayRows = (src.program_days || []).map(pd => ({
       program_id: newProg.id,
       day_index: pd.day_index,
@@ -251,10 +254,9 @@ export function useWorkouts() {
   }, [user, load])
 
   const cloneWorkout = useCallback(async (sourceId, newName) => {
-    // Fetch source workout with exercises
     const { data: src } = await supabase
       .from('workouts')
-      .select('*, workout_exercises(*, exercise:exercises(*))')
+      .select('name, slug, day_type, color, focus, is_morning_routine, workout_exercises(exercise_id, order_index, sets, reps, rest_seconds, tag, notes, accent)')
       .eq('id', sourceId)
       .single()
     if (!src) throw new Error('Source workout not found')
@@ -263,23 +265,14 @@ export function useWorkouts() {
     const { data: newW } = await supabase.from('workouts').insert({
       user_id: user.id,
       name: newName || `${src.name} (copy)`,
-      slug,
-      day_type: src.day_type,
-      color: src.color,
-      focus: src.focus,
-      is_morning_routine: src.is_morning_routine,
-    }).select().single()
+      slug, day_type: src.day_type, color: src.color,
+      focus: src.focus, is_morning_routine: src.is_morning_routine,
+    }).select('id, name, slug, day_type, color, focus, is_morning_routine').single()
 
     const exRows = (src.workout_exercises || []).map(we => ({
-      workout_id: newW.id,
-      exercise_id: we.exercise_id,
-      order_index: we.order_index,
-      sets: we.sets,
-      reps: we.reps,
-      rest_seconds: we.rest_seconds,
-      tag: we.tag,
-      notes: we.notes,
-      accent: we.accent,
+      workout_id: newW.id, exercise_id: we.exercise_id,
+      order_index: we.order_index, sets: we.sets, reps: we.reps,
+      rest_seconds: we.rest_seconds, tag: we.tag, notes: we.notes, accent: we.accent,
     }))
     if (exRows.length) await supabase.from('workout_exercises').insert(exRows)
     await load()

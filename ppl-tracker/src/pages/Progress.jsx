@@ -189,7 +189,7 @@ export default function Progress() {
     setLoading(true)
     const { data: sessions } = await supabase
       .from('workout_sessions')
-      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(*)')
+      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(completed, weight, reps, rpe, exercise_id)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(200)

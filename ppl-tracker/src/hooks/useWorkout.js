@@ -66,7 +66,7 @@ export function useWorkout(dayKey) {
           { user_id: user.id, day_key: dayKey, date: today },
           { onConflict: 'user_id,day_key,date' }
         )
-        .select()
+        .select('id, day_key, date, user_id')
         .single()
 
       if (insertErr) {
@@ -131,7 +131,7 @@ export function useWorkout(dayKey) {
           completed: true,
           ...(rpe ? { rpe } : {}),
         })
-        .select()
+        .select('id')
         .single()
 
       if (error) {
