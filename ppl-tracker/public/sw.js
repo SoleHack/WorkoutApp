@@ -1,4 +1,4 @@
-const CACHE = 'ppl-v2'
+const CACHE = 'ppl-v3'
 const STATIC = ['/', '/index.html', '/manifest.json']
 
 // Offline queue for failed Supabase writes

@@ -578,8 +578,8 @@
 .rpeRow {
   display: flex;
   align-items: center;
-  gap: 4px;
-  margin-top: 10px;
+  gap: 6px;
+  margin-top: 12px;
   flex-wrap: wrap;
 }
 
@@ -594,15 +594,15 @@
 
 .rpeBtn {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  padding: 5px 8px;
-  border-radius: 4px;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 6px;
   background: var(--bg3);
   border: 1px solid var(--border);
   color: var(--muted2);
-  min-height: unset;
-  height: 30px;
-  transition: all 0.1s;
+  min-height: 40px;
+  transition: all 0.12s;
+  flex: 1;
 }
 .rpeBtnActive { font-weight: 600; }
 

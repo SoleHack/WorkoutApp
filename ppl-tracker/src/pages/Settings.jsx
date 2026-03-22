@@ -475,27 +475,24 @@ export default function Settings() {
         </section>
 
         {/* APPLE HEALTH */}
-        <section className={styles.section}>
-          <div className={styles.sectionTitle}>Apple Health</div>
-          <div className={styles.sectionDesc}>
-            Export your workout history to Apple Health as strength training sessions.
-            After downloading, open the file — iOS will offer to import it into Health automatically.
-          </div>
-          {!healthSupported && (
-            <div className={styles.healthNote}>
-              📱 This feature is for iPhone. Open the app on your iPhone to use it.
+        {healthSupported && (
+          <section className={styles.section}>
+            <div className={styles.sectionTitle}>Apple Health</div>
+            <div className={styles.sectionDesc}>
+              Downloads a workout file you can import into Apple Health.
+              After downloading, tap the file — iOS will offer to add it to Health automatically.
             </div>
-          )}
-          <button className={`btn ${styles.exportBtn}`}
-            onClick={() => syncWorkout({
-              dayLabel: 'PPL Workout',
-              duration: 3600,
-              date: getLocalDate(),
-              exercises: [],
-            })}>
-            ↓ Download Health Export
-          </button>
-        </section>
+            <button className={`btn ${styles.exportBtn}`}
+              onClick={() => syncWorkout({
+                dayLabel: 'Strength Training',
+                duration: null,
+                date: getLocalDate(),
+                exercises: [],
+              })}>
+              ↓ Export to Apple Health
+            </button>
+          </section>
+        )}
 
         {/* EXPORT */}
         <section className={styles.section}>

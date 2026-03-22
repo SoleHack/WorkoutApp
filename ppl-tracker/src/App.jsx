@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { AuthProvider, useAuth } from './hooks/useAuth'
 import { SettingsProvider } from './hooks/useSettings.jsx'
 import { ActiveProgramProvider } from './hooks/useActiveProgram.jsx'
+import ErrorBoundary from './components/ErrorBoundary'
 import AppLayout from './components/AppLayout'
 import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
@@ -61,14 +62,16 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <ActiveProgramProvider>
-          <BrowserRouter>
-            <AppRoutes />
-          </BrowserRouter>
-        </ActiveProgramProvider>
-      </SettingsProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <SettingsProvider>
+          <ActiveProgramProvider>
+            <BrowserRouter>
+              <AppRoutes />
+            </BrowserRouter>
+          </ActiveProgramProvider>
+        </SettingsProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }

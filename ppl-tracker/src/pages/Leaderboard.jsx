@@ -34,15 +34,27 @@ function StatCard({ label, you, them, higherIsBetter = true, unit = '' }) {
 async function fetchUserStats(userId) {
   if (!userId) return null
 
-  const { data: sessions } = await supabase
+  // Fetch user's morning workout slug so we can exclude it from stats
+  const { data: enrollment } = await supabase
+    .from('user_programs')
+    .select('morning_workout_id, workouts:morning_workout_id (slug)')
+    .eq('user_id', userId)
+    .maybeSingle()
+  const morningSlug = enrollment?.workouts?.slug || null
+
+  const query = supabase
     .from('workout_sessions')
-    .select('date, completed_at, duration_seconds, session_sets(*)')
+    .select('date, completed_at, duration_seconds, session_sets(completed, weight, reps)')
     .eq('user_id', userId)
     .not('completed_at', 'is', null)
-    .neq('day_key', 'core')
     .neq('day_key', 'rest')
     .order('date', { ascending: false })
-    .limit(365) // full year for meaningful stats
+    .limit(365)
+
+  // Exclude morning routine by slug if we know it
+  if (morningSlug) query.neq('day_key', morningSlug)
+
+  const { data: sessions } = await query
 
   if (!sessions) return null
 

@@ -90,7 +90,8 @@ export function useWorkoutShare() {
         const y = 700 + i * 72
         ctx.fillStyle = '#E8E3D8'
         ctx.font = '500 26px monospace'
-        ctx.fillText(pr.exerciseId.replace(/-/g, ' ').toUpperCase().slice(0, 28), 120, y)
+        const prName = (pr.name || pr.exerciseId || '').replace(/-/g, ' ').toUpperCase().slice(0, 28)
+        ctx.fillText(prName, 120, y)
         ctx.fillStyle = day?.color || '#F59E0B'
         ctx.font = 'bold 30px monospace'
         const wLabel = pr.weight > 0 ? `${pr.weight}lbs × ${pr.reps}` : `BW × ${pr.reps}`
@@ -101,7 +102,8 @@ export function useWorkoutShare() {
     // Date footer
     ctx.fillStyle = 'rgba(255,255,255,0.15)'
     ctx.font = '400 26px monospace'
-    ctx.fillText('jnworkoutapp.vercel.app', 80, 1860)
+    const appUrl = (import.meta.env.VITE_APP_URL || 'ppltracker.app').replace('https://', '')
+    ctx.fillText(appUrl, 80, 1860)
     ctx.fillStyle = day?.color || '#F59E0B'
     ctx.font = '500 26px monospace'
     const dateStr = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
