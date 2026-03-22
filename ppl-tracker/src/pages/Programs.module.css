@@ -235,6 +235,53 @@
 }
 .exRow:hover { border-color: var(--border2); }
 
+/* ── Drag & drop insertion line ───────────────────────────── */
+.exList {
+  position: relative;
+}
+
+/* Line appears ABOVE the target item when dragging from below */
+.exRow[data-show-line-above]::before {
+  content: '';
+  position: absolute;
+  top: -4px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--pull);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--pull);
+  z-index: 20;
+  animation: fadeIn 0.08s ease;
+}
+
+/* Line appears BELOW the target item when dragging from above */
+.exRow[data-show-line-below]::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 8px;
+  right: 8px;
+  height: 2px;
+  background: var(--pull);
+  border-radius: 2px;
+  box-shadow: 0 0 8px var(--pull);
+  z-index: 20;
+  animation: fadeIn 0.08s ease;
+}
+
+/* Dot at start of line */
+.exRow[data-show-line-above]::before,
+.exRow[data-show-line-below]::after {
+  /* Glow pulse while hovering */
+  animation: lineGlow 0.8s ease infinite alternate;
+}
+
+@keyframes lineGlow {
+  from { box-shadow: 0 0 4px var(--pull); opacity: 0.8; }
+  to   { box-shadow: 0 0 12px var(--pull); opacity: 1; }
+}
+
 /* The horizontal row inside each exercise card */
 .exRowTop {
   display: flex;
