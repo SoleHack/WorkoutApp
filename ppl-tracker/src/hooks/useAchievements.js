@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from './useAuth'
 
@@ -25,14 +25,16 @@ export const ACHIEVEMENT_DEFS = [
 
 export function useAchievements(stats) {
   const { user } = useAuth()
-  const [unlocked, setUnlocked] = useState(null) // null = not yet loaded
+  const [unlocked, setUnlocked] = useState(null)
   const [newlyUnlocked, setNewlyUnlocked] = useState([])
   const [loading, setLoading] = useState(true)
+  const checkedRef = useRef(false) // prevent re-running check after first pass
 
   useEffect(() => { if (user) load() }, [user])
 
   const load = async () => {
     setLoading(true)
+    checkedRef.current = false // reset so check runs after fresh load
     const { data } = await supabase
       .from('achievements')
       .select('achievement_id')
@@ -43,26 +45,28 @@ export function useAchievements(stats) {
 
   useEffect(() => {
     if (!stats || !user || unlocked === null) return
-    const run = async () => {
-      const newOnes = []
-      ACHIEVEMENT_DEFS.forEach(def => {
-        if (!unlocked.has(def.id) && def.check(stats)) {
-          newOnes.push(def)
-        }
-      })
+    if (checkedRef.current) return // already checked this session
+    checkedRef.current = true
 
-      if (newOnes.length > 0) {
-        const { error } = await supabase.from('achievements').insert(
-          newOnes.map(a => ({ user_id: user.id, achievement_id: a.id }))
+    const run = async () => {
+      const newOnes = ACHIEVEMENT_DEFS.filter(
+        def => !unlocked.has(def.id) && def.check(stats)
+      )
+      if (newOnes.length === 0) return
+
+      // Upsert with ignoreDuplicates — safe if rows already exist
+      const { error } = await supabase
+        .from('achievements')
+        .upsert(
+          newOnes.map(a => ({ user_id: user.id, achievement_id: a.id })),
+          { onConflict: 'user_id,achievement_id', ignoreDuplicates: true }
         )
-        if (error) {
-          console.error('Achievement insert failed:', error.message, error.code)
-          // Don't toast if we couldn't save — would repeat next load
-          return
-        }
-        setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
-        setNewlyUnlocked(newOnes)
+      if (error) {
+        console.error('Achievement save failed:', error.message)
+        return
       }
+      setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
+      setNewlyUnlocked(newOnes)
     }
     run()
   }, [stats, unlocked])
