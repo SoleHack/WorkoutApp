@@ -5,10 +5,12 @@ import { useRouter } from 'next/navigation'
 
 const AuthContext = createContext({})
 
-export function AuthProvider({ children, initialUser }) {
+export function AuthProvider({
+  children, initialUser }) {
+  const supabase = getSupabase()
   const [user, setUser] = useState(initialUser || null)
   const router = useRouter()
-  const supabase = getSupabase()
+
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -31,5 +33,6 @@ export function AuthProvider({ children, initialUser }) {
 }
 
 export function useAuth() {
+  const supabase = getSupabase()
   return useContext(AuthContext)
 }

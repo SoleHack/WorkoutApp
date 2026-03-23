@@ -25,6 +25,7 @@ export const ACHIEVEMENT_DEFS = [
 ]
 
 export function useAchievements(stats) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [unlocked, setUnlocked] = useState(null)
   const [newlyUnlocked, setNewlyUnlocked] = useState([])

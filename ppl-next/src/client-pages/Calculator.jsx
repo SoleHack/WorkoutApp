@@ -27,7 +27,9 @@ const TRAINING_ZONES = [
   { pct: 55, label: 'Recovery',      reps: '20+',   desc: 'Warm-up, deload weeks' },
 ]
 
-export default function Calculator({ embedded = false }) {
+export default function Calculator({
+  embedded = false }) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const { programData } = useActiveProgram()
   const EXERCISES = programData?.EXERCISES || {}

@@ -58,6 +58,7 @@ function PhotoComparison({ photos }) {
 }
 
 export default function Settings() {
+  const supabase = getSupabase()
   const router = useRouter()
   const { settings, save, loading } = useSettings()
   const { user, signOut } = useAuth()
@@ -310,7 +311,7 @@ export default function Settings() {
                       sex: settings.sex || 'male'
                     })
                     if (!recalc || recalc < 3 || recalc > 60) return Promise.resolve()
-                    return getSupabase().from('body_measurements')
+                    return supabase.from('body_measurements')
                       .update({ body_fat: recalc })
                       .eq('id', e.id)
                   }))

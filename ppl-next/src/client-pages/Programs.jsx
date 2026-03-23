@@ -22,6 +22,7 @@ const TAG_OPTIONS = ['compound','iso','rehab','stability','hold','optional']
 
 // ── View router ───────────────────────────────────────────────
 export default function Programs() {
+  const supabase = getSupabase()
   const [view, setView] = useState('list')          // 'list' | 'program' | 'workout'
   const [selectedProgramId, setSelectedProgramId] = useState(null)
   const [selectedWorkoutId, setSelectedWorkoutId] = useState(null)
@@ -215,8 +216,8 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
   }
 
   const handleSetMorning = async (workoutId) => {
-    const { data: { user } } = await getSupabase().auth.getUser()
-    await getSupabase().from('user_programs').upsert({
+    const { data: { user } } = await supabase.auth.getUser()
+    await supabase.from('user_programs').upsert({
       user_id: user.id,
       program_id: programId,
       morning_workout_id: workoutId,

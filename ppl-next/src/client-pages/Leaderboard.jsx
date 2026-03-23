@@ -151,6 +151,7 @@ async function fetchUserStats(userId) {
 }
 
 export default function Leaderboard() {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const { settings } = useSettings()
   const myName = settings.displayName || user?.email?.split('@')[0] || 'You'
@@ -222,14 +223,14 @@ export default function Leaderboard() {
     const name = data.display_name || partnerEmail.split('@')[0]
 
     // Write partner_user_id to BOTH users via RPC (bypasses RLS)
-    const { error: rpcError } = await getSupabase().rpc('sync_partner', {
+    const { error: rpcError } = await supabase.rpc('sync_partner', {
       my_id: user.id,
       their_id: data.user_id,
       connecting: true,
     })
     // Fallback: if RPC not deployed yet, at least save our own side
     if (rpcError) {
-      await getSupabase().from('user_settings').upsert({
+      await supabase.from('user_settings').upsert({
         user_id: user.id,
         partner_user_id: data.user_id,
       }, { onConflict: 'user_id' })
@@ -243,7 +244,7 @@ export default function Leaderboard() {
   }
 
   const disconnect = async () => {
-    await getSupabase().rpc('sync_partner', {
+    await supabase.rpc('sync_partner', {
       my_id: user.id,
       their_id: partnerUserId,
       connecting: false,

@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useRestDay() {
+  const supabase = getSupabase()
   const { user } = useAuth()
 
   const logRestDay = useCallback(async () => {

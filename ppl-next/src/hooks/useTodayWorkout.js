@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = null) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [todaySlug, setTodaySlug] = useState(null)
   const [lastSession, setLastSession] = useState(null)

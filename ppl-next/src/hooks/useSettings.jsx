@@ -16,7 +16,9 @@ const DEFAULT_SETTINGS = {
 
 const SettingsContext = createContext({})
 
-export function SettingsProvider({ children }) {
+export function SettingsProvider({
+  children }) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [settings, setSettings] = useState(DEFAULT_SETTINGS)
   const [loading, setLoading] = useState(true)
@@ -30,8 +32,8 @@ export function SettingsProvider({ children }) {
   const load = async () => {
     setLoading(true)
     const [{ data: s }, { data: p }] = await Promise.all([
-      getSupabase().from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex, onboarding_done').eq('user_id', user.id).maybeSingle(),
-      getSupabase().from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex, onboarding_done').eq('user_id', user.id).maybeSingle(),
+      supabase.from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
     ])
 
     setSettings({
@@ -51,7 +53,7 @@ export function SettingsProvider({ children }) {
     const next = { ...settings, ...updates }
     setSettings(next)
 
-    await getSupabase().from('user_settings').upsert({
+    await supabase.from('user_settings').upsert({
       user_id:          user.id,
       weight_unit:      next.weightUnit,
       deload_reminder:  next.deloadReminder,
@@ -63,7 +65,7 @@ export function SettingsProvider({ children }) {
     }, { onConflict: 'user_id' })
 
     if ('partnerMode' in updates || 'displayName' in updates) {
-      await getSupabase().from('public_stats').upsert({
+      await supabase.from('public_stats').upsert({
         user_id:      user.id,
         email:        user.email,
         display_name: next.displayName || user.email?.split('@')[0],
@@ -81,5 +83,6 @@ export function SettingsProvider({ children }) {
 }
 
 export function useSettings() {
+  const supabase = getSupabase()
   return useContext(SettingsContext)
 }

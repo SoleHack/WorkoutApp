@@ -96,7 +96,9 @@ function buildProgramShape(workouts, programDays, morningWorkoutId) {
   return { PROGRAM, PROGRAM_ORDER, EXERCISES, TAG_LABELS, ALTERNATIVES: {}, SCHEDULE }
 }
 
-export function ActiveProgramProvider({ children }) {
+export function ActiveProgramProvider({
+  children }) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [programData, setProgramData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -114,7 +116,7 @@ export function ActiveProgramProvider({ children }) {
       .maybeSingle()
 
     if (!enrollment) {
-      await getSupabase().from('user_programs').upsert({
+      await supabase.from('user_programs').upsert({
         user_id: user.id, program_id: null,
         morning_workout_id: null, last_completed_slug: null,
       }, { onConflict: 'user_id' })
@@ -206,7 +208,7 @@ export function ActiveProgramProvider({ children }) {
 
   const updateLastCompleted = useCallback(async (slug) => {
     if (!user) return
-    await getSupabase().from('user_programs').upsert({
+    await supabase.from('user_programs').upsert({
       user_id: user.id,
       last_completed_slug: slug,
       updated_at: new Date().toISOString(),
@@ -221,5 +223,6 @@ export function ActiveProgramProvider({ children }) {
 }
 
 export function useActiveProgram() {
+  const supabase = getSupabase()
   return useContext(ProgramContext)
 }

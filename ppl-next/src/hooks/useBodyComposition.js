@@ -31,6 +31,7 @@ async function convertHeicToJpeg(file) {
 }
 
 export function useBodyMeasurements() {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
@@ -71,6 +72,7 @@ export function useBodyMeasurements() {
 }
 
 export function useProgressPhotos() {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [photos, setPhotos] = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +119,7 @@ export function useProgressPhotos() {
       : 'jpg'
     const path = `${user.id}/${date}-${Date.now()}.${ext}`
 
-    const { error: uploadError } = await getSupabase().storage
+    const { error: uploadError } = await supabase.storage
       .from('progress-photos')
       .upload(path, uploadFile, { contentType: mimeType, upsert: false })
 
@@ -127,7 +129,7 @@ export function useProgressPhotos() {
       return { error: uploadError }
     }
 
-    const { data: urlData } = getSupabase().storage
+    const { data: urlData } = supabase.storage
       .from('progress-photos')
       .getPublicUrl(path)
 
@@ -151,8 +153,8 @@ export function useProgressPhotos() {
   }, [user])
 
   const deletePhoto = useCallback(async (photo) => {
-    await getSupabase().storage.from('progress-photos').remove([photo.storage_path])
-    await getSupabase().from('progress_photos').delete().eq('id', photo.id)
+    await supabase.storage.from('progress-photos').remove([photo.storage_path])
+    await supabase.from('progress_photos').delete().eq('id', photo.id)
     setPhotos(prev => prev.filter(p => p.id !== photo.id))
   }, [])
 

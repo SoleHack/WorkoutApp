@@ -139,7 +139,7 @@ export default function ExerciseCard({
     const updatedSets = [...(sets || [])]
     updatedSets[setNum - 1] = { ...existing, completed: false, weight: null, reps: null }
     // We need the parent to handle this — call onLogSet with completed=false signal
-    // For now update via direct supabase call pattern: pass null weight/reps
+    // For now update via direct getSupabase() call pattern: pass null weight/reps
     await onLogSet(setNum, null, null, null, null, true) // extra arg = clear
   }
 

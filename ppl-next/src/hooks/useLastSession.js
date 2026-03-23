@@ -7,6 +7,7 @@ import { useAuth } from './useAuth'
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
 
 export function useLastSession(dayKey) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [lastData, setLastData] = useState({})
   const [lastDate, setLastDate] = useState(null)

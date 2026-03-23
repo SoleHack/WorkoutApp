@@ -5,6 +5,7 @@ import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useWorkout(dayKey) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [session, setSession] = useState(null)
   const [sets, setSets] = useState({})
@@ -100,7 +101,7 @@ export function useWorkout(dayKey) {
         return { ...prev, [exerciseId]: exSets }
       })
       if (existing?.id) {
-        await getSupabase().from('session_sets')
+        await supabase.from('session_sets')
           .update({ completed: false, weight: null, reps: null, rpe: null })
           .eq('id', existing.id)
       }

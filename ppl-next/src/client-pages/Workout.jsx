@@ -18,6 +18,7 @@ import styles from './Workout.module.css'
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 
 export default function Workout() {
+  const supabase = getSupabase()
   const { dayKey } = useParams()
   const router = useRouter()
   const { programData, loading: programLoading } = useActiveProgram()

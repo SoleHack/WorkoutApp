@@ -27,6 +27,7 @@ const MUSCLE_TO_CATEGORY = {
 }
 
 export function useVolumeLandmarks(exercises = {}) {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const [weeklyVolume, setWeeklyVolume] = useState({})
   const [loading, setLoading] = useState(true)

@@ -3,6 +3,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { getSupabase } from '../lib/supabase-client'
 
 export function useWorkoutNotes(sessionId) {
+  const supabase = getSupabase()
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [loaded, setLoaded] = useState(null) // tracks which sessionId we've loaded for

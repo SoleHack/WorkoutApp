@@ -146,6 +146,7 @@ const EX_RANGE_OPTIONS = [
 ]
 
 export default function Progress() {
+  const supabase = getSupabase()
   const { user } = useAuth()
   const { entries: bwEntries } = useBodyweight()
   const { entries: measureEntries } = useBodyMeasurements()
