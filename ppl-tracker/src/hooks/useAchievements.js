@@ -25,7 +25,7 @@ export const ACHIEVEMENT_DEFS = [
 
 export function useAchievements(stats) {
   const { user } = useAuth()
-  const [unlocked, setUnlocked] = useState(new Set())
+  const [unlocked, setUnlocked] = useState(null) // null = not yet loaded
   const [newlyUnlocked, setNewlyUnlocked] = useState([])
   const [loading, setLoading] = useState(true)
 
@@ -41,9 +41,10 @@ export function useAchievements(stats) {
     setLoading(false)
   }
 
-  // Check for new achievements when stats change
+  // Only check for new achievements after unlocked is fully loaded from Supabase
+  // unlocked === null means we haven't fetched yet — never run in that state
   useEffect(() => {
-    if (!stats || loading || !user) return
+    if (!stats || !user || unlocked === null) return
 
     const newOnes = []
     ACHIEVEMENT_DEFS.forEach(def => {
@@ -57,17 +58,16 @@ export function useAchievements(stats) {
         newOnes.map(a => ({ user_id: user.id, achievement_id: a.id }))
       )
       setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
-      // Toast all newly unlocked — they weren't in Supabase so they're genuinely new
       setNewlyUnlocked(newOnes)
     }
-  }, [stats, loading])
+  }, [stats, unlocked])
 
   const clearNewlyUnlocked = useCallback(() => setNewlyUnlocked([]), [])
 
   const all = ACHIEVEMENT_DEFS.map(def => ({
     ...def,
-    isUnlocked: unlocked.has(def.id),
+    isUnlocked: unlocked ? unlocked.has(def.id) : false,
   }))
 
-  return { all, unlocked, newlyUnlocked, clearNewlyUnlocked, loading }
+  return { all, unlocked: unlocked || new Set(), newlyUnlocked, clearNewlyUnlocked, loading }
 }
