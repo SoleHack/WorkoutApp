@@ -41,25 +41,30 @@ export function useAchievements(stats) {
     setLoading(false)
   }
 
-  // Only check for new achievements after unlocked is fully loaded from Supabase
-  // unlocked === null means we haven't fetched yet — never run in that state
   useEffect(() => {
     if (!stats || !user || unlocked === null) return
+    const run = async () => {
+      const newOnes = []
+      ACHIEVEMENT_DEFS.forEach(def => {
+        if (!unlocked.has(def.id) && def.check(stats)) {
+          newOnes.push(def)
+        }
+      })
 
-    const newOnes = []
-    ACHIEVEMENT_DEFS.forEach(def => {
-      if (!unlocked.has(def.id) && def.check(stats)) {
-        newOnes.push(def)
+      if (newOnes.length > 0) {
+        const { error } = await supabase.from('achievements').insert(
+          newOnes.map(a => ({ user_id: user.id, achievement_id: a.id }))
+        )
+        if (error) {
+          console.error('Achievement insert failed:', error.message, error.code)
+          // Don't toast if we couldn't save — would repeat next load
+          return
+        }
+        setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
+        setNewlyUnlocked(newOnes)
       }
-    })
-
-    if (newOnes.length > 0) {
-      supabase.from('achievements').insert(
-        newOnes.map(a => ({ user_id: user.id, achievement_id: a.id }))
-      )
-      setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
-      setNewlyUnlocked(newOnes)
     }
+    run()
   }, [stats, unlocked])
 
   const clearNewlyUnlocked = useCallback(() => setNewlyUnlocked([]), [])
