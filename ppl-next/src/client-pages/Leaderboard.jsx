@@ -34,8 +34,7 @@ function StatCard({ label, you, them, higherIsBetter = true, unit = '' }) {
 
 async function fetchUserStats(userId) {
   if (!userId) return null
-
-  // Fetch user's morning workout slug so we can exclude it from stats
+  const supabase = getSupabase()
   const { data: enrollment } = await supabase
     .from('user_programs')
     .select('morning_workout_id, workouts:morning_workout_id (slug)')

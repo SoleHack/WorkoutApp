@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 // Apple Health integration via the web - uses the Health app's workout import
 // Generates a .xml file in Apple Health XML format that users can import
 export function useAppleHealth() {
-  const isSupported = /iPhone|iPad|iPod/.test(navigator.userAgent)
+  const isSupported = typeof navigator !== 'undefined' && /iPhone|iPad|iPod/.test(navigator.userAgent)
 
   const exportWorkoutXML = useCallback((workoutData) => {
     const { dayLabel, duration, totalVolume, date, exercises } = workoutData
