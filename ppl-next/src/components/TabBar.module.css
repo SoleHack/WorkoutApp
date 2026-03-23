@@ -14,6 +14,8 @@
   -webkit-backdrop-filter: blur(12px);
 }
 
+.sidebarBrand { display: none; }
+
 .tab {
   flex: 1;
   display: flex;
@@ -113,14 +115,14 @@
   }
 
   .tabBar::before {
-    content: 'PPL Tracker';
+    display: none;
+  }
+
+  .sidebarBrand {
     display: block;
-    font-family: 'Bebas Neue', sans-serif;
-    font-size: clamp(18px, 1.5vw, 24px);
-    letter-spacing: 0.1em;
-    color: var(--text);
-    padding: 0 clamp(16px, 1.8vw, 28px) clamp(16px, 2vh, 28px);
+    padding: 0 clamp(16px, 1.8vw, 28px) clamp(16px, 2vh, 24px);
     border-bottom: 1px solid var(--border);
     margin-bottom: 8px;
+    cursor: pointer;
   }
 }

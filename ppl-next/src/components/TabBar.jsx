@@ -1,5 +1,6 @@
 'use client'
 import { useRouter, usePathname } from 'next/navigation'
+import Image from 'next/image'
 import styles from './TabBar.module.css'
 
 const TABS = [
@@ -76,6 +77,9 @@ export default function TabBar() {
 
   return (
     <nav className={styles.tabBar}>
+      <div className={styles.sidebarBrand} onClick={() => router.push('/')}>
+        <Image src="/logo.png" alt="PPL Tracker" width={140} height={60} style={{ objectFit: 'contain', objectPosition: 'left' }} />
+      </div>
       {TABS.map(tab => {
         const active = getActive(tab)
         return (

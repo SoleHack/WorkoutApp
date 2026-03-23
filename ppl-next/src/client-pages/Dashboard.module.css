@@ -24,6 +24,14 @@
   font-size: 44px; line-height: 1; letter-spacing: 0.02em;
 }
 
+.headerLogo {
+  height: 44px;
+  width: auto;
+  object-fit: contain;
+  object-position: left;
+  display: block;
+}
+
 .headerActions {
   display: flex;
   align-items: center;
@@ -354,8 +362,9 @@
 
 /* ── Desktop layout (sidebar kicks in at 1024px) ──────────── */
 @media (min-width: 1024px) {
-  /* Hide the h1 — sidebar already shows app name */
+  /* Hide the mobile logo — sidebar already shows it */
   .h1 { display: none; }
+  .headerLogo { display: none; }
   .headerLabel { margin-top: 0; }
 
   .header { padding: 16px 40px 0; }
