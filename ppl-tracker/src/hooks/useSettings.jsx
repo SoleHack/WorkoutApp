@@ -10,6 +10,7 @@ const DEFAULT_SETTINGS = {
   sex:            'male',
   partnerMode:    false,
   displayName:    '',
+  onboardingDone: false,
 }
 
 const SettingsContext = createContext({})
@@ -28,7 +29,7 @@ export function SettingsProvider({ children }) {
   const load = async () => {
     setLoading(true)
     const [{ data: s }, { data: p }] = await Promise.all([
-      supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex').eq('user_id', user.id).maybeSingle(),
+      supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex, onboarding_done').eq('user_id', user.id).maybeSingle(),
       supabase.from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
     ])
 
@@ -38,6 +39,7 @@ export function SettingsProvider({ children }) {
       theme:          s?.theme           || 'dark',
       heightInches:   s?.height_inches   || null,
       sex:            s?.sex             || 'male',
+      onboardingDone: s?.onboarding_done ?? false,
       partnerMode:    p?.partner_mode    ?? false,
       displayName:    p?.display_name    || user.email?.split('@')[0] || '',
     })
@@ -49,13 +51,14 @@ export function SettingsProvider({ children }) {
     setSettings(next)
 
     await supabase.from('user_settings').upsert({
-      user_id:         user.id,
-      weight_unit:     next.weightUnit,
-      deload_reminder: next.deloadReminder,
-      theme:           next.theme,
-      height_inches:   next.heightInches,
-      sex:             next.sex,
-      updated_at:      new Date().toISOString(),
+      user_id:          user.id,
+      weight_unit:      next.weightUnit,
+      deload_reminder:  next.deloadReminder,
+      theme:            next.theme,
+      height_inches:    next.heightInches,
+      sex:              next.sex,
+      onboarding_done:  next.onboardingDone,
+      updated_at:       new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
     if ('partnerMode' in updates || 'displayName' in updates) {

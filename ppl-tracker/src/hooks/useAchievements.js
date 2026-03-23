@@ -45,10 +45,6 @@ export function useAchievements(stats) {
   useEffect(() => {
     if (!stats || loading || !user) return
 
-    // Track which achievements have already been toasted
-    const toastKey = `achievements_toasted_${user.id}`
-    const alreadyToasted = new Set(JSON.parse(localStorage.getItem(toastKey) || '[]'))
-
     const newOnes = []
     ACHIEVEMENT_DEFS.forEach(def => {
       if (!unlocked.has(def.id) && def.check(stats)) {
@@ -61,15 +57,8 @@ export function useAchievements(stats) {
         newOnes.map(a => ({ user_id: user.id, achievement_id: a.id }))
       )
       setUnlocked(prev => new Set([...prev, ...newOnes.map(a => a.id)]))
-
-      // Only toast ones not yet shown
-      const toastOnes = newOnes.filter(a => !alreadyToasted.has(a.id))
-      if (toastOnes.length > 0) {
-        setNewlyUnlocked(toastOnes)
-        // Mark as toasted
-        const updated = [...alreadyToasted, ...toastOnes.map(a => a.id)]
-        localStorage.setItem(toastKey, JSON.stringify(updated))
-      }
+      // Toast all newly unlocked — they weren't in Supabase so they're genuinely new
+      setNewlyUnlocked(newOnes)
     }
   }, [stats, loading])
 

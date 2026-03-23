@@ -51,18 +51,18 @@ function useDeloadCheck(allSessions, deloadEnabled) {
 
 export default function Dashboard() {
   const { user, signOut } = useAuth()
-  const [showOnboarding, setShowOnboarding] = useState(() => {
-    if (!user) return false
-    const key = `onboarding_done_${user.id}`
-    return !localStorage.getItem(key)
-  })
-  const handleOnboardingDone = () => {
-    localStorage.setItem(`onboarding_done_${user?.id}`, '1')
-    setShowOnboarding(false)
-  }
   const navigate = useNavigate()
-  const { settings, loading: settingsLoading } = useSettings()
+  const { settings, loading: settingsLoading, save } = useSettings()
   const { programData, loading: programLoading } = useActiveProgram()
+
+  const hasProgram = !programLoading && !!programData?.programId
+
+  // Show onboarding only if settings loaded, not done, and no program yet
+  const showOnboarding = !settingsLoading && !settings.onboardingDone && !hasProgram
+
+  const handleOnboardingDone = () => {
+    save({ onboardingDone: true })
+  }
   const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight()
 
   const PROGRAM = programData?.PROGRAM || {}
