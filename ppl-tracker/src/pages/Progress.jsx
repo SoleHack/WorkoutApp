@@ -182,6 +182,7 @@ export default function Progress() {
   const [volRange, setVolRange] = useState(9999)
   const [bwRange, setBwRange] = useState(9999)
   const [bfRange, setBfRange] = useState(9999)
+  const [waistRange, setWaistRange] = useState(9999)
   const [exRange, setExRange] = useState(9999)
   const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
   const [notesSearch, setNotesSearch] = useState('')
@@ -602,13 +603,23 @@ export default function Progress() {
             )}
 
             {/* Waist measurement */}
-            {measureEntries.filter(e => e.waist).length > 1 && (
+            {measureEntries.filter(e => e.waist).length > 0 && (
               <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
-                <div className={styles.chartTitle}>Waist measurement</div>
-                <div className={styles.chartSub}>inches over time</div>
+                <div className={styles.chartCardHeader}>
+                  <div>
+                    <div className={styles.chartTitle}>Waist measurement</div>
+                    <div className={styles.chartSub}>inches over time</div>
+                  </div>
+                  <RangeSelector value={waistRange} onChange={setWaistRange} options={RANGE_OPTIONS} />
+                </div>
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart
-                    data={[...measureEntries].filter(e => e.waist).reverse().map(e => ({ date: fmt(e.date), waist: e.waist }))}
+                    data={(() => {
+                      const entries = [...measureEntries].filter(e => e.waist).reverse()
+                      if (waistRange >= 9999) return entries.map(e => ({ date: fmt(e.date), waist: e.waist }))
+                      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - waistRange)
+                      return entries.filter(e => new Date(e.date) >= cutoff).map(e => ({ date: fmt(e.date), waist: e.waist }))
+                    })()}
                     margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="waistGrad" x1="0" y1="0" x2="0" y2="1">
