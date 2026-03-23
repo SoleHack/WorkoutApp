@@ -119,9 +119,7 @@ export default function Dashboard() {
             <h1 className={styles.h1}>PPL Tracker</h1>
             {programData?.programId ? (
               <div className={styles.headerLabel}>
-                {programData.programDays?.filter(d => !d.is_rest).length > 0
-                  ? `${PROGRAM_ORDER.length}-Day · ${Object.values(PROGRAM).find(w => !w.isMorningRoutine)?.colorClass?.toUpperCase() || ''} Program`
-                  : 'Active Program'}
+                {programData.programName || 'Active Program'}
               </div>
             ) : (
               <div className={styles.headerLabel}>No program active</div>

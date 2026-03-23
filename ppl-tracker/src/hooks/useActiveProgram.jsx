@@ -129,16 +129,21 @@ export function ActiveProgramProvider({ children }) {
       return
     }
 
-    // Parallel: fetch program_days + alternatives simultaneously
-    const [{ data: days }, { data: altRows }] = await Promise.all([
+    // Parallel: fetch program_days + alternatives + program name simultaneously
+    const [{ data: days }, { data: altRows }, { data: programMeta }] = await Promise.all([
       supabase
         .from('program_days')
-        .select('id, day_index, workout_id, is_rest')  // was select('*')
+        .select('id, day_index, workout_id, is_rest')
         .eq('program_id', enrollment.program_id)
         .order('day_index'),
       supabase
         .from('exercise_alternatives')
         .select('exercise:exercise_id (slug), alternative:alternative_id (slug)'),
+      supabase
+        .from('programs')
+        .select('name')
+        .eq('id', enrollment.program_id)
+        .single(),
     ])
 
     const workoutIds = [
@@ -175,6 +180,7 @@ export function ActiveProgramProvider({ children }) {
     built.ALTERNATIVES = ALTERNATIVES
     built.lastCompletedSlug = enrollment.last_completed_slug
     built.programId = enrollment.program_id
+    built.programName = programMeta?.name || null
     built.morningWorkoutId = enrollment.morning_workout_id
     built.programDays = days || []
 
