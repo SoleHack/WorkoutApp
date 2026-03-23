@@ -556,7 +556,40 @@
     gap: 20px;
     align-items: start;
   }
-  .chartsGridFull {
-    grid-column: 1 / -1;
-  }
+  .chartsGridFull { grid-column: 1 / -1; }
+
+  /* ── Desktop font size bumps ─────────────────────────────── */
+  /* Everything that was 8–10px on mobile is too small on a 1440px screen */
+  .chartTitle  { font-size: 16px; }
+  .chartSub    { font-size: 12px; }
+  .statNum     { font-size: 26px; }
+  .statName    { font-size: 11px; }
+  .landmarkName { font-size: 15px; }
+  .landmarkSets { font-size: 16px; }
+  .landmarkOf   { font-size: 12px; }
+  .landmarkTip  { font-size: 12px; }
+  .prName      { font-size: 15px; }
+  .prNum       { font-size: 22px; }
+  .prUnit      { font-size: 12px; }
+  .pr1rm       { font-size: 12px; }
+  .prDate      { font-size: 11px; }
+  .exName      { font-size: 15px; }
+  .exSets      { font-size: 13px; }
+  .exPRNum     { font-size: 22px; }
+  .exPRUnit    { font-size: 12px; }
+  .exPR1rm     { font-size: 11px; }
+  .sessionDate { font-size: 16px; }
+  .sessionMeta { font-size: 12px; }
+  .sessionExName { font-size: 14px; }
+  .sessionExData { font-size: 12px; }
+  .sectionLabel  { font-size: 12px; }
+  .volumeDesc    { font-size: 13px; }
+  .landmarkMsg   { font-size: 13px; }
+  .pointDetailDate { font-size: 13px; }
+  .repWeight   { font-size: 16px; }
+  .repReps     { font-size: 12px; }
+  .repDate     { font-size: 11px; }
+  .tooltipVal  { font-size: 13px; }
+  .legendText  { font-size: 11px; }
+  .heatmapTooltip { font-size: 12px; }
 }
