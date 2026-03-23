@@ -33,11 +33,22 @@ function buildHeatmap(sessions) {
   const today = new Date(); today.setHours(0,0,0,0)
   const sessionMap = {}
   sessions.forEach(s => { if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date]||0)+1 })
+
+  // Start from the most recent Sunday so columns are full 7-day weeks
+  const startDay = new Date(today)
+  startDay.setDate(today.getDate() - today.getDay()) // rewind to Sunday
+  startDay.setDate(startDay.getDate() - (26 * 7) + 7) // go back 26 weeks
+
   const cells = []
-  for (let i = 111; i >= 0; i--) {
-    const d = new Date(today); d.setDate(today.getDate()-i)
-    const key = d.toISOString().split('T')[0]
-    cells.push({ date: key, count: sessionMap[key]||0, day: d.getDay() })
+  const cursor = new Date(startDay)
+  while (cursor <= today) {
+    const key = cursor.toISOString().split('T')[0]
+    cells.push({ date: key, count: sessionMap[key] || 0, day: cursor.getDay() })
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  // Pad to complete the last week
+  while (cells.length % 7 !== 0) {
+    cells.push({ date: null, count: -1, day: cells.length % 7 })
   }
   return cells
 }
@@ -375,17 +386,20 @@ export default function Progress() {
             {/* Heatmap */}
             <div className={styles.chartCard}>
               <div className={styles.chartTitle}>Training consistency</div>
-              <div className={styles.chartSub}>Last 16 weeks · tap a cell to see the date</div>
+              <div className={styles.chartSub}>Last 26 weeks · tap a cell to see the date</div>
               <div className={styles.heatmapWrap}>
                 <div className={styles.heatmap}>
                   {heatmapWeeks.map((week,wi) => (
                     <div key={wi} className={styles.heatmapCol}>
                       {week.map((cell,di) => (
                         <div key={di} className={styles.heatmapCell}
-                          style={{ background: heatmapColor(cell.count) }}
-                          onMouseEnter={() => setHoveredCell(cell)}
+                          style={{
+                            background: cell.count < 0 ? 'transparent' : heatmapColor(cell.count),
+                            cursor: cell.count < 0 ? 'default' : 'pointer',
+                          }}
+                          onMouseEnter={() => cell.count >= 0 && setHoveredCell(cell)}
                           onMouseLeave={() => setHoveredCell(null)}
-                          onClick={() => setHoveredCell(cell)}
+                          onClick={() => cell.count >= 0 && setHoveredCell(cell)}
                         />
                       ))}
                     </div>

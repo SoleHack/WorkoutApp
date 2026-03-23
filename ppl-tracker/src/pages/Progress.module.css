@@ -89,14 +89,24 @@
 /* Heatmap */
 .heatmapWrap { display: flex; flex-direction: column; gap: 8px; }
 
-.heatmap { display: flex; gap: 3px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
-.heatmap::-webkit-scrollbar { display: none; }
-
-.heatmapCol { display: flex; flex-direction: column; gap: 3px; }
-
+.heatmap {
+  display: flex;
+  gap: clamp(2px, 0.4vw, 4px);
+  width: 100%;
+}
+.heatmapCol {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2px, 0.4vw, 4px);
+  flex: 1;
+  min-width: 0;
+}
 .heatmapCell {
-  width: 14px; height: 14px; border-radius: 3px;
-  cursor: pointer; transition: opacity 0.1s; flex-shrink: 0;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: opacity 0.1s;
 }
 .heatmapCell:hover { opacity: 0.75; }
 
