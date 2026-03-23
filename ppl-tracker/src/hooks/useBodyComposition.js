@@ -40,7 +40,7 @@ export function useBodyMeasurements() {
     setLoading(true)
     const { data } = await supabase
       .from('body_measurements')
-      .select('id, date, waist, hips, chest, neck, left_arm, right_arm, left_thigh, right_thigh')
+      .select('id, date, waist, hips, chest, neck, left_arm, right_arm, left_thigh, right_thigh, body_fat')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(52)

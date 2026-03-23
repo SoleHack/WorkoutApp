@@ -282,6 +282,13 @@ export default function Settings() {
               setMeasureSaving(true)
               const clean = {}
               Object.entries(measurements).forEach(([k, v]) => { if (v) clean[k] = parseFloat(v) })
+              // Calculate and store BF% at save time so Progress can use it directly
+              const bf = navyBodyFat({
+                waist: clean.waist, neck: clean.neck,
+                hip: clean.hips, height: settings.heightInches,
+                sex: settings.sex || 'male'
+              })
+              if (bf !== null) clean.body_fat = bf
               await saveMeasurement(clean)
               setMeasureSaving(false)
               setMeasureSaved(true)
@@ -295,7 +302,7 @@ export default function Settings() {
         <section className={styles.section}>
           <div className={styles.sectionTitle}>Body Fat Estimate</div>
           <div className={styles.sectionDesc}>
-            Uses the US Navy formula from your waist and neck measurements. Log your height and sex once to enable automatic calculation.
+            Uses the US Navy formula from your waist and neck measurements. Set your height and sex below, then log measurements above — your BF% will be saved and tracked over time in Progress.
           </div>
           <div className={styles.bfSetupRow}>
             <div className={styles.inputBlock}>

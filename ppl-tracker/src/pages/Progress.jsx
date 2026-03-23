@@ -144,14 +144,17 @@ export default function Progress() {
   const EXERCISES = programData?.EXERCISES || {}
   const { landmarks } = useVolumeLandmarks(EXERCISES)
 
-  // Build body fat trend from measurement entries
+  // Build body fat trend — use stored body_fat if available, fall back to Navy formula
   const bfTrendData = (() => {
     const h = settings.heightInches
     const sex = settings.sex || 'male'
-    if (!h || measureEntries.length < 2) return []
+    if (measureEntries.length === 0) return []
     return [...measureEntries].reverse()
       .map(e => {
-        const bf = navyBodyFat({ waist: e.waist, neck: e.neck, hip: e.hips, height: h, sex })
+        // Use stored value first, then calculate if possible
+        const bf = e.body_fat != null
+          ? e.body_fat
+          : (h ? navyBodyFat({ waist: e.waist, neck: e.neck, hip: e.hips, height: h, sex }) : null)
         return bf !== null ? { date: fmt(e.date), bf, rawDate: e.date } : null
       })
       .filter(Boolean)
@@ -545,7 +548,7 @@ export default function Progress() {
             )}
 
             {/* Body fat trend */}
-            {bfTrendData.length > 1 && (
+            {bfTrendData.length > 0 && (
               <div className={`${styles.chartCard} ${styles.chartsGridFull}`}>
                 <div className={styles.chartCardHeader}>
                   <div>
