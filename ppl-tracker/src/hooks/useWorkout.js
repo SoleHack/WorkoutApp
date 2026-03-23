@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useState, useCallback, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useWorkout(dayKey) {
@@ -99,7 +100,7 @@ export function useWorkout(dayKey) {
         return { ...prev, [exerciseId]: exSets }
       })
       if (existing?.id) {
-        await supabase.from('session_sets')
+        await getSupabase().from('session_sets')
           .update({ completed: false, weight: null, reps: null, rpe: null })
           .eq('id', existing.id)
       }

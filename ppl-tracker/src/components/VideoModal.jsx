@@ -1,3 +1,4 @@
+'use client'
 import BodyMap from './BodyMap'
 import styles from './VideoModal.module.css'
 

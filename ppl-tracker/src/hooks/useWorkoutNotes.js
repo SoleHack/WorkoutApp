@@ -1,5 +1,6 @@
+'use client'
 import { useState, useCallback, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 
 export function useWorkoutNotes(sessionId) {
   const [note, setNote] = useState('')

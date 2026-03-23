@@ -1,3 +1,4 @@
+'use client'
 import { useCallback } from 'react'
 
 // Apple Health integration via the web - uses the Health app's workout import

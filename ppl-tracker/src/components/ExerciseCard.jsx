@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
 import { unitLabel, calcPlatesLbs, calcPlatesKg, plateColors, lbsToKg, toDisplay, fromDisplay } from '../lib/units'

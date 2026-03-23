@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))

@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect, useRef } from 'react'
 
 const STORAGE_KEY = 'ppl-workout-start'

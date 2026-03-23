@@ -1,3 +1,4 @@
+'use client'
 import { useRef, useState, useCallback } from 'react'
 
 export function useDragReorder(items, onReorder) {

@@ -1,5 +1,6 @@
+'use client'
 import { useState, useEffect, useCallback, createContext, useContext } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 const ProgramContext = createContext({
@@ -113,7 +114,7 @@ export function ActiveProgramProvider({ children }) {
       .maybeSingle()
 
     if (!enrollment) {
-      await supabase.from('user_programs').upsert({
+      await getSupabase().from('user_programs').upsert({
         user_id: user.id, program_id: null,
         morning_workout_id: null, last_completed_slug: null,
       }, { onConflict: 'user_id' })
@@ -205,7 +206,7 @@ export function ActiveProgramProvider({ children }) {
 
   const updateLastCompleted = useCallback(async (slug) => {
     if (!user) return
-    await supabase.from('user_programs').upsert({
+    await getSupabase().from('user_programs').upsert({
       user_id: user.id,
       last_completed_slug: slug,
       updated_at: new Date().toISOString(),

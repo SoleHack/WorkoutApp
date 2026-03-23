@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 // ── Programs CRUD ─────────────────────────────────────────────
@@ -15,11 +16,11 @@ export function usePrograms() {
     setLoading(true)
 
     const [{ data: userProgs }, { data: enrollment }] = await Promise.all([
-      supabase.from('programs')
+      getSupabase().from('programs')
         .select('id, name, description, split_type, is_default, created_at')
         .or(`user_id.eq.${user.id},is_default.eq.true`)
         .order('created_at'),
-      supabase.from('user_programs')
+      getSupabase().from('user_programs')
         .select('program_id')
         .eq('user_id', user.id)
         .maybeSingle(),
@@ -33,7 +34,7 @@ export function usePrograms() {
   useEffect(() => { if (user) load() }, [user, load])
 
   const createProgram = useCallback(async (name, description = '', splitType = 'Custom') => {
-    const { data, error } = await supabase.from('programs').insert({
+    const { data, error } = await getSupabase().from('programs').insert({
       user_id: user.id,
       name,
       description,
@@ -49,23 +50,23 @@ export function usePrograms() {
       workout_id: null,
       is_rest: i === 6, // Sunday rest by default
     }))
-    await supabase.from('program_days').insert(days)
+    await getSupabase().from('program_days').insert(days)
     await load()
     return data
   }, [user, load])
 
   const updateProgram = useCallback(async (id, updates) => {
-    await supabase.from('programs').update(updates).eq('id', id).eq('user_id', user.id)
+    await getSupabase().from('programs').update(updates).eq('id', id).eq('user_id', user.id)
     await load()
   }, [user, load])
 
   const deleteProgram = useCallback(async (id) => {
-    await supabase.from('programs').delete().eq('id', id).eq('user_id', user.id)
+    await getSupabase().from('programs').delete().eq('id', id).eq('user_id', user.id)
     await load()
   }, [user, load])
 
   const activateProgram = useCallback(async (programId, morningWorkoutId = null) => {
-    await supabase.from('user_programs').upsert({
+    await getSupabase().from('user_programs').upsert({
       user_id: user.id,
       program_id: programId,
       morning_workout_id: morningWorkoutId,
@@ -84,7 +85,7 @@ export function usePrograms() {
     if (!src) throw new Error('Source not found')
 
     // 1 — Create the new program
-    const { data: newProg } = await supabase.from('programs').insert({
+    const { data: newProg } = await getSupabase().from('programs').insert({
       user_id: user.id, name: newName,
       description: src.description, split_type: src.split_type,
     }).select('id').single()
@@ -125,7 +126,7 @@ export function usePrograms() {
         tag: we.tag, notes: we.notes, accent: we.accent,
       }))
     )
-    if (allExRows.length) await supabase.from('workout_exercises').insert(allExRows)
+    if (allExRows.length) await getSupabase().from('workout_exercises').insert(allExRows)
 
     // 4 — Batch insert program days
     const dayRows = (src.program_days || []).map(pd => ({
@@ -134,7 +135,7 @@ export function usePrograms() {
       workout_id: pd.workout_id ? workoutIdMap[pd.workout_id] || null : null,
       is_rest: pd.is_rest,
     }))
-    await supabase.from('program_days').insert(dayRows)
+    await getSupabase().from('program_days').insert(dayRows)
     await load()
     return newProg
   }, [user, load])
@@ -200,7 +201,7 @@ export function useProgramEditor(programId) {
   }, [programId, load])
 
   const updateProgram = useCallback(async (updates) => {
-    await supabase.from('programs').update(updates).eq('id', programId)
+    await getSupabase().from('programs').update(updates).eq('id', programId)
     await load()
   }, [programId, load])
 
@@ -229,7 +230,7 @@ export function useWorkouts() {
 
   const createWorkout = useCallback(async ({ name, dayType = 'custom', color = '#6B7280', focus = '' }) => {
     const slug = `${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
-    const { data, error } = await supabase.from('workouts').insert({
+    const { data, error } = await getSupabase().from('workouts').insert({
       user_id: user.id,
       name,
       slug,
@@ -244,12 +245,12 @@ export function useWorkouts() {
   }, [user, load])
 
   const updateWorkout = useCallback(async (id, updates) => {
-    await supabase.from('workouts').update(updates).eq('id', id).eq('user_id', user.id)
+    await getSupabase().from('workouts').update(updates).eq('id', id).eq('user_id', user.id)
     await load()
   }, [user, load])
 
   const deleteWorkout = useCallback(async (id) => {
-    await supabase.from('workouts').delete().eq('id', id).eq('user_id', user.id)
+    await getSupabase().from('workouts').delete().eq('id', id).eq('user_id', user.id)
     await load()
   }, [user, load])
 
@@ -262,7 +263,7 @@ export function useWorkouts() {
     if (!src) throw new Error('Source workout not found')
 
     const slug = `${(newName || src.name).toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
-    const { data: newW } = await supabase.from('workouts').insert({
+    const { data: newW } = await getSupabase().from('workouts').insert({
       user_id: user.id,
       name: newName || `${src.name} (copy)`,
       slug, day_type: src.day_type, color: src.color,
@@ -274,7 +275,7 @@ export function useWorkouts() {
       order_index: we.order_index, sets: we.sets, reps: we.reps,
       rest_seconds: we.rest_seconds, tag: we.tag, notes: we.notes, accent: we.accent,
     }))
-    if (exRows.length) await supabase.from('workout_exercises').insert(exRows)
+    if (exRows.length) await getSupabase().from('workout_exercises').insert(exRows)
     await load()
     return newW
   }, [user, load])
@@ -315,7 +316,7 @@ export function useWorkoutEditor(workoutId) {
 
   const addExercise = useCallback(async (exerciseId, params = {}) => {
     const maxOrder = exercises.length > 0 ? Math.max(...exercises.map(e => e.order_index)) : -1
-    await supabase.from('workout_exercises').insert({
+    await getSupabase().from('workout_exercises').insert({
       workout_id: workoutId,
       exercise_id: exerciseId,
       order_index: maxOrder + 1,
@@ -330,12 +331,12 @@ export function useWorkoutEditor(workoutId) {
   }, [workoutId, exercises, load])
 
   const updateExercise = useCallback(async (id, updates) => {
-    await supabase.from('workout_exercises').update(updates).eq('id', id)
+    await getSupabase().from('workout_exercises').update(updates).eq('id', id)
     await load()
   }, [load])
 
   const removeExercise = useCallback(async (id) => {
-    await supabase.from('workout_exercises').delete().eq('id', id)
+    await getSupabase().from('workout_exercises').delete().eq('id', id)
     await load()
   }, [load])
 
@@ -345,14 +346,14 @@ export function useWorkoutEditor(workoutId) {
     reordered.splice(toIndex, 0, moved)
     // Update order_index for all
     const updates = reordered.map((ex, i) =>
-      supabase.from('workout_exercises').update({ order_index: i }).eq('id', ex.id)
+      getSupabase().from('workout_exercises').update({ order_index: i }).eq('id', ex.id)
     )
     await Promise.all(updates)
     await load()
   }, [exercises, load])
 
   const updateWorkout = useCallback(async (updates) => {
-    await supabase.from('workouts').update(updates).eq('id', workoutId)
+    await getSupabase().from('workouts').update(updates).eq('id', workoutId)
     await load()
   }, [workoutId, load])
 

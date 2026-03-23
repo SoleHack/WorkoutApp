@@ -1,3 +1,4 @@
+'use client'
 import styles from './BodyMap.module.css'
 
 const MUSCLE_IDS = {

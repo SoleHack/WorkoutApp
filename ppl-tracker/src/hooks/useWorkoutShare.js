@@ -1,3 +1,4 @@
+'use client'
 import { useCallback } from 'react'
 
 function roundRect(ctx, x, y, w, h, r) {

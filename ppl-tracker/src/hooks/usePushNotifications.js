@@ -1,3 +1,4 @@
+'use client'
 import { useState, useCallback, useRef } from 'react'
 
 const TIMER_KEY = 'ppl-rest-timer-end'

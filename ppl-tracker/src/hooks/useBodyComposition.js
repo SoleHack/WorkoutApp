@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 // Convert HEIC/HEIF to JPEG using Canvas API
@@ -116,7 +117,7 @@ export function useProgressPhotos() {
       : 'jpg'
     const path = `${user.id}/${date}-${Date.now()}.${ext}`
 
-    const { error: uploadError } = await supabase.storage
+    const { error: uploadError } = await getSupabase().storage
       .from('progress-photos')
       .upload(path, uploadFile, { contentType: mimeType, upsert: false })
 
@@ -126,7 +127,7 @@ export function useProgressPhotos() {
       return { error: uploadError }
     }
 
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = getSupabase().storage
       .from('progress-photos')
       .getPublicUrl(path)
 
@@ -150,8 +151,8 @@ export function useProgressPhotos() {
   }, [user])
 
   const deletePhoto = useCallback(async (photo) => {
-    await supabase.storage.from('progress-photos').remove([photo.storage_path])
-    await supabase.from('progress_photos').delete().eq('id', photo.id)
+    await getSupabase().storage.from('progress-photos').remove([photo.storage_path])
+    await getSupabase().from('progress_photos').delete().eq('id', photo.id)
     setPhotos(prev => prev.filter(p => p.id !== photo.id))
   }, [])
 

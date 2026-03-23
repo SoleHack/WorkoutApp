@@ -1,4 +1,5 @@
-import { useNavigate } from 'react-router-dom'
+'use client'
+import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Confetti from './Confetti'
 import BodyMap from './BodyMap'
@@ -9,7 +10,7 @@ import styles from './WorkoutSummary.module.css'
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))
 
 export default function WorkoutSummary({ dayKey, sets, duration, prs, onDismiss, bestSessionVol }) {
-  const navigate = useNavigate()
+  const router = useRouter()
   const [showConfetti, setShowConfetti] = useState(prs?.length > 0)
   const [sharing, setSharing] = useState(false)
   const { generateImage, share } = useWorkoutShare()

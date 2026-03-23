@@ -1,3 +1,4 @@
+'use client'
 import { useMemo } from 'react'
 
 const e1rm = (w, r) => r === 1 ? w : Math.round(w * (1 + r / 30))

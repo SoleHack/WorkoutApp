@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useRestDay() {

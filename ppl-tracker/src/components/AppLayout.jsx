@@ -1,13 +1,14 @@
+'use client'
 import { useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { usePathname } from 'next/navigation'
 import { usePullToRefresh } from '../hooks/usePullToRefresh'
 import PullToRefresh from './PullToRefresh'
 import TabBar from './TabBar'
 import styles from './AppLayout.module.css'
 
 export default function AppLayout({ children }) {
-  const location = useLocation()
-  const isLogin = location.pathname === '/login'
+  const pathname = usePathname()
+  const isLogin = pathname === '/login'
 
   const handleRefresh = useCallback(async () => {
     window.location.reload()

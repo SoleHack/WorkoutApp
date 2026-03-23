@@ -1,5 +1,6 @@
+'use client'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useRouter } from 'next/navigation'
 import styles from './Onboarding.module.css'
 
 const STEPS = [
@@ -25,7 +26,7 @@ const STEPS = [
 
 export default function Onboarding({ onDone }) {
   const [step, setStep] = useState(0)
-  const navigate = useNavigate()
+  const router = useRouter()
 
   const isLast = step === STEPS.length - 1
   const s = STEPS[step]
@@ -33,7 +34,7 @@ export default function Onboarding({ onDone }) {
   const handleNext = () => {
     if (isLast) {
       onDone()
-      navigate('/programs')
+      router.push('/programs')
     } else {
       setStep(s => s + 1)
     }

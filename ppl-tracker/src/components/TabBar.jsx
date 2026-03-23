@@ -1,4 +1,5 @@
-import { useNavigate, useLocation } from 'react-router-dom'
+'use client'
+import { useRouter, usePathname } from 'next/navigation'
 import styles from './TabBar.module.css'
 
 const TABS = [
@@ -64,13 +65,13 @@ const TABS = [
 ]
 
 export default function TabBar() {
-  const navigate = useNavigate()
-  const location = useLocation()
-  const isInWorkout = location.pathname.startsWith('/workout')
+  const router = useRouter()
+  const pathname = usePathname()
+  const isInWorkout = pathname?.startsWith('/workout')
 
   const getActive = (tab) => {
-    if (tab.key === 'home') return location.pathname === '/' || isInWorkout
-    return location.pathname.startsWith(tab.path) && tab.path !== '/'
+    if (tab.key === 'home') return pathname === '/' || isInWorkout
+    return pathname?.startsWith(tab.path) && tab.path !== '/'
   }
 
   return (
@@ -80,7 +81,7 @@ export default function TabBar() {
         return (
           <button key={tab.key}
             className={`${styles.tab} ${active ? styles.tabActive : ''}`}
-            onClick={() => navigate(tab.path)}>
+            onClick={() => router.push(tab.path)}>
             <div className={styles.iconWrap}>
               {tab.icon(active)}
             </div>

@@ -1,6 +1,7 @@
+'use client'
 import { getLocalDate } from '../lib/date.js'
 import { useState, useEffect, useCallback } from 'react'
-import { supabase } from '../lib/supabase'
+import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 export function useBodyweight() {
@@ -25,7 +26,7 @@ export function useBodyweight() {
 
   const logWeight = useCallback(async (weight) => {
     const today = getLocalDate()
-    await supabase.from('bodyweight').upsert(
+    await getSupabase().from('bodyweight').upsert(
       { user_id: user.id, date: today, weight },
       { onConflict: 'user_id,date' }
     )

@@ -1,3 +1,4 @@
+'use client'
 import styles from './PullToRefresh.module.css'
 
 export default function PullToRefresh({ pulling, refreshing, pullDistance, threshold }) {

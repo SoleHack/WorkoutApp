@@ -1,3 +1,4 @@
+'use client'
 // Manages offline state and queued operations
 import { useState, useEffect } from 'react'
 
