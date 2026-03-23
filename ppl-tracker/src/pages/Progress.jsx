@@ -155,18 +155,14 @@ export default function Progress() {
   const EXERCISES = programData?.EXERCISES || {}
   const { landmarks } = useVolumeLandmarks(EXERCISES)
 
-  // Build body fat trend — use stored body_fat if available, fall back to Navy formula
+  // Build body fat trend from stored body_fat values
   const bfTrendData = (() => {
-    const h = settings.heightInches
-    const sex = settings.sex || 'male'
     if (measureEntries.length === 0) return []
     return [...measureEntries].reverse()
       .map(e => {
-        // Use stored value first, then calculate if possible
-        const bf = e.body_fat != null
-          ? e.body_fat
-          : (h ? navyBodyFat({ waist: e.waist, neck: e.neck, hip: e.hips, height: h, sex }) : null)
-        return bf !== null ? { date: fmt(e.date), bf, rawDate: e.date } : null
+        const bf = e.body_fat
+        if (bf === null || bf === undefined || bf < 3 || bf > 60) return null
+        return { date: fmt(e.date), bf, rawDate: e.date }
       })
       .filter(Boolean)
   })()
@@ -185,6 +181,7 @@ export default function Progress() {
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
   const [volRange, setVolRange] = useState(9999)
   const [bwRange, setBwRange] = useState(9999)
+  const [bfRange, setBfRange] = useState(9999)
   const [exRange, setExRange] = useState(9999)
   const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
   const [notesSearch, setNotesSearch] = useState('')
@@ -293,6 +290,12 @@ export default function Progress() {
     if (bwRange >= 9999) return [...bwEntries].reverse()
     const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - bwRange)
     return [...bwEntries].reverse().filter(d => new Date(d.date) >= cutoff)
+  })()
+
+  const filteredBf = (() => {
+    if (bfRange >= 9999) return bfTrendData
+    const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - bfRange)
+    return bfTrendData.filter(d => new Date(d.rawDate) >= cutoff)
   })()
 
   const filteredEx = (() => {
@@ -482,7 +485,7 @@ export default function Progress() {
                   <RangeSelector value={volRange} onChange={setVolRange} options={RANGE_OPTIONS} />
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={filteredVol} margin={{ top: 10, right: 4, left: -10, bottom: 0 }}
+                  <BarChart data={filteredVol} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
                     onClick={e => e?.activePayload && setSelectedPoint({ type: 'vol', data: e.activePayload[0].payload })}>
                     <defs>
                       <linearGradient id="volGrad" x1="0" y1="0" x2="0" y2="1">
@@ -494,7 +497,7 @@ export default function Progress() {
                     <XAxis dataKey="label" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
                       tickLine={false} axisLine={false} />
                     <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
-                      tickLine={false} axisLine={false} tickFormatter={fmtK} width={36} />
+                      tickLine={false} axisLine={false} tickFormatter={fmtK} />
                     <Tooltip content={<RichTooltip unit="lbs" />} />
                     <Bar dataKey="vol" fill="url(#volGrad)" radius={[4,4,0,0]} cursor="pointer" />
                   </BarChart>
@@ -539,7 +542,7 @@ export default function Progress() {
                 </div>
                 <ResponsiveContainer width="100%" height={220}>
                   <AreaChart data={filteredBw.map(e => ({ date: fmt(e.date), bw: e.weight, rawDate: e.date }))}
-                    margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
+                    margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bwGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#4ADE80" stopOpacity={0.3} />
@@ -550,7 +553,7 @@ export default function Progress() {
                     <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
                       tickLine={false} axisLine={false} />
                     <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
-                      tickLine={false} axisLine={false} domain={['dataMin - 2','dataMax + 2']} width={36} />
+                      tickLine={false} axisLine={false} domain={['dataMin - 2','dataMax + 2']} />
                     <Tooltip content={<RichTooltip unit="lbs" />} />
                     <Area type="monotone" dataKey="bw" stroke="#4ADE80" strokeWidth={2}
                       fill="url(#bwGrad)"
@@ -568,17 +571,18 @@ export default function Progress() {
                   <div>
                     <div className={styles.chartTitle}>Body fat %</div>
                     <div className={styles.chartSub}>
-                      {(() => {
-                        const diff = bfTrendData[bfTrendData.length-1]?.bf - bfTrendData[0]?.bf
+                      {filteredBf.length > 1 && (() => {
+                        const diff = filteredBf[filteredBf.length-1]?.bf - filteredBf[0]?.bf
                         return <span style={{ color: diff < 0 ? 'var(--success)' : diff > 0 ? 'var(--danger)' : 'var(--muted)' }}>
                           {diff > 0 ? '+' : ''}{diff.toFixed(1)}% in range · US Navy formula
                         </span>
                       })()}
                     </div>
                   </div>
+                  <RangeSelector value={bfRange} onChange={setBfRange} options={RANGE_OPTIONS} />
                 </div>
                 <ResponsiveContainer width="100%" height={200}>
-                  <AreaChart data={bfTrendData} margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
+                  <AreaChart data={filteredBf} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="bfGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#F87171" stopOpacity={0.3} />
@@ -588,7 +592,7 @@ export default function Progress() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false}
-                      domain={['dataMin - 1', 'dataMax + 1']} tickFormatter={v => `${v}%`} width={38} />
+                      domain={['dataMin - 1', 'dataMax + 1']} tickFormatter={v => `${v}%`} />
                     <Tooltip content={<RichTooltip unit="%" />} />
                     <Area type="monotone" dataKey="bf" stroke="#F87171" strokeWidth={2} fill="url(#bfGrad)"
                       dot={{ fill:'#F87171', r:4, strokeWidth:0 }} activeDot={{ r:6, strokeWidth:0 }} />
@@ -605,7 +609,7 @@ export default function Progress() {
                 <ResponsiveContainer width="100%" height={160}>
                   <AreaChart
                     data={[...measureEntries].filter(e => e.waist).reverse().map(e => ({ date: fmt(e.date), waist: e.waist }))}
-                    margin={{ top: 10, right: 4, left: -10, bottom: 0 }}>
+                    margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
                     <defs>
                       <linearGradient id="waistGrad" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="0%" stopColor="#C084FC" stopOpacity={0.3} />
@@ -615,7 +619,7 @@ export default function Progress() {
                     <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
                     <XAxis dataKey="date" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false} />
                     <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }} tickLine={false} axisLine={false}
-                      domain={['dataMin - 1','dataMax + 1']} width={36} />
+                      domain={['dataMin - 1','dataMax + 1']} />
                     <Tooltip content={<RichTooltip unit="in" />} />
                     <Area type="monotone" dataKey="waist" stroke="#C084FC" strokeWidth={2} fill="url(#waistGrad)"
                       dot={{ fill:'#C084FC', r:3, strokeWidth:0 }} activeDot={{ r:6, strokeWidth:0 }} />
@@ -775,7 +779,7 @@ export default function Progress() {
                 {filteredEx.length > 1 ? (
                   <ResponsiveContainer width="100%" height={260}>
                     <AreaChart data={filteredEx}
-                      margin={{ top: 10, right: 4, left: -10, bottom: 0 }}
+                      margin={{ top: 10, right: 8, left: 0, bottom: 0 }}
                       onClick={e => e?.activePayload && setSelectedPoint({ type: 'ex', data: e.activePayload[0].payload })}>
                       <defs>
                         <linearGradient id="exGrad" x1="0" y1="0" x2="0" y2="1">
@@ -787,7 +791,7 @@ export default function Progress() {
                       <XAxis dataKey="label" tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
                         tickLine={false} axisLine={false} />
                       <YAxis tick={{ fill:'#6B6860', fontSize:9, fontFamily:'DM Mono' }}
-                        tickLine={false} axisLine={false} domain={['dataMin - 5','dataMax + 5']} width={36} />
+                        tickLine={false} axisLine={false} domain={['dataMin - 5','dataMax + 5']} />
                       <Tooltip content={<RichTooltip unit={chartMetric==='volume'?'lbs total':'lbs'} />} />
                       <Area type="monotone" dataKey={chartMetric} stroke={dayColor} strokeWidth={2.5}
                         fill="url(#exGrad)"

@@ -282,7 +282,6 @@ export default function Settings() {
               setMeasureSaving(true)
               const clean = {}
               Object.entries(measurements).forEach(([k, v]) => { if (v) clean[k] = parseFloat(v) })
-              // Calculate and store BF% at save time so Progress can use it directly
               const bf = navyBodyFat({
                 waist: clean.waist, neck: clean.neck,
                 hip: clean.hips, height: settings.heightInches,
@@ -290,6 +289,33 @@ export default function Settings() {
               })
               if (bf !== null) clean.body_fat = bf
               await saveMeasurement(clean)
+
+              // Backfill body_fat on any existing entries that are missing it or have bad values
+              if (settings.heightInches) {
+                const { data: allEntries } = await supabase
+                  .from('body_measurements')
+                  .select('id, date, waist, neck, hips, body_fat')
+                  .eq('user_id', user.id)
+                if (allEntries) {
+                  const toUpdate = allEntries.filter(e => {
+                    const existing = e.body_fat
+                    const needsUpdate = existing === null || existing === undefined || existing < 3 || existing > 60
+                    return needsUpdate && e.waist && e.neck
+                  })
+                  await Promise.all(toUpdate.map(e => {
+                    const recalc = navyBodyFat({
+                      waist: e.waist, neck: e.neck,
+                      hip: e.hips, height: settings.heightInches,
+                      sex: settings.sex || 'male'
+                    })
+                    if (!recalc || recalc < 3 || recalc > 60) return Promise.resolve()
+                    return supabase.from('body_measurements')
+                      .update({ body_fat: recalc })
+                      .eq('id', e.id)
+                  }))
+                }
+              }
+
               setMeasureSaving(false)
               setMeasureSaved(true)
               setTimeout(() => setMeasureSaved(false), 2500)
