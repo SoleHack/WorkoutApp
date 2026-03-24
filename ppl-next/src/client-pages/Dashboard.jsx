@@ -50,7 +50,7 @@ function useDeloadCheck(allSessions, deloadEnabled) {
   return { needed: false, reason: null }
 }
 
-export default function Dashboard() {
+export default function Dashboard({ initialBwEntries, initialSessions }) {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const { settings, loading: settingsLoading, save } = useSettings()
@@ -64,7 +64,7 @@ export default function Dashboard() {
   const handleOnboardingDone = () => {
     save({ onboardingDone: true })
   }
-  const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight()
+  const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight(initialBwEntries)
 
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
@@ -86,7 +86,7 @@ export default function Dashboard() {
   })
 
   const { todaySlug, lastSession, streak, allSessions, todayCompleted, coreCompletedToday } =
-    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM), SCHEDULE, morningSlug)
+    useTodayWorkout(PROGRAM_ORDER, Object.values(PROGRAM), SCHEDULE, morningSlug, initialSessions)
 
   const todayKey = todaySlug
   const isRest = !todayKey || todayKey === 'rest'

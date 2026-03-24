@@ -145,17 +145,17 @@ const EX_RANGE_OPTIONS = [
   { label: 'All', value: 9999 },
 ]
 
-export default function Progress() {
+export default function Progress({ initialSessions, initialBwEntries, initialMeasureEntries }) {
   const supabase = getSupabase()
   const { user } = useAuth()
-  const { entries: bwEntries } = useBodyweight()
-  const { entries: measureEntries } = useBodyMeasurements()
+  const { entries: bwEntries } = useBodyweight(initialBwEntries)
+  const { entries: measureEntries } = useBodyMeasurements(initialMeasureEntries)
   const { settings } = useSettings()
   const { programData } = useActiveProgram()
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
   const EXERCISES = programData?.EXERCISES || {}
-  const { landmarks } = useVolumeLandmarks(EXERCISES)
+  const { landmarks } = useVolumeLandmarks(EXERCISES, allSessions)
 
   // Build body fat trend from stored body_fat values
   const bfTrendData = (() => {
@@ -172,13 +172,55 @@ export default function Progress() {
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(null)  // initialized after program loads
   const [selectedExId, setSelectedExId] = useState(null)
-  const [allSessions, setAllSessions] = useState([])
-  const [prs, setPrs] = useState({})
-  const [recentPrs, setRecentPrs] = useState([])
-  const [volumeData, setVolumeData] = useState([])
-  const [chartData, setChartData] = useState([])  // raw set history for exercise
-  const [heatmapCells, setHeatmapCells] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [allSessions, setAllSessions] = useState(initialSessions || [])
+  const [prs, setPrs] = useState(() => {
+    if (!initialSessions) return {}
+    const prMap = {}
+    const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate()-30)
+    initialSessions.forEach(s => {
+      s.session_sets?.forEach(set => {
+        if (!set.completed || !set.weight || !set.reps) return
+        const est = e1rm(set.weight, set.reps)
+        if (!prMap[set.exercise_id] || est > prMap[set.exercise_id].e1rm) {
+          prMap[set.exercise_id] = { weight: set.weight, reps: set.reps, date: s.date, e1rm: est, isRecent: new Date(s.date) >= thirtyAgo }
+        }
+      })
+    })
+    return prMap
+  })
+  const [recentPrs, setRecentPrs] = useState(() => {
+    if (!initialSessions) return []
+    const thirtyAgo = new Date(); thirtyAgo.setDate(thirtyAgo.getDate()-30)
+    const prMap = {}
+    initialSessions.forEach(s => {
+      s.session_sets?.forEach(set => {
+        if (!set.completed || !set.weight || !set.reps) return
+        const est = e1rm(set.weight, set.reps)
+        if (!prMap[set.exercise_id] || est > prMap[set.exercise_id].e1rm) {
+          prMap[set.exercise_id] = { weight: set.weight, reps: set.reps, date: s.date, e1rm: est, isRecent: new Date(s.date) >= thirtyAgo }
+        }
+      })
+    })
+    return Object.entries(prMap).filter(([,pr]) => pr.isRecent).slice(0, 5)
+  })
+  const [volumeData, setVolumeData] = useState(() => {
+    if (!initialSessions) return []
+    const weekMap = {}
+    initialSessions.forEach(s => {
+      const week = getWeekLabel(s.date)
+      if (!weekMap[week]) weekMap[week] = { week, vol: 0, sessions: 0 }
+      weekMap[week].sessions++
+      s.session_sets?.forEach(set => {
+        if (set.completed && set.weight && set.reps) weekMap[week].vol += set.weight * set.reps
+      })
+    })
+    return Object.values(weekMap)
+      .sort((a,b) => a.week.localeCompare(b.week))
+      .map(w => ({ ...w, vol: Math.round(w.vol), label: fmt(w.week) }))
+  })
+  const [chartData, setChartData] = useState([])
+  const [heatmapCells, setHeatmapCells] = useState(() => initialSessions ? buildHeatmap(initialSessions) : [])
+  const [loading, setLoading] = useState(!initialSessions)
   const [hoveredCell, setHoveredCell] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
   const [volRange, setVolRange] = useState(9999)
@@ -189,7 +231,9 @@ export default function Progress() {
   const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
   const [notesSearch, setNotesSearch] = useState('')
 
-  useEffect(() => { loadAll() }, [user])
+  useEffect(() => { 
+    if (!initialSessions && user) loadAll()
+  }, [user])
   useEffect(() => {
     if (PROGRAM_ORDER.length > 0 && !activeDay) setActiveDay(PROGRAM_ORDER[0])
   }, [PROGRAM_ORDER, activeDay])
@@ -199,16 +243,7 @@ export default function Progress() {
     setSelectedPoint(null)
   }, [selectedExId])
 
-  const loadAll = async () => {
-    setLoading(true)
-    const { data: sessions } = await supabase
-      .from('workout_sessions')
-      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(completed, weight, reps, rpe, exercise_id)')
-      .eq('user_id', user.id)
-      .order('date', { ascending: false })
-      .limit(200)
-
-    if (!sessions) { setLoading(false); return }
+  const processSessions = useCallback((sessions) => {
     setAllSessions(sessions)
     setHeatmapCells(buildHeatmap(sessions))
 
@@ -227,7 +262,7 @@ export default function Progress() {
     setPrs(prMap)
     setRecentPrs(Object.entries(prMap).filter(([,pr]) => pr.isRecent).slice(0, 5))
 
-    // Weekly volume with day breakdown
+    // Weekly volume
     const weekMap = {}
     sessions.forEach(s => {
       const week = getWeekLabel(s.date)
@@ -242,6 +277,19 @@ export default function Progress() {
       .map(w => ({ ...w, vol: Math.round(w.vol), label: fmt(w.week) }))
     setVolumeData(volArr)
     setLoading(false)
+  }, [])
+
+  const loadAll = async () => {
+    setLoading(true)
+    const { data: sessions } = await supabase
+      .from('workout_sessions')
+      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(completed, weight, reps, rpe, exercise_id)')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false })
+      .limit(200)
+
+    if (!sessions) { setLoading(false); return }
+    processSessions(sessions)
   }
 
   const loadChart = async (exerciseId) => {

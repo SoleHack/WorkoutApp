@@ -57,13 +57,13 @@ function PhotoComparison({ photos }) {
   )
 }
 
-export default function Settings() {
+export default function Settings({ initialMeasurements, initialBwLatest }) {
   const supabase = getSupabase()
   const router = useRouter()
   const { settings, save, loading } = useSettings()
   const { user, signOut } = useAuth()
   const { entries: bwEntries, logWeight, latest: bwLatest, change: bwChange } = useBodyweight()
-  const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements()
+  const { latest: latestMeasurement, saveMeasurement } = useBodyMeasurements(initialMeasurements)
   const { photos, uploading, uploadPhoto, deletePhoto } = useProgressPhotos()
   const { permission, requestPermission } = usePushNotifications()
   const { isSupported: healthSupported, syncWorkout } = useAppleHealth()

@@ -19,14 +19,14 @@ function calcStreak(sessions, morningSlug) {
   return streak
 }
 
-export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = null) {
+export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = null, initialSessions = null) {
   const supabase = getSupabase()
   const { user } = useAuth()
   const [todaySlug, setTodaySlug] = useState(null)
   const [lastSession, setLastSession] = useState(null)
   const [streak, setStreak] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [allSessions, setAllSessions] = useState([])
+  const [allSessions, setAllSessions] = useState(initialSessions || [])
   const [todayCompleted, setTodayCompleted] = useState(false)
   const [coreCompletedToday, setCoreCompletedToday] = useState(false)
 

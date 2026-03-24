@@ -30,13 +30,13 @@ async function convertHeicToJpeg(file) {
   })
 }
 
-export function useBodyMeasurements() {
+export function useBodyMeasurements(initialEntries) {
   const supabase = getSupabase()
   const { user } = useAuth()
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries] = useState(initialEntries || [])
+  const [loading, setLoading] = useState(!initialEntries)
 
-  useEffect(() => { if (user) load() }, [user])
+  useEffect(() => { if (user && !initialEntries) load() }, [user])
 
   const load = async () => {
     setLoading(true)

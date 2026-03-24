@@ -4,41 +4,46 @@ import { useState, useEffect, useCallback } from 'react'
 import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
-export function useBodyweight() {
-  const supabase = getSupabase()
+export function useBodyweight(initialEntries) {
   const { user } = useAuth()
-  const [entries, setEntries] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [entries, setEntries] = useState(initialEntries || [])
+  const [loading, setLoading] = useState(!initialEntries)
 
   const load = useCallback(async () => {
     if (!user) return
     setLoading(true)
+    const supabase = getSupabase()
     const { data } = await supabase
-      .from('bodyweight')
-      .select('id, date, weight')   // was select('*')
-      .eq('user_id', user.id)
-      .order('date', { ascending: true })
-      .limit(90)                     // 3 months max, was unbounded
-    setEntries(data || [])
+      .from('bodyweight').select('id, date, weight')
+      .eq('user_id', user.id).order('date', { ascending: true }).limit(90)
+    if (data) setEntries(data)
     setLoading(false)
   }, [user])
 
-  useEffect(() => { if (user) load() }, [user, load])
+  useEffect(() => {
+    if (!initialEntries && user) load()
+    else setLoading(false)
+  }, [user])
 
   const logWeight = useCallback(async (weight) => {
-    const today = getLocalDate()
-    await supabase.from('bodyweight').upsert(
-      { user_id: user.id, date: today, weight },
-      { onConflict: 'user_id,date' }
-    )
-    await load()
-  }, [user, load])
+    if (!user) return
+    const supabase = getSupabase()
+    const date = getLocalDate()
+    const { data, error } = await supabase.from('bodyweight')
+      .upsert({ user_id: user.id, date, weight }, { onConflict: 'user_id,date' })
+      .select().single()
+    if (!error && data) {
+      setEntries(prev => {
+        const filtered = prev.filter(e => e.date !== date)
+        return [...filtered, data].sort((a, b) => a.date.localeCompare(b.date))
+      })
+    }
+    return { error }
+  }, [user])
 
-  const latest   = entries[entries.length - 1]
-  const previous = entries[entries.length - 2]
-  const change   = latest && previous
-    ? (latest.weight - previous.weight).toFixed(1)
-    : null
+  const latest = entries[entries.length - 1] || null
+  const previous = entries[entries.length - 2] || null
+  const change = latest && previous ? Math.round((latest.weight - previous.weight) * 10) / 10 : null
 
-  return { entries, loading, logWeight, latest, change }
+  return { entries, loading, logWeight, latest, previous, change }
 }

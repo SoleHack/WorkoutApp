@@ -4,73 +4,66 @@ import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
 const DEFAULT_SETTINGS = {
-  weightUnit:     'lbs',
-  deloadReminder: true,
-  theme:          'dark',
-  heightInches:   null,
-  sex:            'male',
-  partnerMode:    false,
-  displayName:    '',
-  onboardingDone: false,
+  weightUnit: 'lbs', deloadReminder: true, theme: 'dark',
+  heightInches: null, sex: 'male', partnerMode: false,
+  displayName: '', onboardingDone: false,
 }
 
 const SettingsContext = createContext({})
 
-export function SettingsProvider({
-  children }) {
-  const supabase = getSupabase()
+export function SettingsProvider({ children, initialSettings, initialPublicStats }) {
   const { user } = useAuth()
-  const [settings, setSettings] = useState(DEFAULT_SETTINGS)
-  const [loading, setLoading] = useState(true)
 
-  useEffect(() => { if (user) load(); else setLoading(false) }, [user])
+  const buildSettings = (s, p) => ({
+    weightUnit:     s?.weight_unit     || 'lbs',
+    deloadReminder: s?.deload_reminder ?? true,
+    theme:          s?.theme           || 'dark',
+    heightInches:   s?.height_inches   || null,
+    sex:            s?.sex             || 'male',
+    onboardingDone: s?.onboarding_done ?? false,
+    partnerMode:    p?.partner_mode    ?? false,
+    displayName:    p?.display_name    || user?.email?.split('@')[0] || '',
+  })
+
+  const [settings, setSettings] = useState(
+    initialSettings ? buildSettings(initialSettings, initialPublicStats) : DEFAULT_SETTINGS
+  )
+  const [loading, setLoading] = useState(!initialSettings)
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', settings.theme || 'dark')
   }, [settings.theme])
 
-  const load = async () => {
-    setLoading(true)
-    const [{ data: s }, { data: p }] = await Promise.all([
-      supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex, onboarding_done').eq('user_id', user.id).maybeSingle(),
-      supabase.from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
-    ])
-
-    setSettings({
-      weightUnit:     s?.weight_unit     || 'lbs',
-      deloadReminder: s?.deload_reminder ?? true,
-      theme:          s?.theme           || 'dark',
-      heightInches:   s?.height_inches   || null,
-      sex:            s?.sex             || 'male',
-      onboardingDone: s?.onboarding_done ?? false,
-      partnerMode:    p?.partner_mode    ?? false,
-      displayName:    p?.display_name    || user.email?.split('@')[0] || '',
-    })
-    setLoading(false)
-  }
+  useEffect(() => {
+    // Only fetch if we didn't get server data
+    if (initialSettings || !user) { setLoading(false); return }
+    const load = async () => {
+      const supabase = getSupabase()
+      setLoading(true)
+      const [{ data: s }, { data: p }] = await Promise.all([
+        supabase.from('user_settings').select('weight_unit, deload_reminder, theme, height_inches, sex, onboarding_done').eq('user_id', user.id).maybeSingle(),
+        supabase.from('public_stats').select('partner_mode, display_name').eq('user_id', user.id).maybeSingle(),
+      ])
+      setSettings(buildSettings(s, p))
+      setLoading(false)
+    }
+    load()
+  }, [user])
 
   const save = useCallback(async (updates) => {
+    const supabase = getSupabase()
     const next = { ...settings, ...updates }
     setSettings(next)
-
     await supabase.from('user_settings').upsert({
-      user_id:          user.id,
-      weight_unit:      next.weightUnit,
-      deload_reminder:  next.deloadReminder,
-      theme:            next.theme,
-      height_inches:    next.heightInches,
-      sex:              next.sex,
-      onboarding_done:  next.onboardingDone,
-      updated_at:       new Date().toISOString(),
+      user_id: user.id, weight_unit: next.weightUnit, deload_reminder: next.deloadReminder,
+      theme: next.theme, height_inches: next.heightInches, sex: next.sex,
+      onboarding_done: next.onboardingDone, updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
-
     if ('partnerMode' in updates || 'displayName' in updates) {
       await supabase.from('public_stats').upsert({
-        user_id:      user.id,
-        email:        user.email,
+        user_id: user.id, email: user.email,
         display_name: next.displayName || user.email?.split('@')[0],
-        partner_mode: next.partnerMode,
-        updated_at:   new Date().toISOString(),
+        partner_mode: next.partnerMode, updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' })
     }
   }, [settings, user])
@@ -82,7 +75,4 @@ export function SettingsProvider({
   )
 }
 
-export function useSettings() {
-  const supabase = getSupabase()
-  return useContext(SettingsContext)
-}
+export function useSettings() { return useContext(SettingsContext) }

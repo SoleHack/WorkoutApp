@@ -97,11 +97,33 @@ function buildProgramShape(workouts, programDays, morningWorkoutId) {
 }
 
 export function ActiveProgramProvider({
-  children }) {
+  children, initialProgramRows }) {
   const supabase = getSupabase()
   const { user } = useAuth()
-  const [programData, setProgramData] = useState(null)
-  const [loading, setLoading] = useState(true)
+
+  // Build initial state from server data if available
+  const buildFromRows = (rows) => {
+    if (!rows) return null
+    const { days, programMeta, altRows, workoutRows, enrollment } = rows
+    const ALTERNATIVES = {}
+    ;(altRows || []).forEach(row => {
+      const slug = row.exercise?.slug; const altSlug = row.alternative?.slug
+      if (!slug || !altSlug) return
+      if (!ALTERNATIVES[slug]) ALTERNATIVES[slug] = []
+      ALTERNATIVES[slug].push(altSlug)
+    })
+    const built = buildProgramShape(workoutRows || [], days || [], enrollment?.morning_workout_id)
+    built.ALTERNATIVES = ALTERNATIVES
+    built.lastCompletedSlug = enrollment?.last_completed_slug
+    built.programId = enrollment?.program_id
+    built.programName = programMeta?.name || null
+    built.morningWorkoutId = enrollment?.morning_workout_id
+    built.programDays = days || []
+    return built
+  }
+
+  const [programData, setProgramData] = useState(() => buildFromRows(initialProgramRows))
+  const [loading, setLoading] = useState(!initialProgramRows)
   const [programId, setProgramId] = useState(null)
   const [morningWorkoutId, setMorningWorkoutId] = useState(null)
 
@@ -191,7 +213,9 @@ export function ActiveProgramProvider({
     setLoading(false)
   }, [user])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { 
+    if (!initialProgramRows) load()
+  }, [load])
 
   // Re-fetch on visibility change but throttle to max once per 2 minutes
   useEffect(() => {
