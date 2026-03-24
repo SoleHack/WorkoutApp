@@ -361,11 +361,21 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
         <div className={styles.schedTitle}>My Workouts</div>
         <div className={styles.workoutsList}>
           {workouts.map(w => (
-            <div key={w.id} className={styles.workoutRow} onClick={() => onOpenWorkout(w.id)}>
+            <div key={w.id} className={styles.workoutRow}>
               <div className={styles.workoutDot} style={{ background: w.color }} />
-              <div className={styles.workoutRowName}>{w.name}</div>
-              <div className={styles.workoutRowMeta}>{w.focus || w.day_type}</div>
-              <span className={styles.workoutRowArrow}>→</span>
+              <div className={styles.workoutRowName} onClick={() => onOpenWorkout(w.id)}>{w.name}</div>
+              <div className={styles.workoutRowMeta} onClick={() => onOpenWorkout(w.id)}>{w.focus || w.day_type}</div>
+              {!isSystem && (
+                <button className={styles.workoutDupBtn}
+                  title="Duplicate workout"
+                  onClick={async (e) => {
+                    e.stopPropagation()
+                    await cloneWorkout(w.id, `${w.name} (copy)`)
+                  }}>
+                  ⧉
+                </button>
+              )}
+              <span className={styles.workoutRowArrow} onClick={() => onOpenWorkout(w.id)}>→</span>
             </div>
           ))}
           {creatingWorkout ? (
@@ -647,11 +657,16 @@ function ExercisePicker({ onAdd, onClose, existingSlugs = [] }) {
   const { exercises, loading } = useExerciseLibrary()
   const [search, setSearch] = useState('')
   const [muscleFilter, setMuscleFilter] = useState(null)
+  const [categoryFilter, setCategoryFilter] = useState('strength')
 
-  const allMuscles = [...new Set(exercises.flatMap(e => e.muscles || []))].sort()
+  const allMuscles = [...new Set(
+    exercises.filter(e => e.category !== 'cardio').flatMap(e => e.muscles || [])
+  )].sort()
 
   const filtered = exercises.filter(ex => {
     if (existingSlugs.includes(ex.slug)) return false
+    const cat = ex.category || 'strength'
+    if (cat !== categoryFilter) return false
     if (muscleFilter && !ex.muscles?.includes(muscleFilter)) return false
     if (search && !ex.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
@@ -659,19 +674,32 @@ function ExercisePicker({ onAdd, onClose, existingSlugs = [] }) {
 
   return (
     <Modal title="Add Exercise" onClose={onClose} fullHeight>
+      {/* Category switcher */}
+      <div className={styles.categoryTabs}>
+        <button className={`${styles.categoryTab} ${categoryFilter === 'strength' ? styles.categoryTabActive : ''}`}
+          onClick={() => { setCategoryFilter('strength'); setMuscleFilter(null) }}>
+          🏋️ Strength
+        </button>
+        <button className={`${styles.categoryTab} ${categoryFilter === 'cardio' ? styles.categoryTabActive : ''}`}
+          onClick={() => { setCategoryFilter('cardio'); setMuscleFilter(null) }}>
+          🏃 Cardio
+        </button>
+      </div>
       <div className={styles.pickerSearch}>
         <input className={styles.searchInput} autoFocus placeholder="Search exercises…"
           value={search} onChange={e => setSearch(e.target.value)} />
       </div>
-      <div className={styles.muscleFilters}>
-        <button className={`${styles.muscleChip} ${!muscleFilter ? styles.muscleChipActive : ''}`}
-          onClick={() => setMuscleFilter(null)}>All</button>
-        {allMuscles.map(m => (
-          <button key={m}
-            className={`${styles.muscleChip} ${muscleFilter === m ? styles.muscleChipActive : ''}`}
-            onClick={() => setMuscleFilter(muscleFilter === m ? null : m)}>{m}</button>
-        ))}
-      </div>
+      {categoryFilter === 'strength' && (
+        <div className={styles.muscleFilters}>
+          <button className={`${styles.muscleChip} ${!muscleFilter ? styles.muscleChipActive : ''}`}
+            onClick={() => setMuscleFilter(null)}>All</button>
+          {allMuscles.map(m => (
+            <button key={m}
+              className={`${styles.muscleChip} ${muscleFilter === m ? styles.muscleChipActive : ''}`}
+              onClick={() => setMuscleFilter(muscleFilter === m ? null : m)}>{m}</button>
+          ))}
+        </div>
+      )}
       {loading ? <Loader /> : (
         <div className={styles.pickerList}>
           {filtered.length === 0 && (
@@ -681,7 +709,9 @@ function ExercisePicker({ onAdd, onClose, existingSlugs = [] }) {
             <button key={ex.id} className={styles.pickerRow} onClick={() => onAdd(ex)}>
               <div>
                 <div className={styles.pickerName}>{ex.name}</div>
-                <div className={styles.pickerMeta}>{ex.muscles?.join(' · ')}</div>
+                <div className={styles.pickerMeta}>
+                  {ex.category === 'cardio' ? `Cardio · ${ex.cardio_metric || 'duration'}` : ex.muscles?.join(' · ')}
+                </div>
               </div>
               <span className={styles.addChip}>+ Add</span>
             </button>

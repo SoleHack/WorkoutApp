@@ -131,6 +131,264 @@ function AchievementsTab({ totalSessions, allSessions, prs, totalVolume }) {
   )
 }
 
+function HistoryTab({ allSessions, PROGRAM, PROGRAM_ORDER, prs, EXERCISES, styles }) {
+  const completedHistory = allSessions.filter(s => s.completed_at && s.day_key !== 'rest')
+  const [historyFilter, setHistoryFilter] = useState('all')
+
+  const filtered = historyFilter === 'all'
+    ? completedHistory
+    : completedHistory.filter(s => s.day_key === historyFilter)
+
+  return (
+
+            <>
+              {/* Filter tabs */}
+              <div className={styles.dayTabsWrap}>
+                <div className={styles.dayTabs}>
+                  <button
+                    className={`${styles.dayTab} ${historyFilter === 'all' ? styles.dayTabActive : ''}`}
+                    onClick={() => setHistoryFilter('all')}>
+                    All
+                  </button>
+                  {PROGRAM_ORDER.map(key => (
+                    <button key={key}
+                      className={`${styles.dayTab} ${historyFilter === key ? styles.dayTabActive : ''}`}
+                      style={historyFilter === key ? { color: PROGRAM[key]?.color, borderBottomColor: PROGRAM[key]?.color } : {}}
+                      onClick={() => setHistoryFilter(key)}>
+                      {PROGRAM[key]?.label || key}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className={styles.sessionList}>
+                {filtered.length === 0 && (
+                  <div className={styles.empty}>No sessions yet.</div>
+                )}
+                {filtered.map((session, idx) => {
+                  const completedSets = session.session_sets?.filter(s => s.completed) || []
+                  const totalVol = completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
+                  const uniqueExIds = [...new Set(completedSets.map(s => s.exercise_id))]
+                  const dur = session.duration_seconds
+                  const durStr = dur
+                    ? dur >= 3600
+                      ? `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60)}m`
+                      : `${Math.floor(dur / 60)}m`
+                    : null
+                  const dayColor = PROGRAM[session.day_key]?.color || 'var(--muted)'
+                  const dayLabel = PROGRAM[session.day_key]?.label || session.day_key
+
+                  // Check if any PRs were set in this session
+                  const sessionPrExIds = uniqueExIds.filter(exId => {
+                    const pr = prs[exId]
+                    return pr && pr.date === session.date
+                  })
+
+                  return (
+                    <div key={session.id} className={styles.sessionCard}>
+                      <div className={styles.sessionCardAccent} style={{ background: dayColor }} />
+                      <div className={styles.sessionCardBody}>
+                        <div className={styles.sessionHeader}>
+                          <div>
+                            <div className={styles.sessionWorkoutName} style={{ color: dayColor }}>
+                              {dayLabel}
+                            </div>
+                            <div className={styles.sessionDate}>
+                              {new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
+                                weekday: 'long', month: 'short', day: 'numeric'
+                              })}
+                            </div>
+                          </div>
+                          <div className={styles.sessionStats}>
+                            {durStr && <div className={styles.sessionStat}>{durStr}</div>}
+                            <div className={styles.sessionStat}>{completedSets.length} sets</div>
+                            {totalVol > 0 && <div className={styles.sessionStat}>{Math.round(totalVol / 1000).toLocaleString()}k lbs</div>}
+                          </div>
+                        </div>
+
+                        {sessionPrExIds.length > 0 && (
+                          <div className={styles.sessionPrBadges}>
+                            {sessionPrExIds.map(exId => (
+                              <span key={exId} className={styles.sessionPrBadge} style={{ borderColor: dayColor, color: dayColor }}>
+                                🏆 {EXERCISES[exId]?.name || exId} PR
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {uniqueExIds.length > 0 && (
+                          <div className={styles.sessionExList}>
+                            {uniqueExIds.map(exId => {
+                              const exSets = completedSets.filter(s => s.exercise_id === exId)
+                              const maxW = Math.max(...exSets.map(s => s.weight || 0))
+                              const isPr = sessionPrExIds.includes(exId)
+                              // Show each set
+                              return (
+                                <div key={exId} className={styles.sessionEx}>
+                                  <span className={`${styles.sessionExName} ${isPr ? styles.sessionExNamePr : ''}`}
+                                    style={isPr ? { color: dayColor } : {}}>
+                                    {EXERCISES[exId]?.name || exId}
+                                    {isPr && ' 🏆'}
+                                  </span>
+                                  <span className={styles.sessionExSets}>
+                                    {exSets.map((s, i) => (
+                                      <span key={i} className={styles.sessionExSet}>
+                                        {s.weight > 0 ? `${s.weight}×${s.reps}` : `BW×${s.reps}`}
+                                      </span>
+                                    ))}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {session.notes && (
+                          <div className={styles.sessionNote}>
+                            <span className={styles.sessionNoteIcon}>📝</span>
+                            <span className={styles.sessionNoteText}>{session.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </>
+  )
+}
+
+const MACRO_COLOR = { calories: '#F59E0B', protein_g: '#38BDF8', carbs_g: '#4ADE80', fat_g: '#F87171' }
+const MACRO_LABEL = { calories: 'Calories', protein_g: 'Protein', carbs_g: 'Carbs', fat_g: 'Fat' }
+const MACRO_UNIT  = { calories: 'kcal', protein_g: 'g', carbs_g: 'g', fat_g: 'g' }
+
+function NutritionTab({ nutritionTargets, nutritionToday, nutritionLogs, logNutrition, saveTargets, styles }) {
+  const [nutrForm, setNutrForm] = useState({
+    calories:  nutritionToday?.calories  || '',
+    protein_g: nutritionToday?.protein_g || '',
+    carbs_g:   nutritionToday?.carbs_g   || '',
+    fat_g:     nutritionToday?.fat_g     || '',
+  })
+  const [targetForm, setTargetForm] = useState({
+    calories:  nutritionTargets?.calories  || '',
+    protein_g: nutritionTargets?.protein_g || '',
+    carbs_g:   nutritionTargets?.carbs_g   || '',
+    fat_g:     nutritionTargets?.fat_g     || '',
+  })
+  const [saving, setSaving]               = useState(false)
+  const [savingTargets, setSavingTargets] = useState(false)
+  const [saved, setSaved]                 = useState(false)
+
+  const pct = (val, target) => target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
+
+  const handleLogSave = async () => {
+    setSaving(true)
+    await logNutrition({
+      calories:  parseInt(nutrForm.calories)    || 0,
+      protein_g: parseFloat(nutrForm.protein_g) || 0,
+      carbs_g:   parseFloat(nutrForm.carbs_g)   || 0,
+      fat_g:     parseFloat(nutrForm.fat_g)     || 0,
+    })
+    setSaving(false); setSaved(true)
+    setTimeout(() => setSaved(false), 2000)
+  }
+
+  const handleTargetSave = async () => {
+    setSavingTargets(true)
+    await saveTargets({
+      calories:  parseInt(targetForm.calories)  || null,
+      protein_g: parseInt(targetForm.protein_g) || null,
+      carbs_g:   parseInt(targetForm.carbs_g)   || null,
+      fat_g:     parseInt(targetForm.fat_g)     || null,
+    })
+    setSavingTargets(false)
+  }
+
+  return (
+    <>
+      <div className={styles.nutrSection}>
+        <div className={styles.sectionLabel}>Today's Intake</div>
+        {nutritionTargets?.calories && (
+          <div className={styles.nutrBars}>
+            {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => {
+              const val = parseInt(nutrForm[key]) || 0
+              const target = nutritionTargets[key] || 0
+              const p = pct(val, target)
+              const color = MACRO_COLOR[key]
+              return (
+                <div key={key} className={styles.nutrBar}>
+                  <div className={styles.nutrBarHeader}>
+                    <span className={styles.nutrBarLabel}>{MACRO_LABEL[key]}</span>
+                    <span className={styles.nutrBarVal} style={{ color }}>
+                      {val}<span className={styles.nutrBarUnit}>/{target}{MACRO_UNIT[key]}</span>
+                    </span>
+                  </div>
+                  <div className={styles.nutrBarTrack}>
+                    <div className={styles.nutrBarFill} style={{ width: `${p}%`, background: color, opacity: p > 100 ? 0.5 : 1 }} />
+                  </div>
+                  <div className={styles.nutrBarPct} style={{ color: p >= 90 ? color : 'var(--muted)' }}>{p}%</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+        <div className={styles.nutrInputGrid}>
+          {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
+            <div key={key} className={styles.nutrInputWrap}>
+              <label className={styles.nutrInputLabel} style={{ color: MACRO_COLOR[key] }}>{MACRO_LABEL[key]}</label>
+              <input type="number" inputMode="decimal" className={styles.nutrInput}
+                style={{ borderColor: nutrForm[key] ? MACRO_COLOR[key] + '60' : undefined }}
+                placeholder={`0 ${MACRO_UNIT[key]}`}
+                value={nutrForm[key]}
+                onChange={e => setNutrForm(f => ({ ...f, [key]: e.target.value }))} />
+            </div>
+          ))}
+        </div>
+        <button className={styles.nutrSaveBtn} onClick={handleLogSave} disabled={saving}>
+          {saving ? 'Saving...' : saved ? '✓ Saved' : 'Log Today'}
+        </button>
+      </div>
+
+      {nutritionLogs.length > 0 && (
+        <div className={styles.nutrSection}>
+          <div className={styles.sectionLabel}>Recent <span className={styles.sectionSub}>last 7 days</span></div>
+          {nutritionLogs.map(log => (
+            <div key={log.id} className={styles.nutrLogRow}>
+              <div className={styles.nutrLogDate}>
+                {new Date(log.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+              </div>
+              <div className={styles.nutrLogMacros}>
+                <span style={{ color: MACRO_COLOR.calories }}>{log.calories} kcal</span>
+                <span style={{ color: MACRO_COLOR.protein_g }}>{log.protein_g}g P</span>
+                <span style={{ color: MACRO_COLOR.carbs_g }}>{log.carbs_g}g C</span>
+                <span style={{ color: MACRO_COLOR.fat_g }}>{log.fat_g}g F</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.nutrSection}>
+        <div className={styles.sectionLabel}>Daily Targets</div>
+        <div className={styles.nutrInputGrid}>
+          {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
+            <div key={key} className={styles.nutrInputWrap}>
+              <label className={styles.nutrInputLabel} style={{ color: MACRO_COLOR[key] }}>{MACRO_LABEL[key]}</label>
+              <input type="number" inputMode="decimal" className={styles.nutrInput}
+                placeholder={`Target ${MACRO_UNIT[key]}`}
+                value={targetForm[key]}
+                onChange={e => setTargetForm(f => ({ ...f, [key]: e.target.value }))} />
+            </div>
+          ))}
+        </div>
+        <button className={styles.nutrSaveBtn} onClick={handleTargetSave} disabled={savingTargets}>
+          {savingTargets ? 'Saving...' : 'Save Targets'}
+        </button>
+      </div>
+    </>
+  )
+}
+
 const RANGE_OPTIONS = [
   { label: '4W', value: 28 },
   { label: '8W', value: 56 },
@@ -997,131 +1255,16 @@ export default function Progress() {
         )}
 
         {/* ── HISTORY ── */}
-        {activeTab === 'history' && (() => {
-          const completedHistory = allSessions.filter(s => s.completed_at && s.day_key !== 'rest')
-          const [historyFilter, setHistoryFilter] = React.useState('all')
-
-          const filtered = historyFilter === 'all'
-            ? completedHistory
-            : completedHistory.filter(s => s.day_key === historyFilter)
-
-          return (
-            <>
-              {/* Filter tabs */}
-              <div className={styles.dayTabsWrap}>
-                <div className={styles.dayTabs}>
-                  <button
-                    className={`${styles.dayTab} ${historyFilter === 'all' ? styles.dayTabActive : ''}`}
-                    onClick={() => setHistoryFilter('all')}>
-                    All
-                  </button>
-                  {PROGRAM_ORDER.map(key => (
-                    <button key={key}
-                      className={`${styles.dayTab} ${historyFilter === key ? styles.dayTabActive : ''}`}
-                      style={historyFilter === key ? { color: PROGRAM[key]?.color, borderBottomColor: PROGRAM[key]?.color } : {}}
-                      onClick={() => setHistoryFilter(key)}>
-                      {PROGRAM[key]?.label || key}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className={styles.sessionList}>
-                {filtered.length === 0 && (
-                  <div className={styles.empty}>No sessions yet.</div>
-                )}
-                {filtered.map((session, idx) => {
-                  const completedSets = session.session_sets?.filter(s => s.completed) || []
-                  const totalVol = completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
-                  const uniqueExIds = [...new Set(completedSets.map(s => s.exercise_id))]
-                  const dur = session.duration_seconds
-                  const durStr = dur
-                    ? dur >= 3600
-                      ? `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60)}m`
-                      : `${Math.floor(dur / 60)}m`
-                    : null
-                  const dayColor = PROGRAM[session.day_key]?.color || 'var(--muted)'
-                  const dayLabel = PROGRAM[session.day_key]?.label || session.day_key
-
-                  // Check if any PRs were set in this session
-                  const sessionPrExIds = uniqueExIds.filter(exId => {
-                    const pr = prs[exId]
-                    return pr && pr.date === session.date
-                  })
-
-                  return (
-                    <div key={session.id} className={styles.sessionCard}>
-                      <div className={styles.sessionCardAccent} style={{ background: dayColor }} />
-                      <div className={styles.sessionCardBody}>
-                        <div className={styles.sessionHeader}>
-                          <div>
-                            <div className={styles.sessionWorkoutName} style={{ color: dayColor }}>
-                              {dayLabel}
-                            </div>
-                            <div className={styles.sessionDate}>
-                              {new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
-                                weekday: 'long', month: 'short', day: 'numeric'
-                              })}
-                            </div>
-                          </div>
-                          <div className={styles.sessionStats}>
-                            {durStr && <div className={styles.sessionStat}>{durStr}</div>}
-                            <div className={styles.sessionStat}>{completedSets.length} sets</div>
-                            {totalVol > 0 && <div className={styles.sessionStat}>{Math.round(totalVol / 1000).toLocaleString()}k lbs</div>}
-                          </div>
-                        </div>
-
-                        {sessionPrExIds.length > 0 && (
-                          <div className={styles.sessionPrBadges}>
-                            {sessionPrExIds.map(exId => (
-                              <span key={exId} className={styles.sessionPrBadge} style={{ borderColor: dayColor, color: dayColor }}>
-                                🏆 {EXERCISES[exId]?.name || exId} PR
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {uniqueExIds.length > 0 && (
-                          <div className={styles.sessionExList}>
-                            {uniqueExIds.map(exId => {
-                              const exSets = completedSets.filter(s => s.exercise_id === exId)
-                              const maxW = Math.max(...exSets.map(s => s.weight || 0))
-                              const isPr = sessionPrExIds.includes(exId)
-                              // Show each set
-                              return (
-                                <div key={exId} className={styles.sessionEx}>
-                                  <span className={`${styles.sessionExName} ${isPr ? styles.sessionExNamePr : ''}`}
-                                    style={isPr ? { color: dayColor } : {}}>
-                                    {EXERCISES[exId]?.name || exId}
-                                    {isPr && ' 🏆'}
-                                  </span>
-                                  <span className={styles.sessionExSets}>
-                                    {exSets.map((s, i) => (
-                                      <span key={i} className={styles.sessionExSet}>
-                                        {s.weight > 0 ? `${s.weight}×${s.reps}` : `BW×${s.reps}`}
-                                      </span>
-                                    ))}
-                                  </span>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )}
-
-                        {session.notes && (
-                          <div className={styles.sessionNote}>
-                            <span className={styles.sessionNoteIcon}>📝</span>
-                            <span className={styles.sessionNoteText}>{session.notes}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
-            </>
-          )
-        })()}
+        {activeTab === 'history' && (
+          <HistoryTab
+            allSessions={allSessions}
+            PROGRAM={PROGRAM}
+            PROGRAM_ORDER={PROGRAM_ORDER}
+            prs={prs}
+            EXERCISES={EXERCISES}
+            styles={styles}
+          />
+        )}
 
         {/* ── NOTES ── */}
         {activeTab === 'notes' && (() => {
@@ -1180,159 +1323,16 @@ export default function Progress() {
         )}
 
         {/* ── 1RM ── */}
-        {activeTab === 'nutrition' && (() => {
-          const [nutrForm, setNutrForm] = React.useState({
-            calories: nutritionToday?.calories || '',
-            protein_g: nutritionToday?.protein_g || '',
-            carbs_g: nutritionToday?.carbs_g || '',
-            fat_g: nutritionToday?.fat_g || '',
-          })
-          const [targetForm, setTargetForm] = React.useState({
-            calories: nutritionTargets?.calories || '',
-            protein_g: nutritionTargets?.protein_g || '',
-            carbs_g: nutritionTargets?.carbs_g || '',
-            fat_g: nutritionTargets?.fat_g || '',
-          })
-          const [saving, setSaving] = React.useState(false)
-          const [savingTargets, setSavingTargets] = React.useState(false)
-          const [saved, setSaved] = React.useState(false)
-
-          const macroColor = { calories: '#F59E0B', protein_g: '#38BDF8', carbs_g: '#4ADE80', fat_g: '#F87171' }
-          const macroLabel = { calories: 'Calories', protein_g: 'Protein', carbs_g: 'Carbs', fat_g: 'Fat' }
-          const macroUnit = { calories: 'kcal', protein_g: 'g', carbs_g: 'g', fat_g: 'g' }
-
-          const handleLogSave = async () => {
-            setSaving(true)
-            await logNutrition({
-              calories: parseInt(nutrForm.calories) || 0,
-              protein_g: parseFloat(nutrForm.protein_g) || 0,
-              carbs_g: parseFloat(nutrForm.carbs_g) || 0,
-              fat_g: parseFloat(nutrForm.fat_g) || 0,
-            })
-            setSaving(false)
-            setSaved(true)
-            setTimeout(() => setSaved(false), 2000)
-          }
-
-          const handleTargetSave = async () => {
-            setSavingTargets(true)
-            await saveTargets({
-              calories: parseInt(targetForm.calories) || null,
-              protein_g: parseInt(targetForm.protein_g) || null,
-              carbs_g: parseInt(targetForm.carbs_g) || null,
-              fat_g: parseInt(targetForm.fat_g) || null,
-            })
-            setSavingTargets(false)
-          }
-
-          const pct = (val, target) => target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
-
-          return (
-            <>
-              {/* Today's log */}
-              <div className={styles.nutrSection}>
-                <div className={styles.sectionLabel}>Today's Intake</div>
-
-                {/* Macro rings / progress bars */}
-                {nutritionTargets?.calories && (
-                  <div className={styles.nutrBars}>
-                    {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => {
-                      const val = parseInt(nutrForm[key]) || 0
-                      const target = nutritionTargets[key] || 0
-                      const p = pct(val, target)
-                      const color = macroColor[key]
-                      return (
-                        <div key={key} className={styles.nutrBar}>
-                          <div className={styles.nutrBarHeader}>
-                            <span className={styles.nutrBarLabel}>{macroLabel[key]}</span>
-                            <span className={styles.nutrBarVal} style={{ color }}>
-                              {val}<span className={styles.nutrBarUnit}>/{target}{macroUnit[key]}</span>
-                            </span>
-                          </div>
-                          <div className={styles.nutrBarTrack}>
-                            <div className={styles.nutrBarFill}
-                              style={{ width: `${p}%`, background: color, opacity: p > 100 ? 0.5 : 1 }} />
-                          </div>
-                          <div className={styles.nutrBarPct} style={{ color: p >= 90 ? color : 'var(--muted)' }}>
-                            {p}%
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-
-                {/* Log inputs */}
-                <div className={styles.nutrInputGrid}>
-                  {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
-                    <div key={key} className={styles.nutrInputWrap}>
-                      <label className={styles.nutrInputLabel} style={{ color: macroColor[key] }}>
-                        {macroLabel[key]}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        className={styles.nutrInput}
-                        style={{ borderColor: nutrForm[key] ? macroColor[key] + '60' : undefined }}
-                        placeholder={`0 ${macroUnit[key]}`}
-                        value={nutrForm[key]}
-                        onChange={e => setNutrForm(f => ({ ...f, [key]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <button className={styles.nutrSaveBtn} onClick={handleLogSave} disabled={saving}>
-                  {saving ? 'Saving...' : saved ? '✓ Saved' : 'Log Today'}
-                </button>
-              </div>
-
-              {/* Recent logs */}
-              {nutritionLogs.length > 0 && (
-                <div className={styles.nutrSection}>
-                  <div className={styles.sectionLabel}>Recent <span className={styles.sectionSub}>last 7 days</span></div>
-                  {nutritionLogs.map(log => (
-                    <div key={log.id} className={styles.nutrLogRow}>
-                      <div className={styles.nutrLogDate}>
-                        {new Date(log.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-                      </div>
-                      <div className={styles.nutrLogMacros}>
-                        <span style={{ color: macroColor.calories }}>{log.calories} kcal</span>
-                        <span style={{ color: macroColor.protein_g }}>{log.protein_g}g P</span>
-                        <span style={{ color: macroColor.carbs_g }}>{log.carbs_g}g C</span>
-                        <span style={{ color: macroColor.fat_g }}>{log.fat_g}g F</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Targets */}
-              <div className={styles.nutrSection}>
-                <div className={styles.sectionLabel}>Daily Targets</div>
-                <div className={styles.nutrInputGrid}>
-                  {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
-                    <div key={key} className={styles.nutrInputWrap}>
-                      <label className={styles.nutrInputLabel} style={{ color: macroColor[key] }}>
-                        {macroLabel[key]}
-                      </label>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        className={styles.nutrInput}
-                        placeholder={`Target ${macroUnit[key]}`}
-                        value={targetForm[key]}
-                        onChange={e => setTargetForm(f => ({ ...f, [key]: e.target.value }))}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <button className={styles.nutrSaveBtn} onClick={handleTargetSave} disabled={savingTargets}>
-                  {savingTargets ? 'Saving...' : 'Save Targets'}
-                </button>
-              </div>
-            </>
-          )
-        })()}
+        {activeTab === 'nutrition' && (
+          <NutritionTab
+            nutritionTargets={nutritionTargets}
+            nutritionToday={nutritionToday}
+            nutritionLogs={nutritionLogs}
+            logNutrition={logNutrition}
+            saveTargets={saveTargets}
+            styles={styles}
+          />
+        )}
 
         {activeTab === '1rm' && <LazyCalculator embedded />}
 

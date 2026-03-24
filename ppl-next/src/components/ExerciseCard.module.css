@@ -488,6 +488,15 @@
   letter-spacing: 0.1em;
   color: var(--muted);
   margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.warmupSub {
+  font-size: 9px;
+  color: var(--muted2);
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .warmupSets { display: flex; flex-direction: column; gap: 4px; }
@@ -506,6 +515,7 @@
   transition: background 0.12s;
 }
 .warmupRow:active { background: var(--bg3); }
+.warmupLogged { border-color: var(--border2); }
 
 .warmupFill {
   margin-left: auto;

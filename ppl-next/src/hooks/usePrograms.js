@@ -374,7 +374,7 @@ export function useExerciseLibrary() {
     const load = async () => {
       const { data } = await supabase
         .from('exercises')
-        .select('id, slug, name, muscles, secondary_muscles, tags, video_url')
+        .select('id, slug, name, muscles, secondary_muscles, tags, video_url, category, cardio_metric')
         .eq('is_public', true)
         .order('name')
       setExercises(data || [])

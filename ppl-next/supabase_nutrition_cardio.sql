@@ -41,16 +41,16 @@ ALTER TABLE session_sets
 -- ── Seed cardio exercises ──────────────────────────────────────
 INSERT INTO exercises (slug, name, muscles, secondary_muscles, tags, category, cardio_metric)
 VALUES
-  ('treadmill',       'Treadmill',          '[]', '[]', '["cardio"]', 'cardio', 'distance'),
-  ('stationary-bike', 'Stationary Bike',    '[]', '[]', '["cardio"]', 'cardio', 'duration'),
-  ('rowing-machine',  'Rowing Machine',     '[]', '[]', '["cardio"]', 'cardio', 'distance'),
-  ('stairmaster',     'StairMaster',        '[]', '[]', '["cardio"]', 'cardio', 'duration'),
-  ('elliptical',      'Elliptical',         '[]', '[]', '["cardio"]', 'cardio', 'duration'),
-  ('jump-rope',       'Jump Rope',          '[]', '[]', '["cardio"]', 'cardio', 'duration'),
-  ('hiit',            'HIIT',               '[]', '[]', '["cardio"]', 'cardio', 'duration'),
-  ('outdoor-run',     'Outdoor Run',        '[]', '[]', '["cardio"]', 'cardio', 'distance'),
-  ('outdoor-walk',    'Outdoor Walk',       '[]', '[]', '["cardio"]', 'cardio', 'distance'),
-  ('swimming',        'Swimming',           '[]', '[]', '["cardio"]', 'cardio', 'distance')
+  ('treadmill',       'Treadmill',       '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'distance'),
+  ('stationary-bike', 'Stationary Bike', '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'duration'),
+  ('rowing-machine',  'Rowing Machine',  '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'distance'),
+  ('stairmaster',     'StairMaster',     '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'duration'),
+  ('elliptical',      'Elliptical',      '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'duration'),
+  ('jump-rope',       'Jump Rope',       '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'duration'),
+  ('hiit',            'HIIT',            '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'duration'),
+  ('outdoor-run',     'Outdoor Run',     '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'distance'),
+  ('outdoor-walk',    'Outdoor Walk',    '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'distance'),
+  ('swimming',        'Swimming',        '{}'::text[], '{}'::text[], '{cardio}'::text[], 'cardio', 'distance')
 ON CONFLICT (slug) DO UPDATE SET
   category = EXCLUDED.category,
   cardio_metric = EXCLUDED.cardio_metric;

@@ -32,6 +32,8 @@ function buildProgramShape(workouts, programDays, morningWorkoutId) {
       EXERCISES[ex.slug] = {
         name: ex.name,
         video: ex.video_url ? { type: 'mp4', url: ex.video_url } : null,
+        category: ex.category || 'strength',
+        cardioMetric: ex.cardio_metric || null,
         muscles: {
           primary: ex.muscles || [],
           secondary: ex.secondary_muscles || [],
@@ -164,7 +166,7 @@ export function ActiveProgramProvider({
           id, name, slug, day_type, color, focus, is_morning_routine,
           workout_exercises (
             id, order_index, sets, reps, rest_seconds, tag, notes, accent, exercise_id,
-            exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes)
+            exercise:exercises (id, slug, name, muscles, secondary_muscles, tags, video_url, notes, category, cardio_metric)
           )
         `)
         .in('id', uniqueIds)

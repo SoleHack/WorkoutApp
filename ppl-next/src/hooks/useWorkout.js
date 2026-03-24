@@ -84,7 +84,7 @@ export function useWorkout(dayKey) {
     setLoading(false)
   }, [user, dayKey])
 
-  const logSet = useCallback(async (exerciseId, setNumber, weight, reps, rpe, clear = false) => {
+  const logSet = useCallback(async (exerciseId, setNumber, weight, reps, rpe, clear = false, isWarmup = false) => {
     const currentSession = sessionRef.current
     if (!currentSession) {
       setError('Session not ready. Please wait a moment and try again.')
@@ -131,6 +131,7 @@ export function useWorkout(dayKey) {
           weight,
           reps,
           completed: true,
+          is_warmup: isWarmup,
           ...(rpe ? { rpe } : {}),
         })
         .select('id')

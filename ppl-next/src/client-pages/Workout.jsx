@@ -403,7 +403,9 @@ export default function Workout() {
                     }}>
                     <span className={styles.exSearchName}>{ex.name}</span>
                     <span className={styles.exSearchMuscles}>
-                      {ex.muscles?.primary?.slice(0, 2).join(', ')}
+                      {ex.category === 'cardio'
+                        ? `Cardio · ${ex.cardioMetric || 'duration'}`
+                        : ex.muscles?.primary?.slice(0, 2).join(', ')}
                     </span>
                   </button>
                 ))}

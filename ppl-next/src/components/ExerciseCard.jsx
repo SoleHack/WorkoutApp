@@ -301,37 +301,46 @@ export default function ExerciseCard({
       )}
 
       {/* Warm-up sets */}
-      {showWarmup && lastMax > 0 && (
-        <div className={styles.warmupWrap}>
-          <div className={styles.warmupTitle}>Warm-up sets</div>
-          <div className={styles.warmupSets}>
-            {[
-              { pct: 0.4, reps: 10, label: '40%' },
-              { pct: 0.6, reps: 5,  label: '60%' },
-              { pct: 0.8, reps: 3,  label: '80%' },
-            ].map(ws => {
-              const wsWeightLbs = Math.round(lastMax * ws.pct / 2.5) * 2.5
-              const wsWeight = toDisplay(wsWeightLbs, weightUnit)
-              return (
-                <button key={ws.label} className={styles.warmupRow}
-                  onClick={() => {
-                    setWeight(wsWeight.toString())
-                    setReps(ws.reps.toString())
-                    const nextSet = sets.findIndex(s => !s?.completed)
-                    if (nextSet !== -1) setActiveSet(nextSet + 1)
-                    setShowWarmup(false)
-                    setRestTimer(null) // clear rest timer when starting warm-up
-                  }}>
-                  <span className={styles.warmupLabel}>{ws.label}</span>
-                  <span className={styles.warmupWeight} style={{ color: dayColor }}>{wsWeight} {unitLabel(weightUnit)}</span>
-                  <span className={styles.warmupReps}>× {ws.reps}</span>
-                  <span className={styles.warmupFill}>↓ use</span>
-                </button>
-              )
-            })}
+      {showWarmup && lastMax > 0 && (() => {
+        const warmupDefs = [
+          { pct: 0.4, reps: 10, label: '40%' },
+          { pct: 0.6, reps: 5,  label: '60%' },
+          { pct: 0.8, reps: 3,  label: '80%' },
+        ]
+        return (
+          <div className={styles.warmupWrap}>
+            <div className={styles.warmupTitle}>Warm-up sets <span className={styles.warmupSub}>tap to log</span></div>
+            <div className={styles.warmupSets}>
+              {warmupDefs.map((ws, wi) => {
+                const wsWeightLbs = Math.round(lastMax * ws.pct / 2.5) * 2.5
+                const wsWeight = toDisplay(wsWeightLbs, weightUnit)
+                const warmupKey = `warmup-${wi}`
+                const logged = sets.find(s => s?.isWarmup && s?.set_number === -(wi + 1))
+                return (
+                  <button key={ws.label}
+                    className={`${styles.warmupRow} ${logged ? styles.warmupLogged : ''}`}
+                    style={logged ? { borderColor: dayColor, background: `${dayColor}15` } : {}}
+                    onClick={async () => {
+                      setWeight(wsWeight.toString())
+                      setReps(ws.reps.toString())
+                      // Log as warmup set with negative set number
+                      await onLogSet(-(wi + 1), wsWeightLbs, ws.reps, null, false, true)
+                    }}>
+                    <span className={styles.warmupLabel}>{ws.label}</span>
+                    <span className={styles.warmupWeight} style={{ color: logged ? dayColor : 'var(--text)' }}>
+                      {wsWeight} {unitLabel(weightUnit)}
+                    </span>
+                    <span className={styles.warmupReps}>× {ws.reps}</span>
+                    <span className={styles.warmupFill} style={{ color: logged ? dayColor : 'var(--muted)' }}>
+                      {logged ? '✓' : '↓ log'}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Exercise alternatives */}
       {showAlts && ALTERNATIVES[programEx.originalId || programEx.id]?.length > 0 && (
@@ -392,14 +401,23 @@ export default function ExerciseCard({
                 onClick={() => handleSetTap(setNum)}>
                 {isDone ? (
                   <span className={styles.setDoneInner}>
-                    <span className={styles.doneWeight}>
-                      {s.weight > 0 ? toDisplay(s.weight, weightUnit) : 'BW'}
-                      {s.weight > 0 && <span className={styles.doneUnit}>{unitLabel(weightUnit)}</span>}
-                    </span>
-                    <span className={styles.doneReps}>{s.reps}</span>
+                    {exercise.category === 'cardio' ? (
+                      <>
+                        <span className={styles.doneWeight}>{s.weight}<span className={styles.doneUnit}>m</span></span>
+                        <span className={styles.doneReps}>{s.reps}mi</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={styles.doneWeight}>
+                          {s.weight > 0 ? toDisplay(s.weight, weightUnit) : 'BW'}
+                          {s.weight > 0 && <span className={styles.doneUnit}>{unitLabel(weightUnit)}</span>}
+                        </span>
+                        <span className={styles.doneReps}>{s.reps}</span>
+                      </>
+                    )}
                   </span>
                 ) : (
-                  <span className={styles.setLabel}>Set {setNum}</span>
+                  <span className={styles.setLabel}>{exercise.category === 'cardio' ? `Log ${setNum}` : `Set ${setNum}`}</span>
                 )}
               </button>
               {isDone && (
@@ -457,28 +475,55 @@ export default function ExerciseCard({
           </div>
 
           <div className={styles.inputsRow}>
-            <div className={styles.inputBlock}>
-              <div className={styles.inputLabel}>Weight ({unitLabel(weightUnit)})</div>
-              <div className={styles.stepper}>
-                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? -1.25 : -2.5)}>−</button>
-                <input className={styles.stepInput} type="number" inputMode="decimal"
-                  step={weightUnit === 'kg' ? '1.25' : '2.5'} min="0" placeholder="0" value={weight}
-                  onChange={e => setWeight(e.target.value)} />
-                <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? 1.25 : 2.5)}>+</button>
-              </div>
-              <PlateDisplay weight={weight} unit={weightUnit} />
-            </div>
+            {exercise.category === 'cardio' ? (
+              // Cardio inputs: duration + distance
+              <>
+                <div className={styles.inputBlock}>
+                  <div className={styles.inputLabel}>Duration (min)</div>
+                  <div className={styles.stepper}>
+                    <button type="button" className={styles.stepBtn} onClick={() => setWeight(w => Math.max(0, (parseFloat(w) || 0) - 1).toString())}>−</button>
+                    <input className={styles.stepInput} type="number" inputMode="decimal"
+                      placeholder="0" value={weight} onChange={e => setWeight(e.target.value)} />
+                    <button type="button" className={styles.stepBtn} onClick={() => setWeight(w => ((parseFloat(w) || 0) + 1).toString())}>+</button>
+                  </div>
+                </div>
+                <div className={styles.inputBlock}>
+                  <div className={styles.inputLabel}>Distance (mi)</div>
+                  <div className={styles.stepper}>
+                    <button type="button" className={styles.stepBtn} onClick={() => setReps(r => Math.max(0, (parseFloat(r) || 0) - 0.1).toFixed(1))}>−</button>
+                    <input className={styles.stepInput} type="number" inputMode="decimal"
+                      step="0.1" placeholder="0.0" value={reps} onChange={e => setReps(e.target.value)} />
+                    <button type="button" className={styles.stepBtn} onClick={() => setReps(r => ((parseFloat(r) || 0) + 0.1).toFixed(1))}>+</button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              // Strength inputs: weight + reps
+              <>
+                <div className={styles.inputBlock}>
+                  <div className={styles.inputLabel}>Weight ({unitLabel(weightUnit)})</div>
+                  <div className={styles.stepper}>
+                    <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? -1.25 : -2.5)}>−</button>
+                    <input className={styles.stepInput} type="number" inputMode="decimal"
+                      step={weightUnit === 'kg' ? '1.25' : '2.5'} min="0" placeholder="0" value={weight}
+                      onChange={e => setWeight(e.target.value)} />
+                    <button type="button" className={styles.stepBtn} onClick={() => adjustWeight(weightUnit === 'kg' ? 1.25 : 2.5)}>+</button>
+                  </div>
+                  <PlateDisplay weight={weight} unit={weightUnit} />
+                </div>
 
-            <div className={styles.inputBlock}>
-              <div className={styles.inputLabel}>Reps</div>
-              <div className={styles.stepper}>
-                <button type="button" className={styles.stepBtn} onClick={() => adjustReps(-1)}>−</button>
-                <input className={styles.stepInput} type="number" inputMode="numeric"
-                  min="1" placeholder="0" value={reps}
-                  onChange={e => setReps(e.target.value)} />
-                <button type="button" className={styles.stepBtn} onClick={() => adjustReps(1)}>+</button>
-              </div>
-            </div>
+                <div className={styles.inputBlock}>
+                  <div className={styles.inputLabel}>Reps</div>
+                  <div className={styles.stepper}>
+                    <button type="button" className={styles.stepBtn} onClick={() => adjustReps(-1)}>−</button>
+                    <input className={styles.stepInput} type="number" inputMode="numeric"
+                      min="1" placeholder="0" value={reps}
+                      onChange={e => setReps(e.target.value)} />
+                    <button type="button" className={styles.stepBtn} onClick={() => adjustReps(1)}>+</button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* RPE selector */}
