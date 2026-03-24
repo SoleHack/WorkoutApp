@@ -1,8 +1,7 @@
-const VERSION = 'ppl-v5'
+const VERSION = 'ppl-v6'
 const STATIC_CACHE = VERSION + '-static'
 const DATA_CACHE = VERSION + '-data'
 
-// These never change between deploys — cache forever
 const STATIC_URLS = [
   '/manifest.json',
   '/logo-dark.png',
@@ -70,50 +69,55 @@ async function replayQueue() {
   }
 }
 
-// ── Cache helpers ─────────────────────────────────────────────
-async function isFresh(cachedResponse) {
+// ── Cache freshness check ─────────────────────────────────────
+function isFresh(cachedResponse) {
   if (!cachedResponse) return false
-  const dateHeader = cachedResponse.headers.get('sw-cached-at')
-  if (!dateHeader) return false
-  return (Date.now() - parseInt(dateHeader)) < DATA_TTL_MS
+  const ts = cachedResponse.headers.get('sw-cached-at')
+  if (!ts) return false
+  return (Date.now() - parseInt(ts)) < DATA_TTL_MS
 }
 
-async function cacheWithTimestamp(cacheName, request, response) {
-  const cache = await caches.open(cacheName)
-  // Clone response and add timestamp header
-  const headers = new Headers(response.headers)
-  headers.set('sw-cached-at', Date.now().toString())
-  const stamped = new Response(await response.clone().blob(), {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  })
-  cache.put(request, stamped)
+// Store a response with a timestamp header
+// IMPORTANT: always pass response.clone() — never the original
+async function storeWithTimestamp(cacheName, request, responseClone) {
+  try {
+    const body = await responseClone.arrayBuffer()
+    const headers = new Headers(responseClone.headers)
+    headers.set('sw-cached-at', Date.now().toString())
+    const stamped = new Response(body, {
+      status: responseClone.status,
+      statusText: responseClone.statusText,
+      headers,
+    })
+    const cache = await caches.open(cacheName)
+    await cache.put(request, stamped)
+  } catch (e) {
+    // Ignore cache write errors — stale data is fine
+  }
 }
 
-// ── Install: cache static assets ─────────────────────────────
+// ── Install ───────────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(STATIC_CACHE)
-      .then(c => c.addAll(STATIC_URLS).catch(() => {}))
+      .then(c => Promise.allSettled(STATIC_URLS.map(url => c.add(url))))
       .then(() => self.skipWaiting())
   )
 })
 
-// ── Activate: clear old caches ────────────────────────────────
+// ── Activate ──────────────────────────────────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k !== STATIC_CACHE && k !== DATA_CACHE)
-          .map(k => caches.delete(k))
-      )
-    ).then(() => self.clients.claim())
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k !== STATIC_CACHE && k !== DATA_CACHE)
+            .map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   )
 })
 
-// ── Fetch: main routing logic ─────────────────────────────────
+// ── Fetch ─────────────────────────────────────────────────────
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url)
   if (!url.protocol.startsWith('http')) return
@@ -121,13 +125,14 @@ self.addEventListener('fetch', e => {
   const isSupabase = url.hostname.includes('supabase')
   const isAuth = url.pathname.includes('/auth/')
   const isMutation = ['POST', 'PATCH', 'PUT', 'DELETE'].includes(e.request.method)
-  const isStaticAsset = /\.(png|jpg|jpeg|svg|ico|woff2?|ttf)$/.test(url.pathname)
   const isNextStatic = url.pathname.startsWith('/_next/static/')
+  const isFont = url.pathname.startsWith('/fonts/')
+  const isImage = /\.(png|jpg|jpeg|svg|ico|webp)$/.test(url.pathname)
 
-  // ── Never cache auth requests ──────────────────────────────
+  // Never cache auth
   if (isAuth) return
 
-  // ── Supabase mutations: network with offline queue ─────────
+  // Supabase mutations — network with offline queue
   if (isSupabase && isMutation) {
     e.respondWith(
       fetch(e.request.clone()).catch(async () => {
@@ -140,78 +145,78 @@ self.addEventListener('fetch', e => {
     return
   }
 
-  // ── Supabase reads: stale-while-revalidate ─────────────────
-  // Show cached data immediately, fetch fresh in background
-  if (isSupabase && !isMutation) {
-    e.respondWith(
-      caches.open(DATA_CACHE).then(async cache => {
-        const cached = await cache.match(e.request)
-        const fresh = isFresh(cached)
+  // Supabase reads — stale-while-revalidate
+  if (isSupabase) {
+    e.respondWith((async () => {
+      const cache = await caches.open(DATA_CACHE)
+      const cached = await cache.match(e.request)
 
-        const networkFetch = fetch(e.request.clone())
-          .then(response => {
-            if (response.ok) {
-              cacheWithTimestamp(DATA_CACHE, e.request.clone(), response.clone())
-            }
-            return response
-          })
-          .catch(() => cached || new Response('{}', { status: 503 }))
+      if (cached && isFresh(cached)) {
+        // Fresh cache — return immediately, no network call
+        return cached
+      }
 
-        if (cached) {
-          // Return cached immediately, refresh in background
-          if (!fresh) {
-            // Stale — trigger background update
-            e.waitUntil(networkFetch)
-          }
-          return cached
+      if (cached) {
+        // Stale — return cached immediately, refresh in background
+        e.waitUntil(
+          fetch(e.request.clone())
+            .then(res => { if (res.ok) storeWithTimestamp(DATA_CACHE, e.request.clone(), res.clone()) })
+            .catch(() => {})
+        )
+        return cached
+      }
+
+      // No cache — fetch and store
+      try {
+        const res = await fetch(e.request.clone())
+        if (res.ok) {
+          storeWithTimestamp(DATA_CACHE, e.request.clone(), res.clone())
         }
-
-        // No cache — wait for network
-        return networkFetch
-      })
-    )
+        return res
+      } catch {
+        return new Response(JSON.stringify({ error: 'offline' }), {
+          status: 503,
+          headers: { 'Content-Type': 'application/json' }
+        })
+      }
+    })())
     return
   }
 
-  // ── Next.js static chunks: cache forever ──────────────────
-  // These have content hashes in filenames so are safe to cache forever
+  // Next.js static chunks — cache forever (content-hashed filenames)
   if (isNextStatic) {
-    e.respondWith(
-      caches.open(STATIC_CACHE).then(async cache => {
-        const cached = await cache.match(e.request)
-        if (cached) return cached
-        return fetch(e.request).then(response => {
-          if (response.ok) cache.put(e.request, response.clone())
-          return response
-        })
-      })
-    )
+    e.respondWith((async () => {
+      const cache = await caches.open(STATIC_CACHE)
+      const cached = await cache.match(e.request)
+      if (cached) return cached
+      const res = await fetch(e.request)
+      if (res.ok) cache.put(e.request, res.clone())
+      return res
+    })())
     return
   }
 
-  // ── Static assets: cache first ────────────────────────────
-  if (isStaticAsset) {
-    e.respondWith(
-      caches.open(STATIC_CACHE).then(async cache => {
-        const cached = await cache.match(e.request)
-        if (cached) return cached
-        return fetch(e.request).then(response => {
-          if (response.ok) cache.put(e.request, response.clone())
-          return response
-        })
-      })
-    )
+  // Fonts and images — cache forever
+  if (isFont || isImage) {
+    e.respondWith((async () => {
+      const cache = await caches.open(STATIC_CACHE)
+      const cached = await cache.match(e.request)
+      if (cached) return cached
+      const res = await fetch(e.request)
+      if (res.ok) cache.put(e.request, res.clone())
+      return res
+    })())
     return
   }
 
-  // ── App pages: network first, cache as fallback ────────────
+  // App pages — network first, cache as fallback for offline
   e.respondWith(
     fetch(e.request)
-      .then(response => {
-        if (response.ok && e.request.method === 'GET') {
-          caches.open(STATIC_CACHE).then(c => c.put(e.request, response.clone()))
+      .then(res => {
+        if (res.ok && e.request.method === 'GET') {
+          caches.open(STATIC_CACHE).then(c => c.put(e.request, res.clone()))
         }
-        return response
+        return res
       })
       .catch(() => caches.match(e.request))
   )
@@ -242,10 +247,8 @@ self.addEventListener('notificationclick', e => {
   e.waitUntil(clients.openWindow('/'))
 })
 
-// ── Message: force cache clear on new deploy ──────────────────
+// ── Messages ──────────────────────────────────────────────────
 self.addEventListener('message', e => {
   if (e.data === 'SKIP_WAITING') self.skipWaiting()
-  if (e.data === 'CLEAR_DATA_CACHE') {
-    caches.delete(DATA_CACHE)
-  }
+  if (e.data === 'CLEAR_DATA_CACHE') caches.delete(DATA_CACHE)
 })
