@@ -62,7 +62,7 @@
   padding: 8px;
   border: none;
   border-radius: 7px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   font-size: 14px;
   cursor: pointer;
   transition: all 0.15s;
@@ -86,7 +86,7 @@
   border: 1px solid var(--border);
   background: var(--bg2);
   color: var(--text);
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   font-size: 16px;
   outline: none;
   transition: border-color 0.15s;

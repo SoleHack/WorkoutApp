@@ -112,7 +112,7 @@
     font-size: clamp(12px, 1vw, 14px);
     letter-spacing: 0.02em;
     text-transform: none;
-    font-family: 'DM Sans', sans-serif;
+    font-family: 'DM Sans', -apple-system, sans-serif;
     font-weight: 500;
   }
 

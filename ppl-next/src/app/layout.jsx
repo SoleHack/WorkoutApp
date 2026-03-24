@@ -3,7 +3,9 @@ import { AuthProvider } from '../hooks/useAuth'
 import { SettingsProvider } from '../hooks/useSettings'
 import { ActiveProgramProvider } from '../hooks/useActiveProgram'
 import AppLayout from '../components/AppLayout'
+import ServiceWorkerRegistration from '../components/ServiceWorkerRegistration'
 import '../globals.css'
+
 
 export const metadata = {
   title: 'PPL Tracker',
@@ -34,15 +36,18 @@ export default async function RootLayout({ children }) {
   }
 
   return (
-    <html lang="en" data-theme={initialSettings?.theme || 'dark'}>
+    <html lang="en" data-theme={initialSettings?.theme || 'dark'}
+>
       <head>
         <meta name="theme-color" content="#0C0C0B" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_SUPABASE_URL} />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Preload critical fonts — starts downloading before CSS is parsed */}
+        <link rel="preload" href="/fonts/bebas-neue.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/dm-sans-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/dm-mono-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
       </head>
       <body>
         <AuthProvider initialUser={user}>
@@ -54,6 +59,7 @@ export default async function RootLayout({ children }) {
             </ActiveProgramProvider>
           </SettingsProvider>
         </AuthProvider>
+        <ServiceWorkerRegistration />
       </body>
     </html>
   )

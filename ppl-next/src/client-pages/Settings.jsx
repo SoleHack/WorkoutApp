@@ -10,6 +10,7 @@ import { navyBodyFat, bfCategory, leanMass } from '../lib/bodyFat'
 import { getLocalDate } from '../lib/date.js'
 import { useAuth } from '../hooks/useAuth'
 import { getSupabase } from '../lib/supabase-client'
+import { clearDataCache } from '../lib/swCache'
 import styles from './Settings.module.css'
 
 // Side-by-side photo comparison picker
@@ -109,6 +110,7 @@ export default function Settings({ initialMeasurements, initialBwLatest }) {
     if (!bwInput) return
     setBwSaving(true)
     await logWeight(parseFloat(bwInput))
+    clearDataCache()
     setBwInput('')
     setBwSaving(false)
   }
@@ -320,6 +322,7 @@ export default function Settings({ initialMeasurements, initialBwLatest }) {
 
               setMeasureSaving(false)
               setMeasureSaved(true)
+              clearDataCache()
               setTimeout(() => setMeasureSaved(false), 2500)
             }}>
             {measureSaving ? 'Saving...' : measureSaved ? '✓ Saved' : 'Log Measurements'}

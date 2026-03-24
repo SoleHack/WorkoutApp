@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getSupabase } from '../lib/supabase-client'
+import { clearDataCache } from '../lib/swCache'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
@@ -180,6 +181,7 @@ export default function Workout() {
     await saveNote(note)
     await finishSession(elapsed)
     clearTimer()
+    clearDataCache() // invalidate SW cache so Progress refreshes
     // Clean up persisted swap/superset state
     if (session?.id) {
       localStorage.removeItem(`swaps-${session.id}`)

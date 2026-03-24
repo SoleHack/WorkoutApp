@@ -19,7 +19,7 @@
 .back:hover { color: var(--text); }
 
 .title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: 40px; letter-spacing: 0.04em; line-height: 1;
 }
 
@@ -80,7 +80,7 @@
   background: none;
   border: none;
   font-size: 14px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   padding: 12px 0;
   outline: none;
   -webkit-appearance: none;
@@ -380,7 +380,7 @@
 
 .bfMain { display: flex; align-items: baseline; gap: 10px; }
 .bfNum {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: 52px;
   line-height: 1;
   letter-spacing: 0.02em;
@@ -607,7 +607,7 @@
   border-radius: 8px;
   color: var(--text);
   font-size: 15px;
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   padding: 10px 14px;
   outline: none;
   width: 100%;

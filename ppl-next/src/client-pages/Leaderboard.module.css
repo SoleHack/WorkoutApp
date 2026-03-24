@@ -8,7 +8,7 @@
 }
 
 .title {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: clamp(28px, 4vw, 40px);
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -75,7 +75,7 @@
   margin-bottom: 4px;
 }
 .leaderName {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: clamp(32px, 4vw, 48px);
   color: var(--push);
   letter-spacing: 0.04em;

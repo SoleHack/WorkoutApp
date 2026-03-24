@@ -20,7 +20,7 @@
 }
 
 .h1 {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: 44px; line-height: 1; letter-spacing: 0.02em;
 }
 
@@ -109,7 +109,7 @@
   border-radius: 10px; padding: 20px;
 }
 .restTitle {
-  font-family: 'Bebas Neue', sans-serif; font-size: 36px;
+  font-family: 'Bebas Neue', impact, sans-serif; font-size: 36px;
   color: var(--muted2); letter-spacing: 0.04em; margin-bottom: 6px;
 }
 .restSub { font-size: 13px; color: var(--muted); line-height: 1.6; }
@@ -136,7 +136,7 @@
 }
 
 .todayTitle {
-  font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 6vw, 52px);
+  font-family: 'Bebas Neue', impact, sans-serif; font-size: clamp(36px, 6vw, 52px);
   letter-spacing: 0.04em; line-height: 1; color: var(--text); margin-bottom: 6px;
 }
 
@@ -175,7 +175,7 @@
 }
 
 .dayTitle {
-  font-family: 'Bebas Neue', sans-serif; font-size: 26px;
+  font-family: 'Bebas Neue', impact, sans-serif; font-size: 26px;
   letter-spacing: 0.04em; line-height: 1; color: var(--text);
 }
 
@@ -198,7 +198,7 @@
 }
 .coreCard:active { background: var(--bg3); }
 .coreCardDone { border-left-color: var(--success); background: rgba(74,222,128,0.04); }
-.coreTitle { font-family: 'Bebas Neue', sans-serif; font-size: 26px; color: var(--text); letter-spacing: 0.04em; line-height: 1; }
+.coreTitle { font-family: 'Bebas Neue', impact, sans-serif; font-size: 26px; color: var(--text); letter-spacing: 0.04em; line-height: 1; }
 .coreSub { font-size: 11px; color: var(--muted); margin-top: 4px; }
 .coreArrow { font-size: 20px; color: var(--core); }
 
@@ -360,7 +360,7 @@
 }
 .noProgramIcon { font-size: clamp(36px, 5vw, 52px); }
 .noProgramTitle {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: clamp(22px, 3vw, 30px);
   letter-spacing: 0.06em;
   color: var(--text);

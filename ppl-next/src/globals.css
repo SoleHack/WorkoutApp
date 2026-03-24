@@ -1,4 +1,43 @@
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap');
+/* Self-hosted fonts — no external requests, no render blocking */
+@font-face {
+  font-family: 'Bebas Neue';
+  src: url('/fonts/bebas-neue.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  src: url('/fonts/dm-mono-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Mono';
+  src: url('/fonts/dm-mono-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/dm-sans-400.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'DM Sans';
+  src: url('/fonts/dm-sans-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -88,7 +127,7 @@ html { scroll-behavior: smooth; }
 .page-enter { animation: pageIn 0.2s ease forwards; }
 
 body {
-  font-family: 'DM Sans', sans-serif;
+  font-family: 'DM Sans', -apple-system, sans-serif;
   background: var(--bg);
   color: var(--text);
   min-height: 100vh;
@@ -121,7 +160,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ── Utilities ──────────────────────────────────────────────── */
 .mono  { font-family: 'DM Mono', monospace; }
-.bebas { font-family: 'Bebas Neue', sans-serif; }
+.bebas { font-family: 'Bebas Neue', impact, sans-serif; }
 .muted  { color: var(--muted); }
 .muted2 { color: var(--muted2); }
 
@@ -183,7 +222,7 @@ a { color: inherit; text-decoration: none; }
   filter: grayscale(0.2);
 }
 .emptyStateTitle {
-  font-family: 'Bebas Neue', sans-serif;
+  font-family: 'Bebas Neue', impact, sans-serif;
   font-size: clamp(22px, 3vw, 30px);
   letter-spacing: 0.06em;
   color: var(--text);
