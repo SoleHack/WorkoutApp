@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import {
   LineChart, Line, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   ResponsiveContainer, Area, AreaChart, ReferenceLine, Legend, ComposedChart
@@ -13,6 +13,7 @@ import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { navyBodyFat } from '../lib/bodyFat'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
+import { useNutrition } from '../hooks/useNutrition'
 import styles from './Progress.module.css'
 
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
@@ -185,6 +186,7 @@ export default function Progress() {
   const [loading, setLoading] = useState(true)
 
   const { landmarks } = useVolumeLandmarks(EXERCISES, allSessions)
+  const { targets: nutritionTargets, todayLog: nutritionToday, recentLogs: nutritionLogs, saveTargets, logNutrition } = useNutrition()
 
   const [hoveredCell, setHoveredCell] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
@@ -354,11 +356,11 @@ export default function Progress() {
         <div className={styles.title}>Progress</div>
         <div className={styles.tabsWrap}>
           <div className={styles.tabs}>
-            {['overview', 'volume', 'exercises', 'history', 'notes', '1rm', 'achievements'].map(tab => (
+            {['overview', 'prs', 'volume', 'exercises', 'history', 'notes', 'nutrition', '1rm', 'achievements'].map(tab => (
               <button key={tab}
                 className={`${styles.tab} ${activeTab===tab?styles.tabActive:''}`}
                 onClick={() => setActiveTab(tab)}>
-                {tab === 'exercises' ? 'Lifts' : tab.charAt(0).toUpperCase()+tab.slice(1)}
+                {tab === 'exercises' ? 'Lifts' : tab === 'prs' ? 'PRs' : tab === '1rm' ? '1RM' : tab.charAt(0).toUpperCase()+tab.slice(1)}
               </button>
             ))}
           </div>
@@ -704,6 +706,95 @@ export default function Progress() {
           </>
         )}
 
+        {/* ── PRs ── */}
+        {activeTab === 'prs' && (() => {
+          const sortedPrs = Object.entries(prs)
+            .map(([exId, pr]) => ({ exId, ...pr, name: EXERCISES[exId]?.name || exId }))
+            .sort((a, b) => b.e1rm - a.e1rm)
+
+          const recentPrIds = new Set(recentPrs.map(([id]) => id))
+
+          // Group by workout day
+          const byDay = {}
+          PROGRAM_ORDER.forEach(key => { byDay[key] = [] })
+          byDay['other'] = []
+          sortedPrs.forEach(pr => {
+            const day = PROGRAM_ORDER.find(key =>
+              PROGRAM[key]?.exercises?.find(e => e.id === pr.exId)
+            )
+            if (day) byDay[day].push(pr)
+            else byDay['other'].push(pr)
+          })
+
+          return (
+            <>
+              {sortedPrs.length === 0 && (
+                <div className={styles.empty}>Complete some workouts to see your PRs here.</div>
+              )}
+              {recentPrs.length > 0 && (
+                <div className={styles.prSection}>
+                  <div className={styles.sectionLabel}>
+                    New PRs <span className={styles.sectionSub}>last 30 days</span>
+                  </div>
+                  {recentPrs.map(([exId, pr]) => (
+                    <div key={exId} className={`${styles.prCard} ${styles.prCardNew}`}>
+                      <div className={styles.prCardBadge}>NEW PR</div>
+                      <div className={styles.prCardName}>{EXERCISES[exId]?.name || exId}</div>
+                      <div className={styles.prCardStats}>
+                        <div className={styles.prCardMain}>
+                          {pr.weight} <span className={styles.prCardUnit}>lbs × {pr.reps}</span>
+                        </div>
+                        <div className={styles.prCardE1rm}>≈ {pr.e1rm} est. 1RM</div>
+                        <div className={styles.prCardDate}>{fmt(pr.date)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {PROGRAM_ORDER.map(key => {
+                const dayPrs = byDay[key]
+                if (!dayPrs.length) return null
+                const day = PROGRAM[key]
+                return (
+                  <div key={key} className={styles.prSection}>
+                    <div className={styles.sectionLabel} style={{ color: day?.color }}>
+                      {day?.label || key}
+                    </div>
+                    {dayPrs.map(pr => (
+                      <div key={pr.exId} className={`${styles.prCard} ${recentPrIds.has(pr.exId) ? styles.prCardRecent : ''}`}>
+                        {recentPrIds.has(pr.exId) && <div className={styles.prCardBadge} style={{ background: day?.color }}>NEW</div>}
+                        <div className={styles.prCardName}>{pr.name}</div>
+                        <div className={styles.prCardStats}>
+                          <div className={styles.prCardMain} style={{ color: day?.color }}>
+                            {pr.weight} <span className={styles.prCardUnit}>lbs × {pr.reps}</span>
+                          </div>
+                          <div className={styles.prCardE1rm}>≈ {pr.e1rm} est. 1RM</div>
+                          <div className={styles.prCardDate}>{fmt(pr.date)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )
+              })}
+              {byDay['other'].length > 0 && (
+                <div className={styles.prSection}>
+                  <div className={styles.sectionLabel}>Other</div>
+                  {byDay['other'].map(pr => (
+                    <div key={pr.exId} className={styles.prCard}>
+                      <div className={styles.prCardName}>{pr.name}</div>
+                      <div className={styles.prCardStats}>
+                        <div className={styles.prCardMain}>{pr.weight} <span className={styles.prCardUnit}>lbs × {pr.reps}</span></div>
+                        <div className={styles.prCardE1rm}>≈ {pr.e1rm} est. 1RM</div>
+                        <div className={styles.prCardDate}>{fmt(pr.date)}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )
+        })()}
+
         {/* ── VOLUME LANDMARKS ── */}
         {activeTab === 'volume' && (
           <>
@@ -906,73 +997,131 @@ export default function Progress() {
         )}
 
         {/* ── HISTORY ── */}
-        {activeTab === 'history' && (
-          <>
-            <div className={styles.dayTabsWrap}>
-              <div className={styles.dayTabs}>
-                {PROGRAM_ORDER.map(key => (
-                  <button key={key}
-                    className={`${styles.dayTab} ${activeDay===key?styles.dayTabActive:''}`}
-                    style={activeDay===key?{color:PROGRAM[key]?.color,borderBottomColor:PROGRAM[key]?.color}:{}}
-                    onClick={() => setActiveDay(key)}>
-                    {PROGRAM[key]?.label || key}
+        {activeTab === 'history' && (() => {
+          const completedHistory = allSessions.filter(s => s.completed_at && s.day_key !== 'rest')
+          const [historyFilter, setHistoryFilter] = React.useState('all')
+
+          const filtered = historyFilter === 'all'
+            ? completedHistory
+            : completedHistory.filter(s => s.day_key === historyFilter)
+
+          return (
+            <>
+              {/* Filter tabs */}
+              <div className={styles.dayTabsWrap}>
+                <div className={styles.dayTabs}>
+                  <button
+                    className={`${styles.dayTab} ${historyFilter === 'all' ? styles.dayTabActive : ''}`}
+                    onClick={() => setHistoryFilter('all')}>
+                    All
                   </button>
-                ))}
+                  {PROGRAM_ORDER.map(key => (
+                    <button key={key}
+                      className={`${styles.dayTab} ${historyFilter === key ? styles.dayTabActive : ''}`}
+                      style={historyFilter === key ? { color: PROGRAM[key]?.color, borderBottomColor: PROGRAM[key]?.color } : {}}
+                      onClick={() => setHistoryFilter(key)}>
+                      {PROGRAM[key]?.label || key}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div className={styles.sessionList}>
-              {daySessions.length === 0 && (
-                <div className={styles.empty}>No {PROGRAM[activeDay]?.label} sessions yet.</div>
-              )}
-              {daySessions.map(session => {
-                const completedSets = session.session_sets?.filter(s => s.completed) || []
-                const totalVol = completedSets.reduce((acc,s) => acc+(s.weight*s.reps||0), 0)
-                const uniqueExercises = [...new Set(completedSets.map(s => s.exercise_id))]
-                const dur = session.duration_seconds
-                const durStr = dur
-                  ? dur >= 3600
-                    ? `${Math.floor(dur/3600)}h ${Math.floor((dur%3600)/60)}m`
-                    : `${Math.floor(dur/60)}m`
-                  : null
-                return (
-                  <div key={session.id} className={styles.sessionCard}>
-                    <div className={styles.sessionHeader}>
-                      <div className={styles.sessionDate}>
-                        {new Date(session.date).toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}
-                      </div>
-                      <div className={styles.sessionMeta}>
-                        {completedSets.length} sets · {Math.round(totalVol).toLocaleString()} lbs
-                        {durStr && <span> · {durStr}</span>}
-                        {session.completed_at && <span className={styles.sessionDone}> · ✓</span>}
+
+              <div className={styles.sessionList}>
+                {filtered.length === 0 && (
+                  <div className={styles.empty}>No sessions yet.</div>
+                )}
+                {filtered.map((session, idx) => {
+                  const completedSets = session.session_sets?.filter(s => s.completed) || []
+                  const totalVol = completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
+                  const uniqueExIds = [...new Set(completedSets.map(s => s.exercise_id))]
+                  const dur = session.duration_seconds
+                  const durStr = dur
+                    ? dur >= 3600
+                      ? `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60)}m`
+                      : `${Math.floor(dur / 60)}m`
+                    : null
+                  const dayColor = PROGRAM[session.day_key]?.color || 'var(--muted)'
+                  const dayLabel = PROGRAM[session.day_key]?.label || session.day_key
+
+                  // Check if any PRs were set in this session
+                  const sessionPrExIds = uniqueExIds.filter(exId => {
+                    const pr = prs[exId]
+                    return pr && pr.date === session.date
+                  })
+
+                  return (
+                    <div key={session.id} className={styles.sessionCard}>
+                      <div className={styles.sessionCardAccent} style={{ background: dayColor }} />
+                      <div className={styles.sessionCardBody}>
+                        <div className={styles.sessionHeader}>
+                          <div>
+                            <div className={styles.sessionWorkoutName} style={{ color: dayColor }}>
+                              {dayLabel}
+                            </div>
+                            <div className={styles.sessionDate}>
+                              {new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', {
+                                weekday: 'long', month: 'short', day: 'numeric'
+                              })}
+                            </div>
+                          </div>
+                          <div className={styles.sessionStats}>
+                            {durStr && <div className={styles.sessionStat}>{durStr}</div>}
+                            <div className={styles.sessionStat}>{completedSets.length} sets</div>
+                            {totalVol > 0 && <div className={styles.sessionStat}>{Math.round(totalVol / 1000).toLocaleString()}k lbs</div>}
+                          </div>
+                        </div>
+
+                        {sessionPrExIds.length > 0 && (
+                          <div className={styles.sessionPrBadges}>
+                            {sessionPrExIds.map(exId => (
+                              <span key={exId} className={styles.sessionPrBadge} style={{ borderColor: dayColor, color: dayColor }}>
+                                🏆 {EXERCISES[exId]?.name || exId} PR
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {uniqueExIds.length > 0 && (
+                          <div className={styles.sessionExList}>
+                            {uniqueExIds.map(exId => {
+                              const exSets = completedSets.filter(s => s.exercise_id === exId)
+                              const maxW = Math.max(...exSets.map(s => s.weight || 0))
+                              const isPr = sessionPrExIds.includes(exId)
+                              // Show each set
+                              return (
+                                <div key={exId} className={styles.sessionEx}>
+                                  <span className={`${styles.sessionExName} ${isPr ? styles.sessionExNamePr : ''}`}
+                                    style={isPr ? { color: dayColor } : {}}>
+                                    {EXERCISES[exId]?.name || exId}
+                                    {isPr && ' 🏆'}
+                                  </span>
+                                  <span className={styles.sessionExSets}>
+                                    {exSets.map((s, i) => (
+                                      <span key={i} className={styles.sessionExSet}>
+                                        {s.weight > 0 ? `${s.weight}×${s.reps}` : `BW×${s.reps}`}
+                                      </span>
+                                    ))}
+                                  </span>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {session.notes && (
+                          <div className={styles.sessionNote}>
+                            <span className={styles.sessionNoteIcon}>📝</span>
+                            <span className={styles.sessionNoteText}>{session.notes}</span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {uniqueExercises.length > 0 && (
-                      <div className={styles.sessionExList}>
-                        {uniqueExercises.map(exId => {
-                          const exSets = completedSets.filter(s => s.exercise_id===exId)
-                          const maxW = Math.max(...exSets.map(s => s.weight||0))
-                          const avgR = Math.round(exSets.reduce((a,s)=>a+(s.reps||0),0)/exSets.length)
-                          return (
-                            <div key={exId} className={styles.sessionEx}>
-                              <span className={styles.sessionExName}>{EXERCISES[exId]?.name||exId}</span>
-                              <span className={styles.sessionExData}>{exSets.length}×{avgR} @ {maxW}lbs</span>
-                            </div>
-                          )
-                        })}
-                      </div>
-                    )}
-                    {session.notes && (
-                      <div className={styles.sessionNote}>
-                        <span className={styles.sessionNoteIcon}>📝</span>
-                        <span className={styles.sessionNoteText}>{session.notes}</span>
-                      </div>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </>
-        )}
+                  )
+                })}
+              </div>
+            </>
+          )
+        })()}
 
         {/* ── NOTES ── */}
         {activeTab === 'notes' && (() => {
@@ -1031,6 +1180,160 @@ export default function Progress() {
         )}
 
         {/* ── 1RM ── */}
+        {activeTab === 'nutrition' && (() => {
+          const [nutrForm, setNutrForm] = React.useState({
+            calories: nutritionToday?.calories || '',
+            protein_g: nutritionToday?.protein_g || '',
+            carbs_g: nutritionToday?.carbs_g || '',
+            fat_g: nutritionToday?.fat_g || '',
+          })
+          const [targetForm, setTargetForm] = React.useState({
+            calories: nutritionTargets?.calories || '',
+            protein_g: nutritionTargets?.protein_g || '',
+            carbs_g: nutritionTargets?.carbs_g || '',
+            fat_g: nutritionTargets?.fat_g || '',
+          })
+          const [saving, setSaving] = React.useState(false)
+          const [savingTargets, setSavingTargets] = React.useState(false)
+          const [saved, setSaved] = React.useState(false)
+
+          const macroColor = { calories: '#F59E0B', protein_g: '#38BDF8', carbs_g: '#4ADE80', fat_g: '#F87171' }
+          const macroLabel = { calories: 'Calories', protein_g: 'Protein', carbs_g: 'Carbs', fat_g: 'Fat' }
+          const macroUnit = { calories: 'kcal', protein_g: 'g', carbs_g: 'g', fat_g: 'g' }
+
+          const handleLogSave = async () => {
+            setSaving(true)
+            await logNutrition({
+              calories: parseInt(nutrForm.calories) || 0,
+              protein_g: parseFloat(nutrForm.protein_g) || 0,
+              carbs_g: parseFloat(nutrForm.carbs_g) || 0,
+              fat_g: parseFloat(nutrForm.fat_g) || 0,
+            })
+            setSaving(false)
+            setSaved(true)
+            setTimeout(() => setSaved(false), 2000)
+          }
+
+          const handleTargetSave = async () => {
+            setSavingTargets(true)
+            await saveTargets({
+              calories: parseInt(targetForm.calories) || null,
+              protein_g: parseInt(targetForm.protein_g) || null,
+              carbs_g: parseInt(targetForm.carbs_g) || null,
+              fat_g: parseInt(targetForm.fat_g) || null,
+            })
+            setSavingTargets(false)
+          }
+
+          const pct = (val, target) => target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
+
+          return (
+            <>
+              {/* Today's log */}
+              <div className={styles.nutrSection}>
+                <div className={styles.sectionLabel}>Today's Intake</div>
+
+                {/* Macro rings / progress bars */}
+                {nutritionTargets?.calories && (
+                  <div className={styles.nutrBars}>
+                    {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => {
+                      const val = parseInt(nutrForm[key]) || 0
+                      const target = nutritionTargets[key] || 0
+                      const p = pct(val, target)
+                      const color = macroColor[key]
+                      return (
+                        <div key={key} className={styles.nutrBar}>
+                          <div className={styles.nutrBarHeader}>
+                            <span className={styles.nutrBarLabel}>{macroLabel[key]}</span>
+                            <span className={styles.nutrBarVal} style={{ color }}>
+                              {val}<span className={styles.nutrBarUnit}>/{target}{macroUnit[key]}</span>
+                            </span>
+                          </div>
+                          <div className={styles.nutrBarTrack}>
+                            <div className={styles.nutrBarFill}
+                              style={{ width: `${p}%`, background: color, opacity: p > 100 ? 0.5 : 1 }} />
+                          </div>
+                          <div className={styles.nutrBarPct} style={{ color: p >= 90 ? color : 'var(--muted)' }}>
+                            {p}%
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Log inputs */}
+                <div className={styles.nutrInputGrid}>
+                  {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
+                    <div key={key} className={styles.nutrInputWrap}>
+                      <label className={styles.nutrInputLabel} style={{ color: macroColor[key] }}>
+                        {macroLabel[key]}
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className={styles.nutrInput}
+                        style={{ borderColor: nutrForm[key] ? macroColor[key] + '60' : undefined }}
+                        placeholder={`0 ${macroUnit[key]}`}
+                        value={nutrForm[key]}
+                        onChange={e => setNutrForm(f => ({ ...f, [key]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button className={styles.nutrSaveBtn} onClick={handleLogSave} disabled={saving}>
+                  {saving ? 'Saving...' : saved ? '✓ Saved' : 'Log Today'}
+                </button>
+              </div>
+
+              {/* Recent logs */}
+              {nutritionLogs.length > 0 && (
+                <div className={styles.nutrSection}>
+                  <div className={styles.sectionLabel}>Recent <span className={styles.sectionSub}>last 7 days</span></div>
+                  {nutritionLogs.map(log => (
+                    <div key={log.id} className={styles.nutrLogRow}>
+                      <div className={styles.nutrLogDate}>
+                        {new Date(log.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                      </div>
+                      <div className={styles.nutrLogMacros}>
+                        <span style={{ color: macroColor.calories }}>{log.calories} kcal</span>
+                        <span style={{ color: macroColor.protein_g }}>{log.protein_g}g P</span>
+                        <span style={{ color: macroColor.carbs_g }}>{log.carbs_g}g C</span>
+                        <span style={{ color: macroColor.fat_g }}>{log.fat_g}g F</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Targets */}
+              <div className={styles.nutrSection}>
+                <div className={styles.sectionLabel}>Daily Targets</div>
+                <div className={styles.nutrInputGrid}>
+                  {['calories', 'protein_g', 'carbs_g', 'fat_g'].map(key => (
+                    <div key={key} className={styles.nutrInputWrap}>
+                      <label className={styles.nutrInputLabel} style={{ color: macroColor[key] }}>
+                        {macroLabel[key]}
+                      </label>
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        className={styles.nutrInput}
+                        placeholder={`Target ${macroUnit[key]}`}
+                        value={targetForm[key]}
+                        onChange={e => setTargetForm(f => ({ ...f, [key]: e.target.value }))}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <button className={styles.nutrSaveBtn} onClick={handleTargetSave} disabled={savingTargets}>
+                  {savingTargets ? 'Saving...' : 'Save Targets'}
+                </button>
+              </div>
+            </>
+          )
+        })()}
+
         {activeTab === '1rm' && <LazyCalculator embedded />}
 
       </main>

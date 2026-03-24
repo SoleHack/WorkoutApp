@@ -202,15 +202,14 @@ export default function Workout() {
     setFinishing(false)
   }
 
-  const handleCancel = async () => {
-    setCancelling(true)
-    await cancelSession()
+  const handleCancel = () => {
     clearTimer()
     if (session?.id) {
       localStorage.removeItem(`swaps-${session.id}`)
       localStorage.removeItem(`supersets-${session.id}`)
     }
     router.push('/')
+    cancelSession() // fire and forget in background
   }
 
   if (showSummary) {

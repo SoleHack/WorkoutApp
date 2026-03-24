@@ -1,8 +1,10 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AreaChart, Area, ResponsiveContainer, Tooltip } from 'recharts'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
+import { useNutrition } from '../hooks/useNutrition'
 import { useTodayWorkout } from '../hooks/useTodayWorkout'
 import { useBodyweight } from '../hooks/useBodyweight'
 import { useAchievements } from '../hooks/useAchievements'
@@ -65,6 +67,7 @@ export default function Dashboard({ initialBwEntries, initialSessions }) {
     save({ onboardingDone: true })
   }
   const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight(initialBwEntries)
+  const { targets: nutrTargets, todayLog: nutrToday } = useNutrition()
 
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
@@ -152,6 +155,32 @@ export default function Dashboard({ initialBwEntries, initialSessions }) {
             <div className={styles.statLabel}>
               Weight (lbs){bwChange !== null ? <span style={{ fontSize: 10, color: 'var(--muted)', display: 'block' }}>vs prev weigh-in</span> : null}
             </div>
+            {bwEntries?.length > 2 && (
+              <div style={{ width: '100%', height: 28, marginTop: 4 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={bwEntries.slice(-14).map(e => ({ w: e.weight }))}
+                    margin={{ top: 2, right: 0, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="bwSparkGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#4ADE80" stopOpacity={0.4} />
+                        <stop offset="100%" stopColor="#4ADE80" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      content={({ active, payload }) =>
+                        active && payload?.[0] ? (
+                          <span style={{ fontSize: 10, color: '#4ADE80', background: 'var(--card)', padding: '2px 6px', borderRadius: 4 }}>
+                            {payload[0].value} lbs
+                          </span>
+                        ) : null
+                      }
+                    />
+                    <Area type="monotone" dataKey="w" stroke="#4ADE80" strokeWidth={1.5}
+                      fill="url(#bwSparkGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
           </div>
         </div>
 
@@ -293,6 +322,38 @@ export default function Dashboard({ initialBwEntries, initialSessions }) {
                 {coreCompletedToday ? '✓' : '→'}
               </div>
             </button>
+          </section>
+        )}
+
+        {/* NUTRITION */}
+        {nutrTargets?.calories && (
+          <section className={styles.section}>
+            <div className={styles.sectionLabel}>Today's Nutrition</div>
+            <div className={styles.nutrCard}>
+              {[
+                { key: 'calories', label: 'Calories', unit: 'kcal', color: '#F59E0B' },
+                { key: 'protein_g', label: 'Protein', unit: 'g', color: '#38BDF8' },
+                { key: 'carbs_g', label: 'Carbs', unit: 'g', color: '#4ADE80' },
+                { key: 'fat_g', label: 'Fat', unit: 'g', color: '#F87171' },
+              ].map(({ key, label, unit, color }) => {
+                const val = nutrToday?.[key] || 0
+                const target = nutrTargets?.[key] || 0
+                const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0
+                return (
+                  <div key={key} className={styles.nutrMacro}>
+                    <div className={styles.nutrMacroHeader}>
+                      <span className={styles.nutrMacroLabel}>{label}</span>
+                      <span className={styles.nutrMacroVal} style={{ color }}>
+                        {val}<span className={styles.nutrMacroUnit}>/{target}{unit}</span>
+                      </span>
+                    </div>
+                    <div className={styles.nutrMacroTrack}>
+                      <div className={styles.nutrMacroFill} style={{ width: `${pct}%`, background: color }} />
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
           </section>
         )}
 

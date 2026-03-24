@@ -436,3 +436,35 @@
   .dayLabel { font-size: 8px !important; }
   .dayFocus { font-size: 11px !important; }
 }
+
+/* ── Nutrition card ── */
+.nutrCard {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.nutrMacro {}
+.nutrMacroHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.nutrMacroLabel { font-size: 12px; color: var(--muted); }
+.nutrMacroVal { font-size: 12px; font-weight: 600; font-family: 'DM Mono', monospace; }
+.nutrMacroUnit { font-size: 10px; font-weight: 400; color: var(--muted); }
+.nutrMacroTrack {
+  height: 4px;
+  background: var(--border2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.nutrMacroFill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
