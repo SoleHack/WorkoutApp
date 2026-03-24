@@ -6,10 +6,11 @@
   right: 0;
   z-index: 200;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   background: var(--bg);
   border-top: 1px solid var(--border);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: 6px;
+  padding-bottom: 0;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
 }
@@ -24,6 +25,7 @@
   justify-content: center;
   gap: 4px;
   padding: 10px 4px;
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 16px));
   background: none;
   border: none;
   color: var(--muted);
