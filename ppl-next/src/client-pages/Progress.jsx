@@ -13,7 +13,8 @@ import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { navyBodyFat } from '../lib/bodyFat'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
-import Calculator from './Calculator'
+import dynamic from 'next/dynamic'
+const Calculator = dynamic(() => import('./Calculator'))
 import styles from './Progress.module.css'
 
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
@@ -145,11 +146,11 @@ const EX_RANGE_OPTIONS = [
   { label: 'All', value: 9999 },
 ]
 
-export default function Progress({ initialSessions, initialBwEntries, initialMeasureEntries }) {
+export default function Progress() {
   const supabase = getSupabase()
   const { user } = useAuth()
-  const { entries: bwEntries } = useBodyweight(initialBwEntries)
-  const { entries: measureEntries } = useBodyMeasurements(initialMeasureEntries)
+  const { entries: bwEntries } = useBodyweight()
+  const { entries: measureEntries } = useBodyMeasurements()
   const { settings } = useSettings()
   const { programData } = useActiveProgram()
   const PROGRAM = programData?.PROGRAM || {}
@@ -172,20 +173,15 @@ export default function Progress({ initialSessions, initialBwEntries, initialMea
   const [activeTab, setActiveTab] = useState('overview')
   const [activeDay, setActiveDay] = useState(null)  // initialized after program loads
   const [selectedExId, setSelectedExId] = useState(null)
-  const [allSessions, setAllSessions] = useState(initialSessions || [])
+  const [allSessions, setAllSessions] = useState([])
   const [prs, setPrs] = useState({})
   const [recentPrs, setRecentPrs] = useState([])
   const [volumeData, setVolumeData] = useState([])
   const [chartData, setChartData] = useState([])
   const [heatmapCells, setHeatmapCells] = useState([])
-  const [loading, setLoading] = useState(!initialSessions)
+  const [loading, setLoading] = useState(true)
 
-  // Process initial server data once on mount
-  useEffect(() => {
-    if (initialSessions?.length) {
-      processSessions(initialSessions)
-    }
-  }, [])
+
   const [hoveredCell, setHoveredCell] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
   const [volRange, setVolRange] = useState(9999)
@@ -196,9 +192,7 @@ export default function Progress({ initialSessions, initialBwEntries, initialMea
   const [chartMetric, setChartMetric] = useState('e1rm') // 'e1rm' | 'weight' | 'volume' | 'avgRpe'
   const [notesSearch, setNotesSearch] = useState('')
 
-  useEffect(() => { 
-    if (!initialSessions && user) loadAll()
-  }, [user])
+  useEffect(() => { if (user) loadAll() }, [user])
 
   useEffect(() => {
     if (PROGRAM_ORDER.length > 0 && !activeDay) setActiveDay(PROGRAM_ORDER[0])
