@@ -120,9 +120,30 @@
 
   .sidebarBrand {
     display: block;
-    padding: 0 clamp(16px, 1.8vw, 28px) clamp(16px, 2vh, 24px);
+    padding: 8px clamp(16px, 1.8vw, 28px) clamp(12px, 2vh, 20px);
     border-bottom: 1px solid var(--border);
     margin-bottom: 8px;
     cursor: pointer;
   }
+
+  .brandLogo {
+    width: 100%;
+    max-width: 160px;
+    height: auto;
+    object-fit: contain;
+    object-position: left;
+    display: block;
+  }
+
+  /* Dark mode: show white logo */
+  [data-theme="dark"] .brandLogoDark  { display: block; }
+  [data-theme="dark"] .brandLogoLight { display: none; }
+
+  /* Light mode: show dark logo */
+  [data-theme="light"] .brandLogoDark  { display: none; }
+  [data-theme="light"] .brandLogoLight { display: block; }
+
+  /* Default (no theme attr) — assume dark */
+  :root:not([data-theme="light"]) .brandLogoDark  { display: block; }
+  :root:not([data-theme="light"]) .brandLogoLight { display: none; }
 }

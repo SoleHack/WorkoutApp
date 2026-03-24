@@ -32,6 +32,18 @@
   display: block;
 }
 
+/* Dark mode: white logo */
+[data-theme="dark"] .headerLogoDark  { display: block; }
+[data-theme="dark"] .headerLogoLight { display: none; }
+
+/* Light mode: dark logo */
+[data-theme="light"] .headerLogoDark  { display: none; }
+[data-theme="light"] .headerLogoLight { display: block; }
+
+/* Default — assume dark */
+:root:not([data-theme="light"]) .headerLogoDark  { display: block; }
+:root:not([data-theme="light"]) .headerLogoLight { display: none; }
+
 .headerActions {
   display: flex;
   align-items: center;

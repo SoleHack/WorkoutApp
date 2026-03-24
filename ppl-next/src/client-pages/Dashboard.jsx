@@ -117,7 +117,8 @@ export default function Dashboard() {
       <header className={styles.header}>
         <div className={styles.headerTop}>
           <div>
-            <img src="/logo.png" alt="PPL Tracker" className={styles.headerLogo} />
+            <img src="/logo-dark.png" alt="PPL Tracker" className={`${styles.headerLogo} ${styles.headerLogoDark}`} />
+            <img src="/logo-light.png" alt="PPL Tracker" className={`${styles.headerLogo} ${styles.headerLogoLight}`} />
             {programData?.programId ? (
               <div className={styles.headerLabel}>
                 {programData.programName || 'Active Program'}

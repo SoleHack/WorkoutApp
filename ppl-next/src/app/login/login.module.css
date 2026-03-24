@@ -1,0 +1,117 @@
+.wrap {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  background: var(--bg);
+}
+
+.logoWrap {
+  margin-bottom: 40px;
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  justify-content: center;
+}
+
+.logo {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  object-fit: contain;
+}
+
+/* Theme switching */
+[data-theme="dark"] .logoDark   { display: block; }
+[data-theme="dark"] .logoLight  { display: none; }
+[data-theme="light"] .logoDark  { display: none; }
+[data-theme="light"] .logoLight { display: block; }
+:root:not([data-theme="light"]) .logoDark  { display: block; }
+:root:not([data-theme="light"]) .logoLight { display: none; }
+
+.tagline {
+  margin-top: 28px;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-align: center;
+}
+
+.form {
+  width: 100%;
+  max-width: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tabs {
+  display: flex;
+  background: var(--bg2);
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 4px;
+}
+
+.tab, .activeTab {
+  flex: 1;
+  padding: 8px;
+  border: none;
+  border-radius: 7px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tab {
+  background: none;
+  color: var(--muted);
+}
+
+.activeTab {
+  background: var(--bg3);
+  color: var(--text);
+  font-weight: 500;
+}
+
+.input {
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.input:focus {
+  border-color: var(--push);
+}
+
+.submit {
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+  border-radius: 10px;
+  margin-top: 4px;
+}
+
+.error {
+  font-size: 13px;
+  color: var(--danger, #ef4444);
+  text-align: center;
+}
+
+.success {
+  font-size: 13px;
+  color: var(--legs);
+  text-align: center;
+}
