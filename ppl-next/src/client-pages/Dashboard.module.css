@@ -377,6 +377,8 @@
   /* Hide the mobile logo — sidebar already shows it */
   .h1 { display: none; }
   .headerLogo { display: none; }
+  .headerLogoDark { display: none; }
+  .headerLogoLight { display: none; }
   .headerLabel { margin-top: 0; }
 
   .header { padding: 16px 40px 0; }
