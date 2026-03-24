@@ -4,6 +4,21 @@ import { useState, useEffect, useCallback } from 'react'
 import { getSupabase } from '../lib/supabase-client'
 import { useAuth } from './useAuth'
 
+function calcStreak(sessions, morningSlug) {
+  const todayDate = new Date(); todayDate.setHours(0,0,0,0)
+  const completedDates = [...new Set(
+    sessions.filter(s => s.completed_at && s.day_key !== morningSlug).map(s => s.date)
+  )].sort((a, b) => b.localeCompare(a))
+  let streak = 0
+  for (let i = 0; i < completedDates.length; i++) {
+    const d = new Date(completedDates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
+    const expected = new Date(todayDate); expected.setDate(todayDate.getDate() - i)
+    if (d.getTime() === expected.getTime()) streak++
+    else break
+  }
+  return streak
+}
+
 export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = null) {
   const supabase = getSupabase()
   const { user } = useAuth()
@@ -63,25 +78,14 @@ export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = 
       if (!scheduledDoneToday) {
         setTodaySlug(scheduledIsRest ? 'rest' : scheduledSlug)
         setTodayCompleted(false)
-        // Still calculate streak
-        const todayDate = new Date(); todayDate.setHours(0,0,0,0)
-        const completedDates = [...new Set(
-          data.filter(s => s.completed_at && s.day_key !== morningSlug).map(s => s.date)
-        )].sort((a, b) => b.localeCompare(a))
-        let currentStreak = 0
-        for (let i = 0; i < completedDates.length; i++) {
-          const d = new Date(completedDates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
-          const expected = new Date(todayDate); expected.setDate(todayDate.getDate() - i)
-          if (d.getTime() === expected.getTime()) currentStreak++
-          else break
-        }
-        setStreak(currentStreak)
+        setStreak(calcStreak(data, morningSlug))
         setLoading(false)
         return
       }
       // Already completed today's scheduled workout — show it as done
       setTodaySlug(scheduledSlug)
       setTodayCompleted(true)
+      setStreak(calcStreak(data, morningSlug))
       setLoading(false)
       return
     }
@@ -101,20 +105,7 @@ export function useTodayWorkout(workoutOrder, workouts, schedule, morningSlug = 
     setTodaySlug(nextSlug)
     setTodayCompleted(nextCompletedToday)
 
-    // Streak
-    const todayDate = new Date(); todayDate.setHours(0,0,0,0)
-    const completedDates = [...new Set(
-      data.filter(s => s.completed_at && s.day_key !== morningSlug).map(s => s.date)
-    )].sort((a, b) => b.localeCompare(a))
-
-    let currentStreak = 0
-    for (let i = 0; i < completedDates.length; i++) {
-      const d = new Date(completedDates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
-      const expected = new Date(todayDate); expected.setDate(todayDate.getDate() - i)
-      if (d.getTime() === expected.getTime()) currentStreak++
-      else break
-    }
-    setStreak(currentStreak)
+    setStreak(calcStreak(data, morningSlug))
     setLoading(false)
   }, [user, workoutOrder, schedule, morningSlug])
 
