@@ -97,11 +97,13 @@ export default function ExerciseCard({
   const [showWarmup, setShowWarmup] = useState(false)
   const [showAlts, setShowAlts] = useState(false)
   const [customRest, setCustomRest] = useState(null)
+  const [extraSets, setExtraSets] = useState(0)
   const touchStartX = useRef(null)
   const formRef = useRef(null)
 
+  const totalSets = programEx.sets + extraSets
   const completedCount = sets.filter(s => s?.completed).length
-  const allDone = completedCount === programEx.sets
+  const allDone = completedCount === totalSets
   const { scheduleRestNotification, cancelRestNotification } = usePushNotifications()
 
   // Rest time: custom override > tag default
@@ -284,7 +286,7 @@ export default function ExerciseCard({
         </div>
         <div className={styles.right}>
           <div className={styles.setsCount} style={{ color: allDone ? 'var(--success)' : dayColor }}>
-            {completedCount}/{programEx.sets}
+            {completedCount}/{totalSets}
           </div>
           <div className={styles.repsTarget}>{programEx.reps}</div>
           <span className={`tag tag-${programEx.tag}`}>{TAG_LABELS[programEx.tag]}</span>
@@ -377,7 +379,7 @@ export default function ExerciseCard({
 
       {/* Set buttons */}
       <div className={styles.setRow}>
-        {[...Array(programEx.sets)].map((_, i) => {
+        {[...Array(totalSets)].map((_, i) => {
           const setNum = i + 1
           const s = sets[i]
           const isDone = s?.completed
@@ -411,6 +413,12 @@ export default function ExerciseCard({
             </div>
           )
         })}
+        <button
+          className={styles.addSetBtn}
+          onClick={() => setExtraSets(e => e + 1)}
+          title="Add a set">
+          +
+        </button>
       </div>
 
       {/* Rest timer */}

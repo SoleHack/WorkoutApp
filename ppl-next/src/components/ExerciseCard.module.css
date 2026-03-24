@@ -675,6 +675,31 @@
 }
 .clearSetBtn:active { color: var(--danger); }
 
+.addSetBtn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1.5px dashed var(--border2);
+  background: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+  align-self: flex-start;
+  min-height: unset;
+  padding: 0;
+}
+.addSetBtn:active {
+  border-color: var(--text);
+  color: var(--text);
+  transform: scale(0.92);
+}
+
 /* ── Responsive ── */
 @media (min-width: 640px) {
   .card { margin: 0 0 10px; border-radius: 10px; }

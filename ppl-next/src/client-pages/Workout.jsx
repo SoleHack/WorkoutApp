@@ -46,6 +46,10 @@ export default function Workout() {
   // Superset pairs: { [exIdA]: exIdB, [exIdB]: exIdA } — persisted to localStorage
   const [supersets, setSupersets] = useState({})
   const [pairingMode, setPairingMode] = useState(null)
+  // Extra exercises added for this session only
+  const [extraExercises, setExtraExercises] = useState([])
+  const [showExSearch, setShowExSearch] = useState(false)
+  const [exSearchQuery, setExSearchQuery] = useState('')
 
   const noteTimer = useRef(null)
   const prTracker = useRef({})
@@ -335,6 +339,86 @@ export default function Workout() {
               </div>
             )
           })
+        )}
+
+        {/* Extra exercises added this session */}
+        {extraExercises.map(slug => {
+          const exercise = EXERCISES[slug]
+          if (!exercise) return null
+          return (
+            <div key={`extra-${slug}`}>
+              <div className={styles.extraExLabel}>ADDED THIS SESSION</div>
+              <ExerciseCard
+                exercise={exercise}
+                programEx={{ id: slug, sets: 3, reps: '8-12', rest: 120, tag: 'iso', note: null, accent: false }}
+                dayColor={day.color}
+                sets={sets[slug] || []}
+                lastSets={lastData[slug]?.sets || []}
+                lastMax={lastData[slug]?.maxWeight || null}
+                weightUnit={weightUnit}
+                onLogSet={(setNum, weight, reps, rpe, _unused, clear) => handleLogSet(slug, setNum, weight, reps, rpe, clear)}
+                onShowVideo={() => exercise.video && setActiveVideo(exercise)}
+                accent={false}
+                isSwapped={false}
+                originalName={null}
+                onSwapExercise={() => {}}
+                onClearSwap={() => {}}
+                supersetPartner={null}
+                onPairRequest={() => {}}
+                onUnpair={() => {}}
+                isPairingMode={false}
+              />
+            </div>
+          )
+        })}
+
+        {/* Add exercise */}
+        {!showExSearch ? (
+          <button className={styles.addExBtn} onClick={() => setShowExSearch(true)}>
+            + Add Exercise
+          </button>
+        ) : (
+          <div className={styles.exSearchWrap}>
+            <input
+              className={styles.exSearchInput}
+              type="text"
+              placeholder="Search exercises..."
+              value={exSearchQuery}
+              onChange={e => setExSearchQuery(e.target.value)}
+              autoFocus
+            />
+            <div className={styles.exSearchResults}>
+              {Object.entries(EXERCISES)
+                .filter(([slug, ex]) =>
+                  !extraExercises.includes(slug) &&
+                  !day.exercises.find(e => e.id === slug) &&
+                  ex.name.toLowerCase().includes(exSearchQuery.toLowerCase())
+                )
+                .slice(0, 8)
+                .map(([slug, ex]) => (
+                  <button key={slug} className={styles.exSearchResult}
+                    onClick={() => {
+                      setExtraExercises(prev => [...prev, slug])
+                      setShowExSearch(false)
+                      setExSearchQuery('')
+                    }}>
+                    <span className={styles.exSearchName}>{ex.name}</span>
+                    <span className={styles.exSearchMuscles}>
+                      {ex.muscles?.primary?.slice(0, 2).join(', ')}
+                    </span>
+                  </button>
+                ))}
+              {Object.entries(EXERCISES).filter(([slug, ex]) =>
+                ex.name.toLowerCase().includes(exSearchQuery.toLowerCase())
+              ).length === 0 && (
+                <div className={styles.exSearchEmpty}>No exercises found</div>
+              )}
+            </div>
+            <button className={styles.exSearchCancel}
+              onClick={() => { setShowExSearch(false); setExSearchQuery('') }}>
+              Cancel
+            </button>
+          </div>
         )}
 
         {allDone && !finishing && (
