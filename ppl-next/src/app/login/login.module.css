@@ -115,3 +115,27 @@
   color: var(--legs);
   text-align: center;
 }
+
+.forgotBtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+  padding: 8px 0;
+  text-align: center;
+  width: 100%;
+  min-height: unset;
+  transition: color 0.15s;
+}
+.forgotBtn:hover { color: var(--text); }
+
+.resetHeader { margin-bottom: 8px; }
+.resetTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+}
+.resetSub { font-size: 13px; color: var(--muted); }

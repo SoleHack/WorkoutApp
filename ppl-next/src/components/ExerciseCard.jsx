@@ -317,43 +317,60 @@ export default function ExerciseCard({
       )}
 
       {/* Warm-up sets */}
-      {showWarmup && lastMax > 0 && (() => {
+      {showWarmup && (() => {
         const warmupDefs = [
           { pct: 0.4, reps: 10, label: '40%' },
           { pct: 0.6, reps: 5,  label: '60%' },
           { pct: 0.8, reps: 3,  label: '80%' },
         ]
+        const baseWeight = lastMax || 0
         return (
           <div className={styles.warmupWrap}>
             <div className={styles.warmupTitle}>Warm-up sets <span className={styles.warmupSub}>tap to log</span></div>
-            <div className={styles.warmupSets}>
-              {warmupDefs.map((ws, wi) => {
-                const wsWeightLbs = Math.round(lastMax * ws.pct / 2.5) * 2.5
-                const wsWeight = toDisplay(wsWeightLbs, weightUnit)
-                const warmupKey = `warmup-${wi}`
-                const logged = sets.find(s => s?.isWarmup && s?.set_number === -(wi + 1))
-                return (
-                  <button key={ws.label}
-                    className={`${styles.warmupRow} ${logged ? styles.warmupLogged : ''}`}
-                    style={logged ? { borderColor: dayColor, background: `${dayColor}15` } : {}}
-                    onClick={async () => {
-                      setWeight(wsWeight.toString())
-                      setReps(ws.reps.toString())
-                      // Log as warmup set with negative set number
-                      await onLogSet(-(wi + 1), wsWeightLbs, ws.reps, null, false, true)
-                    }}>
-                    <span className={styles.warmupLabel}>{ws.label}</span>
-                    <span className={styles.warmupWeight} style={{ color: logged ? dayColor : 'var(--text)' }}>
-                      {wsWeight} {unitLabel(weightUnit)}
-                    </span>
-                    <span className={styles.warmupReps}>× {ws.reps}</span>
-                    <span className={styles.warmupFill} style={{ color: logged ? dayColor : 'var(--muted)' }}>
-                      {logged ? '✓' : '↓ log'}
-                    </span>
-                  </button>
-                )
-              })}
-            </div>
+            {!lastMax && (
+              <div className={styles.warmupNoData}>
+                <span>No previous session — enter your working weight to calculate warm-up percentages:</span>
+                <div className={styles.warmupWeightInput}>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    className={styles.warmupInput}
+                    placeholder={`Working weight (${unitLabel(weightUnit)})`}
+                    value={weight}
+                    onChange={e => setWeight(e.target.value)}
+                  />
+                </div>
+              </div>
+            )}
+            {(lastMax > 0 || parseFloat(weight) > 0) && (
+              <div className={styles.warmupSets}>
+                {warmupDefs.map((ws, wi) => {
+                  const workingWeightLbs = lastMax > 0 ? lastMax : (weightUnit === 'kg' ? parseFloat(weight) * 2.20462 : parseFloat(weight))
+                  const wsWeightLbs = Math.round(workingWeightLbs * ws.pct / 2.5) * 2.5
+                  const wsWeight = toDisplay(wsWeightLbs, weightUnit)
+                  const logged = sets.find(s => s?.isWarmup && s?.set_number === -(wi + 1))
+                  return (
+                    <button key={ws.label}
+                      className={`${styles.warmupRow} ${logged ? styles.warmupLogged : ''}`}
+                      style={logged ? { borderColor: dayColor, background: `${dayColor}15` } : {}}
+                      onClick={async () => {
+                        setWeight(wsWeight.toString())
+                        setReps(ws.reps.toString())
+                        await onLogSet(-(wi + 1), wsWeightLbs, ws.reps, null, false, true)
+                      }}>
+                      <span className={styles.warmupLabel}>{ws.label}</span>
+                      <span className={styles.warmupWeight} style={{ color: logged ? dayColor : 'var(--text)' }}>
+                        {wsWeight} {unitLabel(weightUnit)}
+                      </span>
+                      <span className={styles.warmupReps}>× {ws.reps}</span>
+                      <span className={styles.warmupFill} style={{ color: logged ? dayColor : 'var(--muted)' }}>
+                        {logged ? '✓' : '↓ log'}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
           </div>
         )
       })()}
@@ -377,12 +394,10 @@ export default function ExerciseCard({
 
       {/* Action bar - warm-up / alternatives / rest override */}
       <div className={styles.actionBar}>
-        {lastMax > 0 && (
-          <button className={`${styles.actionBtn} ${showWarmup ? styles.actionBtnActive : ''}`}
-            onClick={() => setShowWarmup(v => !v)}>
-            🔥 Warm-up
-          </button>
-        )}
+        <button className={`${styles.actionBtn} ${showWarmup ? styles.actionBtnActive : ''}`}
+          onClick={() => setShowWarmup(v => !v)}>
+          🔥 Warm-up
+        </button>
         {ALTERNATIVES[programEx.id]?.length > 0 && (
           <button className={`${styles.actionBtn} ${showAlts ? styles.actionBtnActive : ''}`}
             onClick={() => setShowAlts(v => !v)}>
