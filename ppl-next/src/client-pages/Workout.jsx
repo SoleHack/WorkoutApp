@@ -80,7 +80,7 @@ export default function Workout() {
   }, [supersets, session?.id])
 
   useEffect(() => {
-    if (day && startSession) startSession()
+    if (day && startSession) startSession(day.id)
   }, [dayKey, startSession])
 
   // Fetch best session volume for this day (for "vs best" comparison)

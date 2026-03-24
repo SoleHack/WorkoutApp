@@ -29,7 +29,7 @@ export function useWorkout(dayKey) {
     setSession(s)
   }
 
-  const startSession = useCallback(async () => {
+  const startSession = useCallback(async (workoutId = null) => {
     if (!user) return
     setLoading(true)
     setError(null)
@@ -52,7 +52,13 @@ export function useWorkout(dayKey) {
     }
 
     if (existing) {
-      updateSession(existing)
+      // Backfill workout_id if it was missing
+      if (workoutId && !existing.workout_id) {
+        await supabase.from('workout_sessions')
+          .update({ workout_id: workoutId })
+          .eq('id', existing.id)
+      }
+      updateSession({ ...existing, workout_id: workoutId || existing.workout_id })
       const setsMap = {}
       existing.session_sets.forEach(s => {
         if (!setsMap[s.exercise_id]) setsMap[s.exercise_id] = []
@@ -65,10 +71,10 @@ export function useWorkout(dayKey) {
       const { data: newSession, error: insertErr } = await supabase
         .from('workout_sessions')
         .upsert(
-          { user_id: user.id, day_key: dayKey, date: today },
+          { user_id: user.id, day_key: dayKey, date: today, ...(workoutId ? { workout_id: workoutId } : {}) },
           { onConflict: 'user_id,day_key,date' }
         )
-        .select('id, day_key, date, user_id')
+        .select('id, day_key, date, user_id, workout_id')
         .single()
 
       if (insertErr) {
