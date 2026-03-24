@@ -165,6 +165,7 @@ function ProgramsListView({ onOpenProgram }) {
 
 // ── Program editor ────────────────────────────────────────────
 function ProgramEditorView({ programId, onBack, onOpenWorkout }) {
+  const supabase = getSupabase()
   const { program, days, loading, assignWorkout, setRestDay, updateProgram } = useProgramEditor(programId)
   const { workouts, load: reloadWorkouts, createWorkout, cloneWorkout } = useWorkouts()
   const { programs, activeId, activateProgram, cloneProgram } = usePrograms()
