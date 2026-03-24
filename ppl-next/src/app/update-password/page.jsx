@@ -1,38 +1,16 @@
 'use client'
-import { useState, useEffect } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { getSupabase } from '../../lib/supabase-client'
 import styles from '../login/login.module.css'
 
 export default function UpdatePassword() {
   const router = useRouter()
-  const searchParams = useSearchParams()
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
-  const [exchanging, setExchanging] = useState(true)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
-
-  // Exchange the code for a session on mount
-  useEffect(() => {
-    const code = searchParams.get('code')
-    if (!code) {
-      setError('Invalid or expired reset link. Please request a new one.')
-      setExchanging(false)
-      return
-    }
-
-    const exchange = async () => {
-      const supabase = getSupabase()
-      const { error } = await supabase.auth.exchangeCodeForSession(code)
-      if (error) {
-        setError('Reset link expired or already used. Please request a new one.')
-      }
-      setExchanging(false)
-    }
-    exchange()
-  }, [])
 
   const handle = async (e) => {
     e.preventDefault()
@@ -54,15 +32,10 @@ export default function UpdatePassword() {
         <img src="/logo-light.png" alt="PPL Tracker" className={`${styles.logo} ${styles.logoLight}`} />
       </div>
 
-      {exchanging ? (
-        <p style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px' }}>Verifying reset link...</p>
-      ) : done ? (
-        <p style={{ textAlign: 'center', color: 'var(--success)', padding: '24px' }}>✓ Password updated — redirecting...</p>
-      ) : error && !password ? (
-        <div style={{ textAlign: 'center', padding: '24px' }}>
-          <p style={{ color: 'var(--danger)', marginBottom: 16 }}>{error}</p>
-          <button className={`btn btn-primary`} onClick={() => router.push('/login')}>Back to Login</button>
-        </div>
+      {done ? (
+        <p style={{ textAlign: 'center', color: 'var(--success)', padding: '24px' }}>
+          ✓ Password updated — redirecting...
+        </p>
       ) : (
         <form className={styles.form} onSubmit={handle}>
           <div className={styles.resetHeader}>

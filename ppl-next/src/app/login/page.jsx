@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabase } from '../../lib/supabase-client'
 import styles from './login.module.css'
 
@@ -9,7 +9,12 @@ export default function LoginPage() {
   const [mode, setMode] = useState('login') // 'login' | 'signup' | 'reset'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const searchParams = useSearchParams()
+  const [error, setError] = useState(
+    searchParams.get('error') === 'reset_expired'
+      ? 'Reset link expired or already used. Please request a new one.'
+      : ''
+  )
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
