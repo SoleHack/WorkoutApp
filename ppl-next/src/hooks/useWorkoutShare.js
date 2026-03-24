@@ -103,7 +103,7 @@ export function useWorkoutShare() {
     // Date footer
     ctx.fillStyle = 'rgba(255,255,255,0.15)'
     ctx.font = '400 26px monospace'
-    const appUrl = (import.meta.env.VITE_APP_URL || 'ppltracker.app').replace('https://', '')
+    const appUrl = (typeof window !== 'undefined' ? window.location.hostname : 'jnworkoutapp.vercel.app')
     ctx.fillText(appUrl, 80, 1860)
     ctx.fillStyle = day?.color || '#F59E0B'
     ctx.font = '500 26px monospace'

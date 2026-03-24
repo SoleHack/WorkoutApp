@@ -61,6 +61,7 @@
 .progressionHint { color: var(--pull); }
 .progressionStay { color: var(--muted); }
 .progressionNeutral { color: var(--muted); }
+.rpeHint { color: var(--push); font-size: 11px; opacity: 0.8; }
 
 .right {
   display: flex;

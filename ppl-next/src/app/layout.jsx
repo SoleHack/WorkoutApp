@@ -11,7 +11,7 @@ export const metadata = {
   title: 'PPL Tracker',
   description: '6-Day Push Pull Legs Recomp Tracker',
   manifest: '/manifest.json',
-  icons: { icon: '/logo.png', apple: '/apple-touch-icon.png' },
+  icons: { icon: [{ url: '/favicon.ico' }, { url: '/logo.png' }], apple: '/apple-touch-icon.png' },
   appleWebApp: { capable: true, statusBarStyle: 'black-translucent', title: 'PPL Tracker' },
 }
 

@@ -1255,7 +1255,7 @@ export default function Progress() {
         )}
 
         {/* ── HISTORY ── */}
-        {activeTab === 'history' && (
+        <div style={{ display: activeTab === 'history' ? 'block' : 'none' }}>
           <HistoryTab
             allSessions={allSessions}
             PROGRAM={PROGRAM}
@@ -1264,7 +1264,7 @@ export default function Progress() {
             EXERCISES={EXERCISES}
             styles={styles}
           />
-        )}
+        </div>
 
         {/* ── NOTES ── */}
         {activeTab === 'notes' && (() => {
@@ -1318,12 +1318,12 @@ export default function Progress() {
         })()}
 
         {/* ── ACHIEVEMENTS ── */}
-        {activeTab === 'achievements' && (
+        <div style={{ display: activeTab === 'achievements' ? 'block' : 'none' }}>
           <AchievementsTab totalSessions={totalSessions} allSessions={allSessions} prs={prs} totalVolume={totalVolume} />
-        )}
+        </div>
 
         {/* ── 1RM ── */}
-        {activeTab === 'nutrition' && (
+        <div style={{ display: activeTab === 'nutrition' ? 'block' : 'none' }}>
           <NutritionTab
             nutritionTargets={nutritionTargets}
             nutritionToday={nutritionToday}
@@ -1332,7 +1332,7 @@ export default function Progress() {
             saveTargets={saveTargets}
             styles={styles}
           />
-        )}
+        </div>
 
         {activeTab === '1rm' && <LazyCalculator embedded />}
 

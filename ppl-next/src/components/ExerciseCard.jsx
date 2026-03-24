@@ -250,21 +250,36 @@ export default function ExerciseCard({
               {(() => {
                 if (allDone) return <span style={{ color: 'var(--success)' }}>✓ All done — great work</span>
 
-                const exData = lastSets // lastSets is the sets array from last session
+                const exData = lastSets
                 const repTop = parseInt(programEx.reps.split('–')[1] || programEx.reps) || 10
                 const inc = programEx.tag === 'compound' ? 5 : 2.5
 
-                // Check if all sets from last session hit top of rep range
                 const completedLastSets = (exData || []).filter(s => s?.reps)
                 const allHitTop = completedLastSets.length > 0 &&
                   completedLastSets.every(s => s.reps >= repTop)
 
+                // RPE check — if avg RPE was very high last session, suggest holding weight
+                const rpeValues = completedLastSets.filter(s => s?.rpe).map(s => s.rpe)
+                const avgRpe = rpeValues.length
+                  ? rpeValues.reduce((a, r) => a + r, 0) / rpeValues.length
+                  : null
+
                 if (allHitTop && lastMax > 0) {
                   const dispMax = toDisplay(lastMax, weightUnit)
                   const dispInc = weightUnit === 'kg' ? Math.round(inc * 0.453592 * 4) / 4 : inc
+
+                  // High RPE override — hit reps but was very hard, hold weight
+                  if (avgRpe && avgRpe >= 9.5) {
+                    return <>
+                      Last: <strong>{dispMax} {unitLabel(weightUnit)}</strong>
+                      <span className={styles.progressionStay}> · RPE {avgRpe.toFixed(1)} last time — hold weight first</span>
+                    </>
+                  }
+
                   return <>
                     Last: <strong>{dispMax} {unitLabel(weightUnit)}</strong>
                     <span className={styles.progressionHint}> → add {dispInc} {unitLabel(weightUnit)} today 🔼</span>
+                    {avgRpe && <span className={styles.rpeHint}> · RPE {avgRpe.toFixed(1)} last time</span>}
                   </>
                 }
 
@@ -279,6 +294,7 @@ export default function ExerciseCard({
                     ? <span className={styles.progressionStay}> · {shortBy} rep{shortBy > 1 ? 's' : ''} short — hold weight</span>
                     : <span className={styles.progressionNeutral}> · try to match or beat it</span>
                   }
+                  {avgRpe && avgRpe >= 9 && <span className={styles.rpeHint}> · RPE {avgRpe.toFixed(1)} — tough session</span>}
                 </>
               })()}
             </div>
