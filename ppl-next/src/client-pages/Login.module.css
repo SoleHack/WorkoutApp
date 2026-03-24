@@ -99,3 +99,29 @@
   color: var(--success);
   text-align: center;
 }
+
+.forgotBtn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  margin-top: 4px;
+  padding: 8px 0;
+  text-align: center;
+  width: 100%;
+  min-height: unset;
+  transition: color 0.15s;
+}
+.forgotBtn:active { color: var(--text); }
+
+.resetHeader { margin-bottom: 16px; text-align: center; }
+.resetTitle {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 6px;
+  font-family: 'Bebas Neue', sans-serif;
+  letter-spacing: 0.05em;
+}
+.resetSub { font-size: 13px; color: var(--muted); }
