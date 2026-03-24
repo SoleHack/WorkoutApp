@@ -13,8 +13,6 @@ import { useBodyMeasurements } from '../hooks/useBodyComposition'
 import { navyBodyFat } from '../lib/bodyFat'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
-import dynamic from 'next/dynamic'
-const Calculator = dynamic(() => import('./Calculator'))
 import styles from './Progress.module.css'
 
 const e1rm = (w, r) => (!w || !r) ? 0 : r === 1 ? w : Math.round(w * (1 + r / 30))
@@ -145,6 +143,12 @@ const EX_RANGE_OPTIONS = [
   { label: '6M', value: 180 },
   { label: 'All', value: 9999 },
 ]
+
+let LazyCalculator = null
+if (typeof window !== 'undefined') {
+  const { default: dynamic } = require('next/dynamic')
+  LazyCalculator = dynamic(() => import('./Calculator'))
+}
 
 export default function Progress() {
   const supabase = getSupabase()
@@ -1027,7 +1031,7 @@ export default function Progress() {
         )}
 
         {/* ── 1RM ── */}
-        {activeTab === '1rm' && <Calculator embedded />}
+        {activeTab === '1rm' && <LazyCalculator embedded />}
 
       </main>
     </div>
