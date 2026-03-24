@@ -160,7 +160,6 @@ export default function Progress() {
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
   const EXERCISES = programData?.EXERCISES || {}
-  const { landmarks } = useVolumeLandmarks(EXERCISES, allSessions)
 
   // Build body fat trend from stored body_fat values
   const bfTrendData = (() => {
@@ -185,6 +184,7 @@ export default function Progress() {
   const [heatmapCells, setHeatmapCells] = useState([])
   const [loading, setLoading] = useState(true)
 
+  const { landmarks } = useVolumeLandmarks(EXERCISES, allSessions)
 
   const [hoveredCell, setHoveredCell] = useState(null)
   const [selectedPoint, setSelectedPoint] = useState(null) // tapped data point detail
