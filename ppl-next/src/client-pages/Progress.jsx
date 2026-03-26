@@ -610,6 +610,17 @@ export default function Progress() {
   const totalVolume = allSessions.reduce((acc,s) =>
     acc + (s.session_sets?.reduce((a,set) => a+(set.completed&&set.weight&&set.reps?set.weight*set.reps:0),0)||0), 0)
 
+  // Cardio stats
+  const cardioSessions = allSessions.filter(s => s.day_key === 'cardio' && s.completed_at)
+  const totalCardioDuration = cardioSessions.reduce((a, s) =>
+    a + (s.session_sets?.reduce((b, set) => b + (set.duration_seconds || 0), 0) || 0), 0)
+  const totalCardioDistance = cardioSessions.reduce((a, s) =>
+    a + (s.session_sets?.reduce((b, set) => b + (set.distance_meters || 0), 0) || 0), 0)
+  const cardioThisMonth = cardioSessions.filter(s => {
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate()-30)
+    return new Date(s.date) >= monthAgo
+  }).length
+
   const sessionsWithDur = completedSessions.filter(s => s.duration_seconds > 0)
   const avgDuration = sessionsWithDur.length > 0
     ? Math.round(sessionsWithDur.reduce((a,s) => a + s.duration_seconds, 0) / sessionsWithDur.length)
@@ -632,13 +643,29 @@ export default function Progress() {
     <div className={styles.wrap}>
       <header className={styles.header}>
         <div className={styles.title}>Progress</div>
-        <div className={styles.tabsWrap}>
+        <div className={styles.tabsWrap} ref={el => {
+          // Scroll active tab into view
+          if (el) {
+            const active = el.querySelector(`.${styles.tabActive}`)
+            if (active) active.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' })
+          }
+        }}>
           <div className={styles.tabs}>
-            {['overview', 'prs', 'volume', 'exercises', 'history', 'notes', 'nutrition', '1rm', 'achievements'].map(tab => (
-              <button key={tab}
-                className={`${styles.tab} ${activeTab===tab?styles.tabActive:''}`}
-                onClick={() => setActiveTab(tab)}>
-                {tab === 'exercises' ? 'Lifts' : tab === 'prs' ? 'PRs' : tab === '1rm' ? '1RM' : tab.charAt(0).toUpperCase()+tab.slice(1)}
+            {[
+              { key: 'overview',     label: 'Overview' },
+              { key: 'prs',         label: 'PRs' },
+              { key: 'history',     label: 'History' },
+              { key: 'volume',      label: 'Volume' },
+              { key: 'exercises',   label: 'Lifts' },
+              { key: 'nutrition',   label: 'Nutrition' },
+              { key: '1rm',         label: '1RM' },
+              { key: 'notes',       label: 'Notes' },
+              { key: 'achievements',label: 'Awards' },
+            ].map(({ key, label }) => (
+              <button key={key}
+                className={`${styles.tab} ${activeTab===key?styles.tabActive:''}`}
+                onClick={() => setActiveTab(key)}>
+                {label}
               </button>
             ))}
           </div>
@@ -680,6 +707,35 @@ export default function Progress() {
                 <div className={styles.statName}>Avg session</div>
               </div>
             </div>
+
+            {/* Cardio overview card */}
+            {cardioSessions.length > 0 && (
+              <div className={styles.chartCard} style={{ marginTop: 0 }}>
+                <div className={styles.chartTitle}>🏃 Cardio</div>
+                <div className={styles.statsGrid} style={{ marginTop: 10 }}>
+                  <div className={styles.statCard}>
+                    <div className={styles.statNum}>{cardioSessions.length}</div>
+                    <div className={styles.statName}>Sessions</div>
+                  </div>
+                  <div className={styles.statCard}>
+                    <div className={styles.statNum}>{cardioThisMonth}</div>
+                    <div className={styles.statName}>This month</div>
+                  </div>
+                  {totalCardioDuration > 0 && (
+                    <div className={styles.statCard}>
+                      <div className={styles.statNum}>{Math.round(totalCardioDuration / 60)}</div>
+                      <div className={styles.statName}>Total min</div>
+                    </div>
+                  )}
+                  {totalCardioDistance > 0 && (
+                    <div className={styles.statCard}>
+                      <div className={styles.statNum}>{(totalCardioDistance / 1609.34).toFixed(1)}</div>
+                      <div className={styles.statName}>Total mi</div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Heatmap */}
             <div className={styles.chartCard}>

@@ -302,9 +302,19 @@
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  position: relative;
+  /* Fade right edge to hint more content */
+  mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 32px), transparent 100%);
 }
 .tabsWrap::-webkit-scrollbar { display: none; }
-.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); min-width: max-content; }
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid var(--border);
+  min-width: max-content;
+  padding-right: 32px; /* Space for fade */
+}
 
 .chartCardHeader {
   display: flex; justify-content: space-between; align-items: flex-start;

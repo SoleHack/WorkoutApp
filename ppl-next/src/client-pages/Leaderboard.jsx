@@ -298,6 +298,18 @@ export default function Leaderboard() {
             <div className="emptyStateDesc">
               Challenge a friend. Compare streaks, volume, and consistency — side by side.
             </div>
+
+            <div className={styles.setupSteps}>
+              <div className={styles.setupStep}>
+                <span className={styles.setupNum}>1</span>
+                <span>Both users go to <strong>Settings → Partner Mode</strong> and turn it on</span>
+              </div>
+              <div className={styles.setupStep}>
+                <span className={styles.setupNum}>2</span>
+                <span>Enter your partner's email below to connect</span>
+              </div>
+            </div>
+
             <div className={styles.inputRow}>
               <input
                 className={styles.emailInput}
@@ -314,9 +326,6 @@ export default function Leaderboard() {
               </button>
             </div>
             {error && <div className={styles.error}>{error}</div>}
-            <div className={styles.connectHint}>
-              Your partner needs Partner Mode enabled in their Settings first.
-            </div>
           </div>
         ) : (
           <>
