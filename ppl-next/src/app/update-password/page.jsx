@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { getSupabase } from '../../lib/supabase-client'
 import styles from '../login/login.module.css'
@@ -11,6 +11,32 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+  const [ready, setReady] = useState(false)
+
+  useEffect(() => {
+    // Wait for session to be available after middleware exchange
+    const checkSession = async () => {
+      const supabase = getSupabase()
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session) {
+        setReady(true)
+      } else {
+        // Listen for auth state change — session may arrive slightly after page load
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
+            setReady(true)
+            subscription.unsubscribe()
+          }
+        })
+        // Timeout fallback
+        setTimeout(() => {
+          setReady(true)
+          subscription.unsubscribe()
+        }, 3000)
+      }
+    }
+    checkSession()
+  }, [])
 
   const handle = async (e) => {
     e.preventDefault()
@@ -35,6 +61,10 @@ export default function UpdatePassword() {
       {done ? (
         <p style={{ textAlign: 'center', color: 'var(--success)', padding: '24px' }}>
           ✓ Password updated — redirecting...
+        </p>
+      ) : !ready ? (
+        <p style={{ textAlign: 'center', color: 'var(--muted)', padding: '24px' }}>
+          Verifying session...
         </p>
       ) : (
         <form className={styles.form} onSubmit={handle}>

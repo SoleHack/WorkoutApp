@@ -468,3 +468,116 @@
   border-radius: 2px;
   transition: width 0.4s ease;
 }
+
+/* ── Cardio log ── */
+.cardioToggle {
+  background: none;
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  padding: 2px 8px;
+  cursor: pointer;
+  margin-left: 8px;
+  min-height: unset;
+  transition: all 0.15s;
+}
+.cardioToggle:active { color: var(--text); border-color: var(--text); }
+
+.cardioRecent {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+.cardioRecentRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+.cardioRecentDate { color: var(--muted); }
+.cardioRecentStats {
+  display: flex;
+  gap: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--pull);
+  font-weight: 500;
+}
+
+.cardioLogCard {
+  background: var(--card);
+  border: 1px solid var(--border2);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 8px;
+}
+
+.cardioExGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 14px;
+}
+.cardioExBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 4px;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  cursor: pointer;
+  min-height: unset;
+  transition: all 0.15s;
+}
+.cardioExActive {
+  border-color: var(--pull);
+  background: color-mix(in srgb, var(--pull) 10%, var(--bg));
+}
+.cardioExIcon { font-size: 18px; }
+.cardioExName { font-size: 9px; color: var(--muted); text-align: center; font-family: 'DM Mono', monospace; }
+.cardioExActive .cardioExName { color: var(--pull); }
+
+.cardioInputRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.cardioInputWrap { display: flex; flex-direction: column; gap: 4px; }
+.cardioInputLabel {
+  font-size: 11px;
+  font-family: 'DM Mono', monospace;
+  color: var(--muted);
+}
+.cardioInput {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 15px;
+  font-family: 'DM Mono', monospace;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cardioInput:focus { border-color: var(--pull); }
+
+.cardioSaveBtn {
+  width: 100%;
+  padding: 12px;
+  background: var(--pull);
+  color: #000;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: unset;
+  transition: opacity 0.15s;
+}
+.cardioSaveBtn:disabled { opacity: 0.4; }

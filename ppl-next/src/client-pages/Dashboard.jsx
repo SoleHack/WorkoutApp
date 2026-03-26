@@ -10,6 +10,7 @@ import { useBodyweight } from '../hooks/useBodyweight'
 import { useAchievements } from '../hooks/useAchievements'
 import { useRestDay } from '../hooks/useRestDay'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
+import { useCardioLog, CARDIO_EXERCISES } from '../hooks/useCardioLog'
 import AchievementToast from '../components/AchievementToast'
 import Onboarding from '../components/Onboarding'
 import styles from './Dashboard.module.css'
@@ -68,6 +69,13 @@ export default function Dashboard({ initialBwEntries, initialSessions }) {
   }
   const { latest: bwLatest, change: bwChange, entries: bwEntries } = useBodyweight(initialBwEntries)
   const { targets: nutrTargets, todayLog: nutrToday } = useNutrition()
+  const { recentLogs: cardioLogs, logCardio } = useCardioLog()
+  const [showCardioLog, setShowCardioLog] = useState(false)
+  const [cardioSlug, setCardioSlug] = useState('treadmill')
+  const [cardioDuration, setCardioDuration] = useState('')
+  const [cardioDistance, setCardioDistance] = useState('')
+  const [cardioSaving, setCardioSaving] = useState(false)
+  const [cardioSaved, setCardioSaved] = useState(false)
 
   const PROGRAM = programData?.PROGRAM || {}
   const PROGRAM_ORDER = programData?.PROGRAM_ORDER || []
@@ -356,6 +364,81 @@ export default function Dashboard({ initialBwEntries, initialSessions }) {
             </div>
           </section>
         )}
+
+        {/* QUICK CARDIO LOG */}
+        <section className={styles.section}>
+          <div className={styles.sectionLabel}>
+            Cardio
+            <button className={styles.cardioToggle} onClick={() => setShowCardioLog(v => !v)}>
+              {showCardioLog ? '−' : '+ Log'}
+            </button>
+          </div>
+
+          {cardioLogs.length > 0 && !showCardioLog && (
+            <div className={styles.cardioRecent}>
+              {cardioLogs.slice(0, 3).map(log => {
+                const totalDuration = log.session_sets?.reduce((a, s) => a + (s.duration_seconds || 0), 0)
+                const totalDistance = log.session_sets?.reduce((a, s) => a + (s.distance_meters || 0), 0)
+                const durMin = totalDuration ? Math.round(totalDuration / 60) : null
+                const distMi = totalDistance ? (totalDistance / 1609.34).toFixed(1) : null
+                return (
+                  <div key={log.id} className={styles.cardioRecentRow}>
+                    <div className={styles.cardioRecentDate}>
+                      {new Date(log.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className={styles.cardioRecentStats}>
+                      {durMin ? <span>{durMin}m</span> : null}
+                      {distMi && distMi !== '0.0' ? <span>{distMi}mi</span> : null}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {showCardioLog && (
+            <div className={styles.cardioLogCard}>
+              <div className={styles.cardioExGrid}>
+                {CARDIO_EXERCISES.map(ex => (
+                  <button key={ex.slug}
+                    className={`${styles.cardioExBtn} ${cardioSlug === ex.slug ? styles.cardioExActive : ''}`}
+                    onClick={() => setCardioSlug(ex.slug)}>
+                    <span className={styles.cardioExIcon}>{ex.icon}</span>
+                    <span className={styles.cardioExName}>{ex.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className={styles.cardioInputRow}>
+                <div className={styles.cardioInputWrap}>
+                  <label className={styles.cardioInputLabel}>Duration (min)</label>
+                  <input type="number" inputMode="decimal" className={styles.cardioInput}
+                    placeholder="0" value={cardioDuration}
+                    onChange={e => setCardioDuration(e.target.value)} />
+                </div>
+                <div className={styles.cardioInputWrap}>
+                  <label className={styles.cardioInputLabel}>Distance (mi)</label>
+                  <input type="number" inputMode="decimal" className={styles.cardioInput}
+                    placeholder="0.0" step="0.1" value={cardioDistance}
+                    onChange={e => setCardioDistance(e.target.value)} />
+                </div>
+              </div>
+              <button className={styles.cardioSaveBtn}
+                disabled={cardioSaving || (!cardioDuration && !cardioDistance)}
+                onClick={async () => {
+                  setCardioSaving(true)
+                  await logCardio({ slug: cardioSlug, durationMinutes: cardioDuration, distanceMiles: cardioDistance })
+                  setCardioDuration('')
+                  setCardioDistance('')
+                  setCardioSaving(false)
+                  setCardioSaved(true)
+                  setShowCardioLog(false)
+                  setTimeout(() => setCardioSaved(false), 2000)
+                }}>
+                {cardioSaving ? 'Saving...' : cardioSaved ? '✓ Logged' : 'Log Cardio'}
+              </button>
+            </div>
+          )}
+        </section>
 
         {/* TRAINING SPLIT BALANCE */}
         {(() => {

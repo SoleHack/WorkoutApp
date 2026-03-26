@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { getSupabase } from '../lib/supabase-client'
 import { clearDataCache } from '../lib/swCache'
+import { CARDIO_EXERCISES, useCardioLog } from '../hooks/useCardioLog'
 import { useAuth } from '../hooks/useAuth'
 import { useSettings } from '../hooks/useSettings.jsx'
 import { useActiveProgram } from '../hooks/useActiveProgram.jsx'
@@ -28,6 +29,7 @@ export default function Workout() {
   const day = PROGRAM[dayKey]
   const isOnline = useOnlineStatus()
   const { session, sets, loading, error, startSession, logSet, finishSession, cancelSession } = useWorkout(dayKey)
+  const { logCardio } = useCardioLog()
   const { lastData, lastDate } = useLastSession(dayKey)
   const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
   const { elapsed, formatted: timerFormatted, clearTimer } = useWorkoutTimer(!loading && !!session)
@@ -50,6 +52,12 @@ export default function Workout() {
   const [extraExercises, setExtraExercises] = useState([])
   const [showExSearch, setShowExSearch] = useState(false)
   const [exSearchQuery, setExSearchQuery] = useState('')
+  // Cardio logging within workout
+  const [showCardioSection, setShowCardioSection] = useState(false)
+  const [workoutCardioSlug, setWorkoutCardioSlug] = useState('treadmill')
+  const [workoutCardioDuration, setWorkoutCardioDuration] = useState('')
+  const [workoutCardioDistance, setWorkoutCardioDistance] = useState('')
+  const [workoutCardioSaving, setWorkoutCardioSaving] = useState(false)
 
   const noteTimer = useRef(null)
   const prTracker = useRef({})
@@ -421,6 +429,59 @@ export default function Workout() {
             </button>
           </div>
         )}
+
+        {/* ── CARDIO SECTION ── */}
+        <div className={styles.cardioSection}>
+          <button className={styles.cardioSectionToggle}
+            onClick={() => setShowCardioSection(v => !v)}>
+            🏃 {showCardioSection ? 'Hide Cardio' : '+ Add Cardio'}
+          </button>
+
+          {showCardioSection && (
+            <div className={styles.cardioSectionBody}>
+              <div className={styles.cardioExGrid}>
+                {CARDIO_EXERCISES.map(ex => (
+                  <button key={ex.slug}
+                    className={`${styles.cardioExBtn} ${workoutCardioSlug === ex.slug ? styles.cardioExActive : ''}`}
+                    onClick={() => setWorkoutCardioSlug(ex.slug)}>
+                    <span className={styles.cardioExIcon}>{ex.icon}</span>
+                    <span className={styles.cardioExName}>{ex.name}</span>
+                  </button>
+                ))}
+              </div>
+              <div className={styles.cardioInputRow}>
+                <div className={styles.cardioInputWrap}>
+                  <label className={styles.cardioInputLabel}>Duration (min)</label>
+                  <input type="number" inputMode="decimal" className={styles.cardioInput}
+                    placeholder="0" value={workoutCardioDuration}
+                    onChange={e => setWorkoutCardioDuration(e.target.value)} />
+                </div>
+                <div className={styles.cardioInputWrap}>
+                  <label className={styles.cardioInputLabel}>Distance (mi)</label>
+                  <input type="number" inputMode="decimal" className={styles.cardioInput}
+                    placeholder="0.0" step="0.1" value={workoutCardioDistance}
+                    onChange={e => setWorkoutCardioDistance(e.target.value)} />
+                </div>
+              </div>
+              <button className={styles.cardioLogBtn}
+                disabled={workoutCardioSaving || (!workoutCardioDuration && !workoutCardioDistance)}
+                onClick={async () => {
+                  setWorkoutCardioSaving(true)
+                  await logCardio({
+                    slug: workoutCardioSlug,
+                    durationMinutes: workoutCardioDuration,
+                    distanceMiles: workoutCardioDistance,
+                  })
+                  setWorkoutCardioDuration('')
+                  setWorkoutCardioDistance('')
+                  setWorkoutCardioSaving(false)
+                  setShowCardioSection(false)
+                }}>
+                {workoutCardioSaving ? 'Saving...' : '✓ Log Cardio'}
+              </button>
+            </div>
+          )}
+        </div>
 
         {allDone && !finishing && (
           <div className={styles.allDoneBanner}>

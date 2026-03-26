@@ -27,7 +27,7 @@ export default function LoginPage() {
 
     if (mode === 'reset') {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/update-password`,
+        redirectTo: `https://www.myppltracker.com/update-password`,
       })
       if (error) setError(error.message)
       else setMessage('Check your email for a password reset link.')
