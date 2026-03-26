@@ -158,6 +158,14 @@ function HistoryTab({ allSessions, PROGRAM, PROGRAM_ORDER, prs, EXERCISES, style
                       {PROGRAM[key]?.label || key}
                     </button>
                   ))}
+                  {completedHistory.some(s => s.day_key === 'cardio') && (
+                    <button
+                      className={`${styles.dayTab} ${historyFilter === 'cardio' ? styles.dayTabActive : ''}`}
+                      style={historyFilter === 'cardio' ? { color: '#38BDF8', borderBottomColor: '#38BDF8' } : {}}
+                      onClick={() => setHistoryFilter('cardio')}>
+                      🏃
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -166,8 +174,11 @@ function HistoryTab({ allSessions, PROGRAM, PROGRAM_ORDER, prs, EXERCISES, style
                   <div className={styles.empty}>No sessions yet.</div>
                 )}
                 {filtered.map((session, idx) => {
+                  const isCardio = session.day_key === 'cardio'
                   const completedSets = session.session_sets?.filter(s => s.completed) || []
-                  const totalVol = completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
+                  const totalVol = isCardio ? 0 : completedSets.reduce((acc, s) => acc + (s.weight * s.reps || 0), 0)
+                  const totalCardioDur = isCardio ? completedSets.reduce((a, s) => a + (s.duration_seconds || 0), 0) : 0
+                  const totalCardioDist = isCardio ? completedSets.reduce((a, s) => a + (s.distance_meters || 0), 0) : 0
                   const uniqueExIds = [...new Set(completedSets.map(s => s.exercise_id))]
                   const dur = session.duration_seconds
                   const durStr = dur
@@ -175,10 +186,9 @@ function HistoryTab({ allSessions, PROGRAM, PROGRAM_ORDER, prs, EXERCISES, style
                       ? `${Math.floor(dur / 3600)}h ${Math.floor((dur % 3600) / 60)}m`
                       : `${Math.floor(dur / 60)}m`
                     : null
-                  const dayColor = PROGRAM[session.day_key]?.color || 'var(--muted)'
-                  const dayLabel = PROGRAM[session.day_key]?.label || session.day_key
+                  const dayColor = isCardio ? '#38BDF8' : (PROGRAM[session.day_key]?.color || 'var(--muted)')
+                  const dayLabel = isCardio ? '🏃 Cardio' : (PROGRAM[session.day_key]?.label || session.day_key)
 
-                  // Check if any PRs were set in this session
                   const sessionPrExIds = uniqueExIds.filter(exId => {
                     const pr = prs[exId]
                     return pr && pr.date === session.date
@@ -201,8 +211,18 @@ function HistoryTab({ allSessions, PROGRAM, PROGRAM_ORDER, prs, EXERCISES, style
                           </div>
                           <div className={styles.sessionStats}>
                             {durStr && <div className={styles.sessionStat}>{durStr}</div>}
-                            <div className={styles.sessionStat}>{completedSets.length} sets</div>
-                            {totalVol > 0 && <div className={styles.sessionStat}>{Math.round(totalVol / 1000).toLocaleString()}k lbs</div>}
+                            {isCardio ? (
+                              <>
+                                {totalCardioDur > 0 && <div className={styles.sessionStat}>{Math.round(totalCardioDur / 60)}m</div>}
+                                {totalCardioDist > 0 && <div className={styles.sessionStat}>{(totalCardioDist / 1609.34).toFixed(1)}mi</div>}
+                                <div className={styles.sessionStat}>{completedSets.length} {completedSets.length === 1 ? 'log' : 'logs'}</div>
+                              </>
+                            ) : (
+                              <>
+                                <div className={styles.sessionStat}>{completedSets.length} sets</div>
+                                {totalVol > 0 && <div className={styles.sessionStat}>{Math.round(totalVol / 1000).toLocaleString()}k lbs</div>}
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -507,7 +527,7 @@ export default function Progress() {
     setLoading(true)
     const { data: sessions } = await supabase
       .from('workout_sessions')
-      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(completed, weight, reps, rpe, exercise_id)')
+      .select('id, day_key, date, completed_at, notes, duration_seconds, session_sets(completed, weight, reps, rpe, exercise_id, duration_seconds, distance_meters)')
       .eq('user_id', user.id)
       .order('date', { ascending: false })
       .limit(200)

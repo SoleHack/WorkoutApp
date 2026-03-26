@@ -29,7 +29,7 @@ export default function Workout() {
   const day = PROGRAM[dayKey]
   const isOnline = useOnlineStatus()
   const { session, sets, loading, error, startSession, logSet, finishSession, cancelSession } = useWorkout(dayKey)
-  const { logCardio } = useCardioLog()
+  const { logCardio, updateCardioSet, deleteCardioSet, idToSlugMap, recentLogs: cardioLogs } = useCardioLog()
   const { lastData, lastDate } = useLastSession(dayKey)
   const { note, setNote, saveNote, loadNote } = useWorkoutNotes(session?.id)
   const { elapsed, formatted: timerFormatted, clearTimer } = useWorkoutTimer(!loading && !!session)
@@ -58,6 +58,7 @@ export default function Workout() {
   const [workoutCardioDuration, setWorkoutCardioDuration] = useState('')
   const [workoutCardioDistance, setWorkoutCardioDistance] = useState('')
   const [workoutCardioSaving, setWorkoutCardioSaving] = useState(false)
+  const [editingWorkoutCardioSet, setEditingWorkoutCardioSet] = useState(null)
 
   const noteTimer = useRef(null)
   const prTracker = useRef({})
@@ -437,6 +438,58 @@ export default function Workout() {
             🏃 {showCardioSection ? 'Hide Cardio' : '+ Add Cardio'}
           </button>
 
+          {/* Today's cardio logs for this session */}
+          {cardioLogs.filter(l => l.date === new Date().toISOString().split('T')[0]).flatMap(log =>
+            (log.session_sets || []).map(set => {
+              const exSlug = idToSlugMap[set.exercise_id]
+              const ex = CARDIO_EXERCISES.find(e => e.slug === exSlug)
+              const durMin = set.duration_seconds ? Math.round(set.duration_seconds / 60) : null
+              const distMi = set.distance_meters ? (set.distance_meters / 1609.34).toFixed(1) : null
+              const isEditing = editingWorkoutCardioSet?.setId === set.id
+
+              return (
+                <div key={set.id} className={styles.cardioLogEntry}>
+                  {isEditing ? (
+                    <div className={styles.cardioEditRow}>
+                      <span>{ex?.icon || '🏃'}</span>
+                      <input type="number" className={styles.cardioEditInput} placeholder="min"
+                        value={editingWorkoutCardioSet.duration}
+                        onChange={e => setEditingWorkoutCardioSet(v => ({ ...v, duration: e.target.value }))} />
+                      <input type="number" className={styles.cardioEditInput} placeholder="mi" step="0.1"
+                        value={editingWorkoutCardioSet.distance}
+                        onChange={e => setEditingWorkoutCardioSet(v => ({ ...v, distance: e.target.value }))} />
+                      <button className={styles.cardioEditSave} onClick={async () => {
+                        await updateCardioSet(set.id, {
+                          durationMinutes: editingWorkoutCardioSet.duration,
+                          distanceMiles: editingWorkoutCardioSet.distance,
+                        })
+                        setEditingWorkoutCardioSet(null)
+                      }}>✓</button>
+                      <button className={styles.cardioEditCancel} onClick={() => setEditingWorkoutCardioSet(null)}>✕</button>
+                    </div>
+                  ) : (
+                    <>
+                      <span className={styles.cardioEntryIcon}>{ex?.icon || '🏃'}</span>
+                      <span className={styles.cardioEntryName}>{ex?.name || exSlug}</span>
+                      <span className={styles.cardioEntryStats}>
+                        {durMin ? `${durMin}m` : ''}
+                        {durMin && distMi && distMi !== '0.0' ? ' · ' : ''}
+                        {distMi && distMi !== '0.0' ? `${distMi}mi` : ''}
+                      </span>
+                      <button className={styles.cardioEntryEdit} onClick={() => setEditingWorkoutCardioSet({
+                        setId: set.id, sessionId: log.id,
+                        duration: durMin?.toString() || '',
+                        distance: distMi && distMi !== '0.0' ? distMi : '',
+                      })}>✎</button>
+                      <button className={styles.cardioEntryDelete}
+                        onClick={() => deleteCardioSet(set.id, log.id)}>✕</button>
+                    </>
+                  )}
+                </div>
+              )
+            })
+          )}
+
           {showCardioSection && (
             <div className={styles.cardioSectionBody}>
               <div className={styles.cardioExGrid}>
@@ -467,15 +520,9 @@ export default function Workout() {
                 disabled={workoutCardioSaving || (!workoutCardioDuration && !workoutCardioDistance)}
                 onClick={async () => {
                   setWorkoutCardioSaving(true)
-                  await logCardio({
-                    slug: workoutCardioSlug,
-                    durationMinutes: workoutCardioDuration,
-                    distanceMiles: workoutCardioDistance,
-                  })
-                  setWorkoutCardioDuration('')
-                  setWorkoutCardioDistance('')
-                  setWorkoutCardioSaving(false)
-                  setShowCardioSection(false)
+                  await logCardio({ slug: workoutCardioSlug, durationMinutes: workoutCardioDuration, distanceMiles: workoutCardioDistance })
+                  setWorkoutCardioDuration(''); setWorkoutCardioDistance('')
+                  setWorkoutCardioSaving(false); setShowCardioSection(false)
                 }}>
                 {workoutCardioSaving ? 'Saving...' : '✓ Log Cardio'}
               </button>

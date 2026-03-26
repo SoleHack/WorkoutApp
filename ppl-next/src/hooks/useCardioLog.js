@@ -23,20 +23,18 @@ export function useCardioLog() {
   const { user } = useAuth()
   const [recentLogs, setRecentLogs] = useState([])
   const [exerciseIdMap, setExerciseIdMap] = useState({}) // slug → uuid
+  const [idToSlugMap, setIdToSlugMap] = useState({})    // uuid → slug
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Fetch exercise UUIDs for cardio exercises once
     const fetchIds = async () => {
       const slugs = CARDIO_EXERCISES.map(e => e.slug)
-      const { data } = await supabase
-        .from('exercises')
-        .select('id, slug')
-        .in('slug', slugs)
+      const { data } = await supabase.from('exercises').select('id, slug').in('slug', slugs)
       if (data) {
-        const map = {}
-        data.forEach(e => { map[e.slug] = e.id })
-        setExerciseIdMap(map)
+        const bySlug = {}, byId = {}
+        data.forEach(e => { bySlug[e.slug] = e.id; byId[e.id] = e.slug })
+        setExerciseIdMap(bySlug)
+        setIdToSlugMap(byId)
       }
     }
     fetchIds()
@@ -51,7 +49,7 @@ export function useCardioLog() {
       .eq('user_id', user.id)
       .eq('day_key', 'cardio')
       .order('date', { ascending: false })
-      .limit(5)
+      .limit(10)
     setRecentLogs(data || [])
     setLoading(false)
   }, [user])
@@ -61,11 +59,9 @@ export function useCardioLog() {
   const logCardio = useCallback(async ({ slug, durationMinutes, distanceMiles }) => {
     if (!user) return { error: 'Not logged in' }
     const exerciseId = exerciseIdMap[slug]
-    if (!exerciseId) return { error: 'Exercise not found — make sure supabase_nutrition_cardio.sql has been run' }
+    if (!exerciseId) return { error: 'Exercise not found — run supabase_nutrition_cardio.sql first' }
 
     const today = getLocalDate()
-
-    // Get or create today's cardio session
     let sessionId
     const { data: existing } = await supabase
       .from('workout_sessions')
@@ -80,27 +76,18 @@ export function useCardioLog() {
     } else {
       const { data: newSession, error } = await supabase
         .from('workout_sessions')
-        .insert({
-          user_id: user.id,
-          day_key: 'cardio',
-          date: today,
-          completed_at: new Date().toISOString(),
-        })
+        .insert({ user_id: user.id, day_key: 'cardio', date: today, completed_at: new Date().toISOString() })
         .select('id').single()
       if (error) return { error }
       sessionId = newSession.id
     }
 
+    const { data: existingSets } = await supabase
+      .from('session_sets').select('id').eq('session_id', sessionId).eq('exercise_id', exerciseId)
+    const setNumber = (existingSets?.length || 0) + 1
+
     const durationSeconds = durationMinutes ? Math.round(parseFloat(durationMinutes) * 60) : null
     const distanceMeters = distanceMiles ? Math.round(parseFloat(distanceMiles) * 1609.34) : null
-
-    // Count existing sets today for this exercise to get set_number
-    const { data: existingSets } = await supabase
-      .from('session_sets')
-      .select('id')
-      .eq('session_id', sessionId)
-      .eq('exercise_id', exerciseId)
-    const setNumber = (existingSets?.length || 0) + 1
 
     const { error } = await supabase.from('session_sets').insert({
       session_id: sessionId,
@@ -118,5 +105,23 @@ export function useCardioLog() {
     return { error: null }
   }, [user, exerciseIdMap, load])
 
-  return { recentLogs, loading, logCardio, exerciseIdMap, CARDIO_EXERCISES }
+  const updateCardioSet = useCallback(async (setId, { durationMinutes, distanceMiles }) => {
+    const durationSeconds = durationMinutes ? Math.round(parseFloat(durationMinutes) * 60) : null
+    const distanceMeters = distanceMiles ? Math.round(parseFloat(distanceMiles) * 1609.34) : null
+    const { error } = await supabase.from('session_sets')
+      .update({ duration_seconds: durationSeconds, distance_meters: distanceMeters })
+      .eq('id', setId)
+    if (!error) await load()
+    return { error }
+  }, [load])
+
+  const deleteCardioSet = useCallback(async (setId, sessionId) => {
+    await supabase.from('session_sets').delete().eq('id', setId)
+    // If session has no more sets, delete the session too
+    const { data: remaining } = await supabase.from('session_sets').select('id').eq('session_id', sessionId)
+    if (!remaining?.length) await supabase.from('workout_sessions').delete().eq('id', sessionId)
+    await load()
+  }, [load])
+
+  return { recentLogs, loading, logCardio, updateCardioSet, deleteCardioSet, exerciseIdMap, idToSlugMap }
 }
