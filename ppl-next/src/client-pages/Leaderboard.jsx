@@ -32,17 +32,62 @@ function StatCard({ label, you, them, higherIsBetter = true, unit = '' }) {
   )
 }
 
-async function fetchUserStats(userId) {
+async function fetchUserStats(userId, isPartner = false) {
   if (!userId) return null
   const supabase = getSupabase()
-  const { data: enrollment } = await supabase
-    .from('user_programs')
-    .select('morning_workout_id, workouts:morning_workout_id (slug)')
-    .eq('user_id', userId)
-    .maybeSingle()
-  const morningSlug = enrollment?.workouts?.slug || null
 
-  const query = supabase
+  // For partner data, use the security definer RPC to bypass RLS
+  if (isPartner) {
+    const { data, error } = await supabase.rpc('get_partner_stats', { target_user_id: userId })
+    if (error || !data) return null
+
+    const dates = (data.dates || []).sort((a, b) => b.localeCompare(a))
+    const today = new Date(); today.setHours(0,0,0,0)
+
+    // Compute streak from dates array
+    let streak = 0
+    for (let i = 0; i < dates.length; i++) {
+      const d = new Date(dates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
+      const exp = new Date(today); exp.setDate(today.getDate() - i)
+      if (d.getTime() === exp.getTime()) streak++
+      else break
+    }
+
+    // Longest streak
+    let longestStreak = 0, runStreak = 1
+    const sorted = [...dates].sort((a, b) => a.localeCompare(b))
+    for (let i = 1; i < sorted.length; i++) {
+      const prev = new Date(sorted[i-1] + 'T12:00:00')
+      const curr = new Date(sorted[i] + 'T12:00:00')
+      const diff = Math.round((curr - prev) / (1000*60*60*24))
+      if (diff === 1) { runStreak++; longestStreak = Math.max(longestStreak, runStreak) }
+      else runStreak = 1
+    }
+    longestStreak = Math.max(longestStreak, streak, sorted.length > 0 ? 1 : 0)
+
+    const consistency = Math.min(100, Math.round((data.last30 / 26) * 100))
+    const daysSinceLast = dates.length
+      ? Math.round((today - new Date(dates[0] + 'T12:00:00')) / (1000*60*60*24))
+      : null
+
+    return {
+      totalSessions: data.totalSessions || 0,
+      totalVolume: Math.round(data.totalVolume || 0),
+      totalSets: 0,
+      streak,
+      longestStreak,
+      thisWeek: data.thisWeek || 0,
+      thisMonth: data.thisMonth || 0,
+      consistency,
+      bestE1rm: 0,
+      bestLift: '',
+      avgDuration: Math.round((data.avgDuration || 0) / 60),
+      daysSinceLast,
+    }
+  }
+
+  // For own data, query directly
+  const { data: sessions } = await supabase
     .from('workout_sessions')
     .select('date, completed_at, duration_seconds, session_sets(completed, weight, reps)')
     .eq('user_id', userId)
@@ -51,30 +96,18 @@ async function fetchUserStats(userId) {
     .order('date', { ascending: false })
     .limit(365)
 
-  // Exclude morning routine by slug if we know it
-  if (morningSlug) query.neq('day_key', morningSlug)
-
-  const { data: sessions } = await query
-
   if (!sessions) return null
 
   const today = new Date(); today.setHours(0,0,0,0)
   const todayStr = today.toISOString().split('T')[0]
-
-  // ── Total sessions ──────────────────────────────────────────
   const totalSessions = sessions.length
-
-  // ── Total volume ────────────────────────────────────────────
   const totalVolume = sessions.reduce((acc, s) =>
     acc + (s.session_sets?.reduce((a, set) =>
       a + (set.completed && set.weight && set.reps ? set.weight * set.reps : 0), 0) || 0), 0)
-
-  // ── Total sets ──────────────────────────────────────────────
   const totalSets = sessions.reduce((acc, s) =>
     acc + (s.session_sets?.filter(set => set.completed).length || 0), 0)
-
-  // ── Current streak ──────────────────────────────────────────
   const dates = [...new Set(sessions.map(s => s.date))].sort((a, b) => b.localeCompare(a))
+
   let streak = 0
   for (let i = 0; i < dates.length; i++) {
     const d = new Date(dates[i] + 'T12:00:00'); d.setHours(0,0,0,0)
@@ -83,7 +116,6 @@ async function fetchUserStats(userId) {
     else break
   }
 
-  // ── Longest streak ever ─────────────────────────────────────
   let longestStreak = 0, runStreak = 1
   const sortedDates = [...dates].sort((a, b) => a.localeCompare(b))
   for (let i = 1; i < sortedDates.length; i++) {
@@ -95,58 +127,32 @@ async function fetchUserStats(userId) {
   }
   longestStreak = Math.max(longestStreak, streak, sortedDates.length > 0 ? 1 : 0)
 
-  // ── This week ───────────────────────────────────────────────
   const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
   const thisWeek = sessions.filter(s => new Date(s.date + 'T12:00:00') >= weekAgo).length
-
-  // ── This month ──────────────────────────────────────────────
-  const monthStart = todayStr.slice(0, 7) // 'YYYY-MM'
+  const monthStart = todayStr.slice(0, 7)
   const thisMonth = sessions.filter(s => s.date.startsWith(monthStart)).length
-
-  // ── Consistency % (last 30 days, 6-day program = ~26 sessions expected) ──
   const thirtyAgo = new Date(); thirtyAgo.setDate(today.getDate() - 30)
   const last30 = sessions.filter(s => new Date(s.date + 'T12:00:00') >= thirtyAgo).length
-  const consistency = Math.min(100, Math.round((last30 / 26) * 100)) // 26 = ~4 weeks × 6 days
+  const consistency = Math.min(100, Math.round((last30 / 26) * 100))
 
-  // ── Best PR (e1RM across all exercises) ─────────────────────
-  let bestE1rm = 0
-  let bestLift = ''
+  let bestE1rm = 0, bestLift = ''
   const allSets = sessions.flatMap(s => s.session_sets || [])
-  const e1rmByExercise = {}
   allSets.forEach(set => {
     if (!set.completed || !set.weight || !set.reps) return
     const est = e1rm(set.weight, set.reps)
-    if (!e1rmByExercise[set.exercise_id] || est > e1rmByExercise[set.exercise_id]) {
-      e1rmByExercise[set.exercise_id] = est
-    }
     if (est > bestE1rm) { bestE1rm = est; bestLift = set.exercise_id }
   })
 
-  // ── Avg session duration (minutes) ──────────────────────────
   const withDuration = sessions.filter(s => s.duration_seconds > 0)
   const avgDuration = withDuration.length
     ? Math.round(withDuration.reduce((a, s) => a + s.duration_seconds, 0) / withDuration.length / 60)
     : 0
 
-  // ── Days since last workout ──────────────────────────────────
   const daysSinceLast = dates.length
     ? Math.round((today - new Date(dates[0] + 'T12:00:00')) / (1000 * 60 * 60 * 24))
     : null
 
-  return {
-    totalSessions,
-    totalVolume: Math.round(totalVolume),
-    totalSets,
-    streak,
-    longestStreak,
-    thisWeek,
-    thisMonth,
-    consistency,
-    bestE1rm,
-    bestLift,
-    avgDuration,
-    daysSinceLast,
-  }
+  return { totalSessions, totalVolume: Math.round(totalVolume), totalSets, streak, longestStreak, thisWeek, thisMonth, consistency, bestE1rm, bestLift, avgDuration, daysSinceLast }
 }
 
 export default function Leaderboard() {
@@ -193,7 +199,7 @@ export default function Leaderboard() {
           || partnerPublic?.email?.split('@')[0]
           || 'Them'
         setPartnerName(name)
-        const theirStats = await fetchUserStats(pid)
+        const theirStats = await fetchUserStats(pid, true)
         setTheirStats(theirStats)
       }
 
@@ -237,7 +243,7 @@ export default function Leaderboard() {
 
     setPartnerUserId(data.user_id)
     setPartnerName(name)
-    const stats = await fetchUserStats(data.user_id)
+    const stats = await fetchUserStats(data.user_id, true)
     setTheirStats(stats)
     setConnecting(false)
   }
