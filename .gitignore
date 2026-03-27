@@ -1,0 +1,33 @@
+# Node
+node_modules/
+npm-debug.*
+
+# Next.js
+ppl-next/.next/
+ppl-next/out/
+
+# Expo
+ppl-app/.expo/
+ppl-app/dist/
+ppl-app/ios/Pods/
+ppl-app/ios/build/
+ppl-app/android/build/
+ppl-app/android/.gradle/
+ppl-app/android/app/build/
+
+# Environment
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# OS
+.DS_Store
+*.log
+
+# Secrets
+google-service-account.json
+*.p8
+*.p12
+*.mobileprovision
