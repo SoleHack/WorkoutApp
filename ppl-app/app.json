@@ -1,0 +1,53 @@
+{
+  "expo": {
+    "name": "PPL Tracker",
+    "slug": "ppl-tracker",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0C0C0B"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.solehack.ppltracker",
+      "infoPlist": {
+        "NSHealthShareUsageDescription": "PPL Tracker reads your workouts and body metrics to keep your progress in sync.",
+        "NSHealthUpdateUsageDescription": "PPL Tracker writes your workouts, weight, and body fat to Apple Health.",
+        "NSCameraUsageDescription": "Take progress photos to track your physique over time.",
+        "NSPhotoLibraryUsageDescription": "Choose photos from your library for progress tracking.",
+        "NSPhotoLibraryAddUsageDescription": "Save progress photos to your library."
+      },
+      "entitlements": {
+        "com.apple.developer.healthkit": true,
+        "com.apple.developer.healthkit.access": []
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0C0C0B"
+      },
+      "package": "com.solehack.ppltracker",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.VIBRATE"
+      ]
+    },
+    "web": { "favicon": "./assets/favicon.png" },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      ["expo-notifications", { "color": "#F59E0B" }],
+      ["expo-camera", { "cameraPermission": "Allow PPL Tracker to access your camera for progress photos." }]
+    ],
+    "scheme": "ppltracker",
+    "experiments": { "typedRoutes": true }
+  }
+}
