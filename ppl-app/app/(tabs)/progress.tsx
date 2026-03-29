@@ -441,68 +441,71 @@ export default function ProgressScreen() {
                 ))}
               </View>
 
-              {/* e1rm trend chart for selected exercise */}
-              {selectedEx && exChartData.length > 1 && (
-                <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 16, height: 220 }}>
-                  <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.text, marginBottom: 8 }}>
-                    {EXERCISES[selectedEx]?.name || selectedEx} — Est. 1RM
-                  </Text>
-                  <CartesianChart
-                    data={exChartData}
-                    padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
-                      xKey="x"
-                      yKeys={['e1rm']}
-                    domainPadding={{ top: 30, left: 20, right: 20, bottom: 10 }}
-                    axisOptions={{
-                      font,
-                        formatXLabel: (v) => exChartData[Math.round(v as number)]?.label || '',
-                      tickCount: { x: 4, y: 4 },
-                      formatYLabel: (v) => String(v),
-                      lineColor: colors.border,
-                      labelColor: colors.muted,
-                    }}>
-                    {({ points }) => (
-                      <Line
-                        points={points.e1rm}
-                        color={colors.push}
-                        strokeWidth={2}
-                        curveType="natural"
-                      />
-                    )}
-                  </CartesianChart>
-                  <TouchableOpacity onPress={() => setSelectedEx(null)} style={{ alignItems: 'center', marginTop: 6 }}>
-                    <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted }}>Tap exercise below to compare</Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-
-              {/* PR list */}
+              {/* PR list — chart expands inline below selected row */}
               {Object.entries(prs)
                 .sort(([, a], [, b]) => b.e1rm - a.e1rm)
                 .map(([slug, pr]) => {
                   const exName = EXERCISES[slug]?.name || slug
                   const isSelected = selectedEx === slug
+                  const chartData = isSelected ? exChartData : []
                   return (
-                    <TouchableOpacity key={slug} onPress={() => setSelectedEx(isSelected ? null : slug)}
-                      style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 14, marginBottom: 8, backgroundColor: isSelected ? colors.push + '15' : colors.card, borderWidth: isSelected ? 1.5 : 1, borderColor: isSelected ? colors.push : colors.border }}>
-                      {pr.isRecent ? (
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.legs, marginRight: 10 }} />
-                      ) : (
-                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border, marginRight: 10 }} />
+                    <View key={slug}>
+                      <TouchableOpacity onPress={() => setSelectedEx(isSelected ? null : slug)}
+                        style={{ flexDirection: 'row', alignItems: 'center', borderRadius: isSelected && chartData.length > 1 ? 14 : 14, borderBottomLeftRadius: isSelected && chartData.length > 1 ? 0 : 14, borderBottomRightRadius: isSelected && chartData.length > 1 ? 0 : 14, padding: 14, marginBottom: isSelected && chartData.length > 1 ? 0 : 8, backgroundColor: isSelected ? colors.push + '15' : colors.card, borderWidth: isSelected ? 1.5 : 1, borderBottomWidth: isSelected && chartData.length > 1 ? 0 : (isSelected ? 1.5 : 1), borderColor: isSelected ? colors.push : colors.border }}>
+                        {pr.isRecent ? (
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.legs, marginRight: 10 }} />
+                        ) : (
+                          <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.border, marginRight: 10 }} />
+                        )}
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{exName}</Text>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 2 }}>
+                            {toDStr(pr.weight) + ' ' + wu + ' × ' + String(pr.reps) + ' · ' + formatDate(pr.date)}
+                          </Text>
+                        </View>
+                        <View style={{ alignItems: 'flex-end' }}>
+                          <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.push, letterSpacing: 1 }}>
+                            {toDStr(pr.e1rm)}
+                          </Text>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }}>{'E1RM ' + wu.toUpperCase()}</Text>
+                        </View>
+                        <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: colors.push, marginLeft: 8 }}>
+                          {isSelected ? '▲' : '▼'}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Inline chart */}
+                      {isSelected && (
+                        <View style={{ borderRadius: 14, borderTopLeftRadius: 0, borderTopRightRadius: 0, backgroundColor: colors.push + '10', borderWidth: 1.5, borderTopWidth: 0, borderColor: colors.push, overflow: 'hidden', marginBottom: 8, height: 200 }}>
+                          {chartData.length > 1 ? (
+                            <CartesianChart
+                              data={chartData}
+                              padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                              xKey="x"
+                              yKeys={['e1rm']}
+                              domainPadding={{ top: 20, left: 10, right: 10 }}
+                              axisOptions={{
+                                font,
+                                formatXLabel: (v) => chartData[Math.round(v as number)]?.label || '',
+                                tickCount: { x: 4, y: 4 },
+                                formatYLabel: (v) => String(v),
+                                lineColor: colors.border,
+                                labelColor: colors.muted,
+                              }}>
+                              {({ points }) => (
+                                <Line points={points.e1rm} color={colors.push} strokeWidth={2.5} curveType="natural" />
+                              )}
+                            </CartesianChart>
+                          ) : (
+                            <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                              <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>
+                                Only 1 session — need more data for a trend
+                              </Text>
+                            </View>
+                          )}
+                        </View>
                       )}
-                      <View style={{ flex: 1 }}>
-                        <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{exName}</Text>
-                        <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 2 }}>
-                          {toDStr(pr.weight) + ' ' + wu + ' × ' + String(pr.reps) + ' · ' + formatDate(pr.date)}
-                        </Text>
-                      </View>
-                      <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.push, letterSpacing: 1 }}>
-                          {toDStr(pr.e1rm)}
-                        </Text>
-                        <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }}>{'E1RM ' + wu.toUpperCase()}</Text>
-                      </View>
-                    </TouchableOpacity>
+                    </View>
                   )
                 })}
             </>
