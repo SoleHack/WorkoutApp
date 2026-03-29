@@ -4,16 +4,16 @@ import { colors } from '@/lib/theme'
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
   return (
-    <View className="items-center" style={{ paddingTop: 6 }}>
-      <Text style={{ fontSize: 22 }}>{emoji}</Text>
+    <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 8, width: 60 }}>
+      <Text style={{ fontSize: 20 }}>{emoji}</Text>
       <Text style={{
         fontFamily: 'DMMono',
-        fontSize: 9,
-        letterSpacing: 0.5,
-        marginTop: 2,
+        fontSize: 8,
+        letterSpacing: 0.3,
+        marginTop: 3,
         color: focused ? colors.text : colors.muted,
       }}>
-        {label.toUpperCase()}
+        {label}
       </Text>
     </View>
   )
@@ -28,40 +28,44 @@ export default function TabsLayout() {
           backgroundColor: colors.card,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 80,
+          height: 82,
           paddingBottom: 0,
+          paddingTop: 0,
         },
         tabBarShowLabel: false,
+        tabBarItemStyle: {
+          paddingVertical: 0,
+        },
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="Today" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="TODAY" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" label="Progress" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" label="STATS" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="programs"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📋" label="Programs" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="💪" label="TRAIN" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="partner"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" label="Partner" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" label="PARTNER" focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="settings"
         options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" label="Settings" focused={focused} />,
+          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" label="MORE" focused={focused} />,
         }}
       />
     </Tabs>

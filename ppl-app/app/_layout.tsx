@@ -1,5 +1,6 @@
 import '../src/styles/global.css'
 import { useEffect } from 'react'
+import { View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { GestureHandlerRootView } from 'react-native-gesture-handler'
@@ -7,6 +8,8 @@ import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
 import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { QueryProvider } from '@/lib/queryClient'
+import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { OfflineBanner } from '@/components/OfflineBanner'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -28,6 +31,20 @@ function AuthGate() {
   return null
 }
 
+function AppShell() {
+  const { isOnline, wasOffline, clearRecovery } = useNetworkStatus()
+  return (
+    <View style={{ flex: 1 }}>
+      <AuthGate />
+      <StatusBar style="light" />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0C0C0B' } }} />
+      {(!isOnline || wasOffline) && (
+        <OfflineBanner isOnline={isOnline} wasOffline={wasOffline} onDismissRecovery={clearRecovery} />
+      )}
+    </View>
+  )
+}
+
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
     'BebasNeue':  require('../assets/fonts/bebas-neue.ttf'),
@@ -47,9 +64,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
         <AuthProvider>
-          <AuthGate />
-          <StatusBar style="light" />
-          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0C0C0B' } }} />
+          <AppShell />
         </AuthProvider>
       </QueryProvider>
     </GestureHandlerRootView>

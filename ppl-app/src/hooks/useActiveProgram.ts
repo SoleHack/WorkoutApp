@@ -8,6 +8,7 @@ export interface Exercise {
   name: string
   category: string
   cardioMetric: string | null
+  notes: string | null
   muscles: { primary: string[]; secondary: string[] }
   video: { type: string; url: string } | null
 }
@@ -30,6 +31,7 @@ export interface WorkoutDay {
   color: string
   dayType: string
   slug: string
+  focus: string | null
   isMorningRoutine: boolean
   exercises: ProgramExercise[]
 }
@@ -42,6 +44,7 @@ export interface ProgramData {
   programId: string | null
   programName: string
   morningWorkoutId: string | null
+  morningWorkout: WorkoutDay | null
   programDays: any[]
 }
 
@@ -88,6 +91,7 @@ async function fetchActiveProgram(userId: string): Promise<ProgramData | null> {
         name: ex.name,
         category: ex.category || 'strength',
         cardioMetric: ex.cardio_metric || null,
+        notes: ex.notes || null,
         video: ex.video_url ? { type: 'mp4', url: ex.video_url } : null,
         muscles: {
           primary: ex.muscles || [],
@@ -124,6 +128,7 @@ async function fetchActiveProgram(userId: string): Promise<ProgramData | null> {
       color: workout.color || '#F59E0B',
       dayType: workout.day_type || '',
       slug: workout.slug,
+      focus: workout.focus || null,
       isMorningRoutine: workout.is_morning_routine || false,
       exercises,
     }
@@ -139,6 +144,62 @@ async function fetchActiveProgram(userId: string): Promise<ProgramData | null> {
     isRest: day.is_rest || false,
   }))
 
+  // Fetch morning workout separately — it may not be in program_days
+  let morningWorkout: WorkoutDay | null = null
+  const morningWorkoutId = enrollment.morning_workout_id || null
+
+  if (morningWorkoutId) {
+    // Check if already in PROGRAM
+    const existing = Object.values(PROGRAM).find(w => w.id === morningWorkoutId)
+    if (existing) {
+      morningWorkout = existing
+    } else {
+      // Fetch it separately
+      const { data: mw } = await supabase
+        .from('workouts')
+        .select(`
+          id, name, slug, day_type, color, focus, is_morning_routine,
+          workout_exercises(
+            id, exercise_id, order_index, sets, reps, rest_seconds, tag, notes, accent,
+            exercise:exercises(id, slug, name, muscles, secondary_muscles, tags, video_url, notes, category, cardio_metric)
+          )
+        `)
+        .eq('id', morningWorkoutId)
+        .single()
+
+      if (mw) {
+        // Add exercises to EXERCISES map
+        ;(mw.workout_exercises || []).forEach((we: any) => {
+          const ex = we.exercise
+          if (!ex) return
+          EXERCISES[ex.slug] = {
+            id: ex.id, slug: ex.slug, name: ex.name,
+            category: ex.category || 'strength',
+            cardioMetric: ex.cardio_metric || null,
+            notes: ex.notes || null,
+            video: ex.video_url ? { type: 'mp4', url: ex.video_url } : null,
+            muscles: { primary: ex.muscles || [], secondary: ex.secondary_muscles || [] },
+          }
+        })
+        const exercises = (mw.workout_exercises || [])
+          .sort((a: any, b: any) => a.order_index - b.order_index)
+          .map((we: any) => ({
+            id: we.exercise?.slug || '',
+            exerciseDbId: we.exercise_id,
+            workoutExId: we.id,
+            sets: we.sets, reps: we.reps, rest: we.rest_seconds,
+            tag: we.tag, note: we.notes, accent: we.accent || false,
+          }))
+        morningWorkout = {
+          id: mw.id, label: mw.name, color: mw.color || '#F59E0B',
+          dayType: mw.day_type || '', slug: mw.slug, focus: mw.focus || null,
+          isMorningRoutine: true, exercises,
+        }
+        PROGRAM[mw.slug] = morningWorkout
+      }
+    }
+  }
+
   return {
     PROGRAM,
     PROGRAM_ORDER,
@@ -146,7 +207,8 @@ async function fetchActiveProgram(userId: string): Promise<ProgramData | null> {
     SCHEDULE,
     programId: program.id,
     programName: program.name,
-    morningWorkoutId: enrollment.morning_workout_id || null,
+    morningWorkoutId,
+    morningWorkout,
     programDays: program.program_days,
   }
 }
