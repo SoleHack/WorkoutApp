@@ -8,6 +8,7 @@ import { useFonts } from 'expo-font'
 import * as SplashScreen from 'expo-splash-screen'
 import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { QueryProvider } from '@/lib/queryClient'
+import { ThemeProvider, useTheme } from '@/lib/ThemeContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { OfflineBanner } from '@/components/OfflineBanner'
 
@@ -33,11 +34,12 @@ function AuthGate() {
 
 function AppShell() {
   const { isOnline, wasOffline, clearRecovery } = useNetworkStatus()
+  const { colors } = useTheme()
   return (
     <View style={{ flex: 1 }}>
       <AuthGate />
-      <StatusBar style="light" />
-      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#0C0C0B' } }} />
+      <StatusBar style={colors.bg === '#F8F7F4' ? 'dark' : 'light'} />
+      <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: colors.bg } }} />
       {(!isOnline || wasOffline) && (
         <OfflineBanner isOnline={isOnline} wasOffline={wasOffline} onDismissRecovery={clearRecovery} />
       )}
@@ -64,7 +66,9 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <QueryProvider>
         <AuthProvider>
-          <AppShell />
+          <ThemeProvider>
+            <AppShell />
+          </ThemeProvider>
         </AuthProvider>
       </QueryProvider>
     </GestureHandlerRootView>

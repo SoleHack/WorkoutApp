@@ -9,7 +9,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useBodyMeasurements, useProgressPhotos } from '@/hooks/useBodyComposition'
 import { navyBodyFat, bfCategory, leanMass } from '@/lib/bodyFat'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 // ─── Measurement field definitions (matching DB columns) ──────
 const MEASUREMENT_FIELDS = [
@@ -25,6 +25,7 @@ const MEASUREMENT_FIELDS = [
 
 // ─── Shared components ────────────────────────────────────────
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const { colors } = useTheme()
   return (
     <View style={{ marginBottom: 24 }}>
       <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginBottom: 8, paddingHorizontal: 2 }}>
@@ -38,6 +39,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 }
 
 function Row({ label, sublabel, children, last, onPress }: any) {
+  const { colors } = useTheme()
   const content = (
     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: last ? 0 : 1, borderBottomColor: colors.border }}>
       <View style={{ flex: 1, marginRight: 12 }}>
@@ -51,6 +53,7 @@ function Row({ label, sublabel, children, last, onPress }: any) {
 }
 
 function SegmentControl({ options, value, onChange }: { options: string[]; value: string; onChange: (v: string) => void }) {
+  const { colors } = useTheme()
   return (
     <View style={{ flexDirection: 'row', backgroundColor: colors.bg, borderRadius: 10, padding: 3, borderWidth: 1, borderColor: colors.border }}>
       {options.map(opt => (
@@ -67,6 +70,7 @@ function SegmentControl({ options, value, onChange }: { options: string[]; value
 
 // ─── Measurements Modal ───────────────────────────────────────
 function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
+  const { colors } = useTheme()
   const { latest, saveMeasurement } = useBodyMeasurements()
   const [vals, setVals] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -196,10 +200,11 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
 
 // ─── Progress Photos Modal ────────────────────────────────────
 function PhotosModal({ visible, onClose }: any) {
+  const { colors } = useTheme()
   const { photos, loading, uploading, uploadPhoto, takePhoto, deletePhoto } = useProgressPhotos()
-  const [viewingPhoto, setViewingPhoto]     = useState<any>(null)
-  const [compareMode, setCompareMode]       = useState(false)
-  const [comparePhotos, setComparePhotos]   = useState<any[]>([])
+  const [viewingPhoto, setViewingPhoto]   = useState<any>(null)
+  const [compareMode, setCompareMode]     = useState(false)
+  const [comparePhotos, setComparePhotos] = useState<any[]>([])
 
   const handleDelete = (photo: any) => {
     Alert.alert('Delete Photo', 'Remove this progress photo?', [
@@ -220,19 +225,19 @@ function PhotosModal({ visible, onClose }: any) {
     setComparePhotos(prev => {
       const exists = prev.find(p => p.id === photo.id)
       if (exists) return prev.filter(p => p.id !== photo.id)
-      if (prev.length >= 2) return [prev[1], photo] // replace oldest
+      if (prev.length >= 2) return [prev[1], photo]
       return [...prev, photo]
     })
   }
 
-  const screenW  = Dimensions.get('window').width
-  const padding  = 16 * 2
-  const cols     = 3
-  const gap      = 8
-  const thumbW   = Math.floor((screenW - padding - gap * (cols - 1)) / cols)
-  const thumbH   = Math.floor(thumbW * 1.33)
-  const halfW    = Math.floor((screenW - padding - gap) / 2)
-  const halfH    = Math.floor(halfW * 1.33)
+  const screenW = Dimensions.get('window').width
+  const padding = 16 * 2
+  const cols    = 3
+  const gap     = 8
+  const thumbW  = Math.floor((screenW - padding - gap * (cols - 1)) / cols)
+  const thumbH  = Math.floor(thumbW * 1.33)
+  const halfW   = Math.floor((screenW - padding - gap) / 2)
+  const halfH   = Math.floor(halfW * 1.33)
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -258,7 +263,7 @@ function PhotosModal({ visible, onClose }: any) {
         {/* Side-by-side comparison panel */}
         {compareMode && comparePhotos.length === 2 && (
           <View style={{ flexDirection: 'row', padding: 16, gap: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
-            {comparePhotos.map((photo, i) => (
+            {comparePhotos.map((photo) => (
               <View key={photo.id} style={{ flex: 1 }}>
                 <Image source={{ uri: photo.public_url }} style={{ width: halfW, height: halfH, borderRadius: 10 }} resizeMode="cover" />
                 <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, textAlign: 'center', marginTop: 4 }}>
@@ -270,7 +275,7 @@ function PhotosModal({ visible, onClose }: any) {
         )}
 
         <ScrollView contentContainerStyle={{ padding: 16 }}>
-          {/* Add button */}
+          {/* Add button — hidden in compare mode */}
           {!compareMode && (
             <TouchableOpacity onPress={handleAdd} disabled={uploading}
               style={{ borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
@@ -295,13 +300,12 @@ function PhotosModal({ visible, onClose }: any) {
               {(photos as any[]).map((photo: any, idx: number) => {
                 const col        = idx % cols
                 const isSelected = comparePhotos.some(p => p.id === photo.id)
-                const marginRight = col < cols - 1 ? gap : 0
-                const marginBottom = gap
+                const marginRight  = col < cols - 1 ? gap : 0
                 return (
                   <TouchableOpacity key={photo.id}
                     onPress={() => compareMode ? toggleCompare(photo) : setViewingPhoto(photo)}
                     onLongPress={() => !compareMode && handleDelete(photo)}
-                    style={{ width: thumbW, height: thumbH, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.card, marginRight, marginBottom, borderWidth: isSelected ? 2 : 1, borderColor: isSelected ? colors.pull : colors.border }}>
+                    style={{ width: thumbW, height: thumbH, borderRadius: 10, overflow: 'hidden', backgroundColor: colors.card, marginRight, marginBottom: gap, borderWidth: isSelected ? 2 : 1, borderColor: isSelected ? colors.pull : colors.border }}>
                     <Image source={{ uri: photo.public_url }} style={{ width: thumbW, height: thumbH }} resizeMode="cover" />
                     {isSelected && (
                       <View style={{ position: 'absolute', top: 6, right: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: colors.pull, alignItems: 'center', justifyContent: 'center' }}>
@@ -318,6 +322,7 @@ function PhotosModal({ visible, onClose }: any) {
               })}
             </View>
           )}
+
           {!compareMode && (
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.border, textAlign: 'center', marginTop: 20 }}>
               LONG PRESS TO DELETE
@@ -353,9 +358,11 @@ function PhotosModal({ visible, onClose }: any) {
   )
 }
 
+
 // ─── Main Screen ─────────────────────────────────────────────
 export default function SettingsScreen() {
   const { user, signOut } = useAuth()
+  const { colors, theme, setTheme } = useTheme()
   const { settings, save } = useSettings()
   const { entries: bwEntries, latest: bwLatest } = useBodyweight()
   const { latest: latestMeasurements } = useBodyMeasurements()
@@ -372,7 +379,6 @@ export default function SettingsScreen() {
 
   const wu        = settings.weightUnit || 'lbs'
   const sex       = (settings as any).sex || 'male'
-  const theme     = (settings as any).theme || 'dark'
   const heightIn  = settings.heightInches
 
   // Body fat from latest measurements + height from settings
@@ -500,7 +506,7 @@ export default function SettingsScreen() {
             <SegmentControl options={['lbs', 'kg']} value={wu} onChange={v => save({ weightUnit: v as 'lbs' | 'kg' })} />
           </Row>
           <Row label="Theme" last>
-            <SegmentControl options={['dark', 'light']} value={theme} onChange={v => save({ theme: v as 'dark' | 'light' })} />
+            <SegmentControl options={['dark', 'light']} value={theme} onChange={v => { const t = v as 'dark' | 'light'; setTheme(t); save({ theme: t }) }} />
           </Row>
         </Section>
 

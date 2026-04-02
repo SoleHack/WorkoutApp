@@ -263,7 +263,7 @@ function CardioModal({ visible, onClose, onLog }: any) {
   )
 }
 
-function ExerciseSearchModal({ visible, onClose, EXERCISES, onAdd }: any) {
+function ExerciseSearchModal({ visible, onClose, EXERCISES, onAdd, title = "Add Exercise" }: any) {
   const [query, setQuery] = useState('')
   const results = (Object.entries(EXERCISES) as [string, any][])
     .filter(([, ex]) => ex.name.toLowerCase().includes(query.toLowerCase()))
@@ -468,6 +468,7 @@ export default function WorkoutScreen() {
   const [finishing, setFinishing] = useState(false)
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [showExSearch, setShowExSearch] = useState(false)
+  const [swapTarget, setSwapTarget] = useState<string | null>(null) // exerciseDbId to swap
   const [extraExercises, setExtraExercises] = useState<string[]>([])
   const [skippedExercises, setSkippedExercises] = useState<Set<string>>(new Set())
   const [showNotes, setShowNotes] = useState(false)
@@ -696,6 +697,13 @@ export default function WorkoutScreen() {
                   <TouchableOpacity onPress={() => setShowWarmup(showWarmup === programEx.exerciseDbId ? null : programEx.exerciseDbId)}
                     style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
                     <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>🔥 Warm-up</Text>
+                  </TouchableOpacity>
+                )}
+                {/* Swap exercise */}
+                {!isCardio && !isExtra && (
+                  <TouchableOpacity onPress={() => setSwapTarget(programEx.exerciseDbId)}
+                    style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>⇄ Swap</Text>
                   </TouchableOpacity>
                 )}
                 {/* Rest timer button + inline picker */}
@@ -954,7 +962,33 @@ export default function WorkoutScreen() {
       />
 
       <CardioModal visible={showCardioModal} onClose={() => setShowCardioModal(false)} onLog={logCardio} />
-      <ExerciseSearchModal visible={showExSearch} onClose={() => setShowExSearch(false)} EXERCISES={EXERCISES} onAdd={(slug: string) => setExtraExercises(prev => [...prev, slug])} />
+      <ExerciseSearchModal
+        visible={showExSearch || swapTarget !== null}
+        onClose={() => { setShowExSearch(false); setSwapTarget(null) }}
+        EXERCISES={EXERCISES}
+        title={swapTarget ? 'Swap Exercise' : 'Add Exercise'}
+        onAdd={(slug: string) => {
+          if (swapTarget) {
+            // Replace the swapped exercise in extraExercises or program exercises
+            setExtraExercises(prev => {
+              const idx = prev.indexOf(swapTarget)
+              if (idx >= 0) {
+                const next = [...prev]
+                next[idx] = slug
+                return next
+              }
+              return prev
+            })
+            // For program exercises, add as extra and skip the original
+            setSkippedExercises(prev => new Set([...prev, swapTarget]))
+            setExtraExercises(prev => [...prev.filter(s => s !== slug), slug])
+            setSwapTarget(null)
+          } else {
+            setExtraExercises(prev => [...prev, slug])
+            setShowExSearch(false)
+          }
+        }}
+      />
       <NotesModal visible={showNotes} note={note} onChange={handleNoteChange} onClose={() => setShowNotes(false)} />
       <ExerciseInfoModal exercise={infoExercise} visible={!!infoExercise} onClose={() => setInfoExercise(null)} dayColor={day.color} />
     </View>

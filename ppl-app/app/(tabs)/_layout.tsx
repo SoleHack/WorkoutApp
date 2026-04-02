@@ -1,8 +1,9 @@
 import { Tabs } from 'expo-router'
 import { View, Text } from 'react-native'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+  const { colors } = useTheme()
   return (
     <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 8, width: 60 }}>
       <Text style={{ fontSize: 20 }}>{emoji}</Text>
@@ -20,6 +21,7 @@ function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focu
 }
 
 export default function TabsLayout() {
+  const { colors } = useTheme()
   return (
     <Tabs
       screenOptions={{
@@ -40,33 +42,23 @@ export default function TabsLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="TODAY" focused={focused} />,
-        }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" label="TODAY" focused={focused} /> }}
       />
       <Tabs.Screen
         name="progress"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📈" label="STATS" focused={focused} />,
-        }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="📈" label="STATS" focused={focused} /> }}
       />
       <Tabs.Screen
         name="programs"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="💪" label="TRAIN" focused={focused} />,
-        }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="💪" label="TRAIN" focused={focused} /> }}
       />
       <Tabs.Screen
         name="partner"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" label="PARTNER" focused={focused} />,
-        }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="🏆" label="PARTNER" focused={focused} /> }}
       />
       <Tabs.Screen
         name="settings"
-        options={{
-          tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" label="MORE" focused={focused} />,
-        }}
+        options={{ tabBarIcon: ({ focused }) => <TabIcon emoji="⚙️" label="MORE" focused={focused} /> }}
       />
     </Tabs>
   )

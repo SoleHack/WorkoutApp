@@ -6,9 +6,16 @@ import { useSettings } from '@/hooks/useSettings'
 import { colors } from '@/lib/theme'
 
 function e1rm(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
-
 function toDisplay(lbs: number, unit: string) {
   return unit === 'kg' ? (lbs * 0.453592).toFixed(1) : lbs.toString()
+}
+
+// Clean up a day_key slug into something readable
+function prettifyDayKey(key: string) {
+  if (!key) return 'Workout'
+  // Strip trailing timestamp like -1773805816456
+  const cleaned = key.replace(/-\d{10,}$/, '')
+  return cleaned.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
 }
 
 export default function SessionDetailScreen() {
@@ -27,7 +34,6 @@ export default function SessionDetailScreen() {
     if (!id) return
     const load = async () => {
       setLoading(true)
-      console.log('Loading session id:', id)
 
       // Step 1: fetch session
       const { data: sessionData, error: sessionError } = await supabase
@@ -36,15 +42,12 @@ export default function SessionDetailScreen() {
         .eq('id', id)
         .single()
 
-      console.log('Session data:', JSON.stringify(sessionData), 'Error:', JSON.stringify(sessionError))
-
       if (sessionError || !sessionData) {
-        console.error('Session error:', sessionError)
         setLoading(false)
         return
       }
 
-      // Step 2: fetch workout info if workout_id exists
+      // Step 2: fetch workout info
       let workout = null
       if (sessionData.workout_id) {
         const { data: wData } = await supabase
@@ -57,17 +60,14 @@ export default function SessionDetailScreen() {
 
       setSession({ ...sessionData, workout })
 
-      // Step 3: fetch sets via parent session (satisfies RLS which checks user_id on workout_sessions)
-      const { data: sessionWithSets, error: setsError } = await supabase
+      // Step 3: fetch sets through parent session (RLS)
+      const { data: sessionWithSets } = await supabase
         .from('workout_sessions')
         .select('session_sets(id, exercise_id, set_number, weight, reps, rpe, completed, is_warmup, duration_seconds, distance_meters)')
         .eq('id', id)
         .single()
 
       const allSets = (sessionWithSets?.session_sets || [])
-      console.log('Sets count:', allSets.length, 'Error:', JSON.stringify(setsError))
-      console.log('First set:', JSON.stringify(allSets[0]))
-
       const setsData = allSets
         .filter((s: any) => s.completed)
         .sort((a: any, b: any) =>
@@ -81,16 +81,25 @@ export default function SessionDetailScreen() {
         return
       }
 
-      // Step 4: fetch exercise names
+      // Step 4: fetch exercise names by slug (exercise_id stores slugs)
       const exIds = [...new Set(setsData.map((s: any) => s.exercise_id).filter(Boolean))] as string[]
       const exMap: Record<string, any> = {}
       if (exIds.length > 0) {
-        const { data: exData, error: exError } = await supabase
+        const { data: exData } = await supabase
           .from('exercises')
           .select('id, name, category, slug')
           .in('slug', exIds)
-        console.log('Exercise fetch:', exData?.length, 'ids queried:', exIds.length, 'error:', JSON.stringify(exError))
         exData?.forEach((e: any) => { exMap[e.slug] = e })
+
+        // Fallback: also try by id in case some sessions stored UUIDs
+        const missingIds = exIds.filter(id => !exMap[id])
+        if (missingIds.length > 0) {
+          const { data: byId } = await supabase
+            .from('exercises')
+            .select('id, name, category, slug')
+            .in('id', missingIds)
+          byId?.forEach((e: any) => { exMap[e.id] = e; exMap[e.slug] = e })
+        }
       }
 
       setSets(setsData.map((s: any) => ({ ...s, exerciseInfo: exMap[s.exercise_id] || null })))
@@ -98,7 +107,6 @@ export default function SessionDetailScreen() {
     }
     load()
   }, [id])
-
 
   if (loading) return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -115,6 +123,9 @@ export default function SessionDetailScreen() {
   const workout  = session?.workout
   const dayColor = workout?.color || colors.muted
   const dur      = session.duration_seconds ? Math.round(session.duration_seconds / 60) : null
+
+  // Workout display name — prefer joined workout name, fall back to prettified day_key
+  const workoutName = workout?.name || prettifyDayKey(session.day_key)
 
   // Group sets by exercise_id
   const byExercise: Record<string, any[]> = {}
@@ -140,7 +151,7 @@ export default function SessionDetailScreen() {
               {new Date(session.date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}
             </Text>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 1, marginTop: 2 }}>
-              {(workout?.name || session.day_key).toUpperCase()}
+              {workoutName.toUpperCase()}
             </Text>
             {workout?.focus ? (
               <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 2 }}>{workout.focus}</Text>
@@ -180,7 +191,6 @@ export default function SessionDetailScreen() {
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* Notes */}
         {session.notes ? (
           <View style={{ borderRadius: 14, padding: 14, marginBottom: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.push + '40' }}>
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.push, letterSpacing: 1, marginBottom: 6 }}>SESSION NOTES</Text>
@@ -188,11 +198,11 @@ export default function SessionDetailScreen() {
           </View>
         ) : null}
 
-        {/* Exercise breakdown */}
         {Object.entries(byExercise).map(([exId, exSets]) => {
           const firstSet = exSets[0]
           const ex       = firstSet?.exerciseInfo
-          const exName   = ex?.name || 'Unknown Exercise'
+          // If no exerciseInfo, prettify the slug as a fallback
+          const exName   = ex?.name || prettifyDayKey(exId)
           const isCardio = ex?.category === 'cardio'
 
           const workingSets = exSets.filter((s: any) => !s.is_warmup)
