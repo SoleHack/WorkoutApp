@@ -126,7 +126,7 @@ export default function ProgressScreen() {
   const [showCalcInfo, setShowCalcInfo] = useState(false)
   const [showPrPicker, setShowPrPicker] = useState(false)
 
-  const { data: sessions = [], refetch, isRefetching } = useQuery({
+  const { data: sessions = [], refetch, isRefetching, isLoading } = useQuery({
     queryKey: ['allSessions', user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -272,6 +272,8 @@ export default function ProgressScreen() {
 
   const chartW = SCREEN_W - 32
   const chartH = 180
+
+  if (isLoading) return <LoadingScreen message="Loading your progress" />
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>

@@ -221,6 +221,8 @@ export default function TodayScreen() {
   const sessions = recentSessions as any[]
 
   // ── Derived values ─────────────────────────────────────────
+  if (programLoading) return <LoadingScreen />
+
   const schedule    = (programData?.SCHEDULE || []) as any[]
   const PROGRAM     = programData?.PROGRAM    || {}
   const EXERCISES   = programData?.EXERCISES  || {}
