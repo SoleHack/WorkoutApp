@@ -4,6 +4,7 @@ import {
   TextInput, Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
+import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useActiveProgram } from '@/hooks/useActiveProgram'

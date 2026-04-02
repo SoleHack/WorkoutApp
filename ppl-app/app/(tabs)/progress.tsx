@@ -13,6 +13,7 @@ import { navyBodyFat, bfCategory } from '@/lib/bodyFat'
 import { supabase } from '@/lib/supabase'
 import { colors } from '@/lib/theme'
 import { useRouter } from 'expo-router'
+import { LoadingScreen } from '@/components/LoadingScreen'
 
 const TABS = ['Overview', 'PRs', 'History', 'Body', 'Volume', 'Calc']
 
