@@ -96,21 +96,17 @@ export default function PartnerScreen() {
     setLoadingMine(true)
     const stats = await loadUserStats(user!.id)
     setMyStats(stats)
-
-    // Read existing partner connection directly from user_settings
-    const { data: row } = await supabase
-      .from('user_settings')
-      .select('partner_user_id, partner_display_name')
-      .eq('user_id', user!.id)
-      .single()
-
     setLoadingMine(false)
-
-    if (row?.partner_user_id) {
-      setPartnerUserId(row.partner_user_id)
-      loadPartnerData(row.partner_user_id, row.partner_display_name)
-    }
   }
+
+  // Load partner data whenever settings loads the partner_user_id
+  useEffect(() => {
+    const pid = (settings as any).partner_user_id
+    if (pid && pid !== partnerUserId) {
+      setPartnerUserId(pid)
+      loadPartnerData(pid)
+    }
+  }, [(settings as any).partner_user_id])
 
   const loadPartnerData = async (partnerId: string, cachedName?: string | null) => {
     setLoadingPartner(true)
