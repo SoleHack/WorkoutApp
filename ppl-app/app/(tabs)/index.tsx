@@ -1,9 +1,10 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl,
   TextInput, Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
@@ -183,6 +184,7 @@ export default function TodayScreen() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
+  const [restDayOverride, setRestDayOverride] = useState(false)
 
   const today        = new Date()
   const todayStr     = getLocalDate()
@@ -218,6 +220,25 @@ export default function TodayScreen() {
     if (user) refetch()
   }, [user, refetch]))
 
+  // Load/clear rest day override for today
+  const todayStrForEffect = getLocalDate()
+  useEffect(() => {
+    AsyncStorage.getItem('ppl_rest_override').then(val => {
+      setRestDayOverride(val === todayStrForEffect)
+    })
+  }, [])
+
+  const handleRestDay = async () => {
+    const d = getLocalDate()
+    await AsyncStorage.setItem('ppl_rest_override', d)
+    setRestDayOverride(true)
+  }
+
+  const handleUndoRest = async () => {
+    await AsyncStorage.removeItem('ppl_rest_override')
+    setRestDayOverride(false)
+  }
+
   const sessions = recentSessions as any[]
 
   // ── Derived values ─────────────────────────────────────────
@@ -236,7 +257,7 @@ export default function TodayScreen() {
   const todaySlot    = schedule.find((s: any) => s.dayIndex === dbDayOfWeek)
   const todayDayKey  = todaySlot?.isRest ? null : todaySlot?.dayKey
   const todayWorkout = todayDayKey ? PROGRAM[todayDayKey] : null
-  const isRest       = !!todaySlot?.isRest
+  const isRest       = !!todaySlot?.isRest || restDayOverride
   const todayDone    = sessions.some(s => s.date === todayStr && s.completed_at && s.day_key !== 'rest' && s.day_key !== 'cardio')
   const todaySession = sessions.find(s => s.date === todayStr && s.completed_at && s.day_key !== 'rest' && s.day_key !== 'cardio')
 
@@ -470,8 +491,14 @@ export default function TodayScreen() {
           <View style={{ borderRadius: 16, padding: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.muted, letterSpacing: 2 }}>REST DAY 😴</Text>
             <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 6 }}>
-              Recovery is part of the program. Eat well, sleep, repeat.
+              {restDayOverride ? 'You marked today as a rest day.' : 'Recovery is part of the program. Eat well, sleep, repeat.'}
             </Text>
+            {restDayOverride && (
+              <TouchableOpacity onPress={handleUndoRest}
+                style={{ marginTop: 14, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>Undo — take me back to the workout</Text>
+              </TouchableOpacity>
+            )}
           </View>
 
         ) : todayWorkout ? (
@@ -526,8 +553,14 @@ export default function TodayScreen() {
               </View>
 
               {!todayDone ? (
-                <View style={{ borderRadius: 12, paddingVertical: 15, alignItems: 'center', backgroundColor: todayWorkout.color }}>
-                  <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.bg, letterSpacing: 2 }}>START WORKOUT →</Text>
+                <View>
+                  <View style={{ borderRadius: 12, paddingVertical: 15, alignItems: 'center', backgroundColor: todayWorkout.color }}>
+                    <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.bg, letterSpacing: 2 }}>START WORKOUT →</Text>
+                  </View>
+                  <TouchableOpacity onPress={e => { e.stopPropagation?.(); handleRestDay() }}
+                    style={{ marginTop: 8, borderRadius: 12, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>😴 Take a rest day instead</Text>
+                  </TouchableOpacity>
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
