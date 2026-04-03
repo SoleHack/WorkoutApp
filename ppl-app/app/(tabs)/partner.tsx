@@ -94,34 +94,65 @@ export default function PartnerScreen() {
 
   const loadMyData = async () => {
     setLoadingMine(true)
+
+    // Load my own stats
     const stats = await loadUserStats(user!.id)
     setMyStats(stats)
-    setLoadingMine(false)
-  }
 
-  // Load partner data whenever settings loads the partner_user_id
-  useEffect(() => {
-    const pid = (settings as any).partner_user_id
-    if (pid && pid !== partnerUserId) {
-      setPartnerUserId(pid)
-      loadPartnerData(pid)
+    // Query user_settings directly for partner_user_id
+    const { data: row, error } = await supabase
+      .from('user_settings')
+      .select('partner_user_id, partner_display_name')
+      .eq('user_id', user!.id)
+      .single()
+
+    setLoadingMine(false)
+
+    if (row?.partner_user_id) {
+      setPartnerUserId(row.partner_user_id)
+      loadPartnerData(row.partner_user_id, row.partner_display_name)
     }
-  }, [(settings as any).partner_user_id])
+  }
 
   const loadPartnerData = async (partnerId: string, cachedName?: string | null) => {
     setLoadingPartner(true)
 
-    // Look up their display name from public_stats
+    // Fetch display name from public_stats (readable by all authenticated users)
     const { data: pRow } = await supabase
       .from('public_stats')
       .select('display_name')
       .eq('user_id', partnerId)
       .single()
-
     setPartnerName(pRow?.display_name || cachedName || 'Training Partner')
 
-    const stats = await loadUserStats(partnerId)
-    setPartnerStats(stats)
+    // Use SECURITY DEFINER RPC to bypass RLS on workout_sessions
+    const { data: rpcData, error: rpcError } = await supabase
+      .rpc('get_partner_stats', { partner_id: partnerId })
+
+    if (rpcError || !rpcData) {
+      console.log('RPC error:', JSON.stringify(rpcError))
+      setLoadingPartner(false)
+      return
+    }
+
+    // Compute streak client-side from the dates array returned by the function
+    const dates: string[] = rpcData.dates || []
+    let streak = 0
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    for (let i = 0; i <= 365; i++) {
+      const d = new Date(today); d.setDate(d.getDate() - i)
+      if (dates.includes(d.toISOString().split('T')[0])) streak++
+      else if (i > 0) break
+    }
+
+    setPartnerStats({
+      sessions:  rpcData.sessions  || 0,
+      totalVol:  rpcData.total_vol_k || 0,
+      prCount:   rpcData.pr_count  || 0,
+      topE1rm:   rpcData.top_e1rm  || 0,
+      streak,
+      avgDur:    null,
+    })
     setLoadingPartner(false)
   }
 
