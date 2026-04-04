@@ -4,7 +4,6 @@ import {
   TextInput, Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
-import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
@@ -14,6 +13,7 @@ import { useBodyweight } from '@/hooks/useBodyweight'
 import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { supabase } from '@/lib/supabase'
+import { storage } from '@/lib/storage'
 import { getLocalDate } from '@/lib/date'
 
 const DAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -188,7 +188,9 @@ export default function TodayScreen() {
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
-  const [restDayOverride, setRestDayOverride] = useState(false)
+  const [restDayOverride, setRestDayOverride] = useState(
+    storage.getString('ppl_rest_override') === getLocalDate()
+  )
 
   const today        = new Date()
   const todayStr     = getLocalDate()
@@ -223,23 +225,13 @@ export default function TodayScreen() {
   useFocusEffect(useCallback(() => {
     if (user) refetch()
   }, [user, refetch]))
-
-  // Load/clear rest day override for today
-  const todayStrForEffect = getLocalDate()
-  useEffect(() => {
-    AsyncStorage.getItem('ppl_rest_override').then(val => {
-      setRestDayOverride(val === todayStrForEffect)
-    })
-  }, [])
-
-  const handleRestDay = async () => {
-    const d = getLocalDate()
-    await AsyncStorage.setItem('ppl_rest_override', d)
+  const handleRestDay = () => {
+    storage.set('ppl_rest_override', getLocalDate())
     setRestDayOverride(true)
   }
 
-  const handleUndoRest = async () => {
-    await AsyncStorage.removeItem('ppl_rest_override')
+  const handleUndoRest = () => {
+    storage.remove('ppl_rest_override')
     setRestDayOverride(false)
   }
 

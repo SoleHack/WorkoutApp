@@ -1,5 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
-import AsyncStorage from '@react-native-async-storage/async-storage'
+import React, { createContext, useContext, useState, useCallback } from 'react'
+import { storage } from './storage'
 import { getColors, ColorScheme } from './theme'
 
 type Theme = 'dark' | 'light'
@@ -19,17 +19,16 @@ const ThemeContext = createContext<ThemeContextType>({
 const THEME_KEY = 'ppl_theme'
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>('dark')
-
-  useEffect(() => {
-    AsyncStorage.getItem(THEME_KEY).then(saved => {
-      if (saved === 'light' || saved === 'dark') setThemeState(saved)
-    })
-  }, [])
+  // MMKV is synchronous — read the saved theme immediately in useState()
+  // so the correct theme is applied on the very first render with no flash.
+  const saved = storage.getString(THEME_KEY)
+  const [theme, setThemeState] = useState<Theme>(
+    saved === 'light' || saved === 'dark' ? saved : 'dark'
+  )
 
   const setTheme = useCallback((t: Theme) => {
     setThemeState(t)
-    AsyncStorage.setItem(THEME_KEY, t)
+    storage.set(THEME_KEY, t) // synchronous write
   }, [])
 
   return (
