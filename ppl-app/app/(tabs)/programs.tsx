@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
-  Modal, Alert, ActivityIndicator,
+  Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
 import { useRouter } from 'expo-router'
 import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions } from '@/hooks/usePrograms'
@@ -63,10 +63,13 @@ export default function ProgramsScreen() {
 function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id: string) => void; onOpenWorkout: (id: string) => void }) {
   const { colors } = useTheme()
   const DAY_TYPE_COLORS = getDayTypeColors(colors)
-  const { programs, activeId, loading, activateProgram, refresh } = usePrograms()
+  const { programs, activeId, loading, activateProgram, createProgram, refresh } = usePrograms()
   const { workouts, refresh: refreshWorkouts } = useWorkouts()
   const { createWorkout, cloneWorkout } = useWorkoutActions()
   const { programData } = useActiveProgram()
+  const [creatingProgram, setCreatingProgram] = useState(false)
+  const [showNewProgram, setShowNewProgram] = useState(false)
+  const [newProgramName, setNewProgramName] = useState('')
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newType, setNewType] = useState('push')
@@ -94,6 +97,16 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
     if (w) { refreshWorkouts(); onOpenWorkout(w.id) }
   }
 
+  const handleCreateProgram = async () => {
+    if (!newProgramName.trim()) return
+    setCreatingProgram(true)
+    const p = await createProgram(newProgramName.trim())
+    setCreatingProgram(false)
+    setShowNewProgram(false)
+    setNewProgramName('')
+    if (p) { refresh(); onOpenProgram(p.id) }
+  }
+
   const handleClone = async (workoutId: string, name: string) => {
     const w = await cloneWorkout(workoutId, name)
     if (w) { refreshWorkouts(); onOpenWorkout(w.id) }
@@ -113,7 +126,13 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16 }}>
-        <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 2 }}>PROGRAMS</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+          <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 2 }}>PROGRAMS</Text>
+          <TouchableOpacity onPress={() => setShowNewProgram(true)}
+            style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: colors.legs + '20', borderWidth: 1, borderColor: colors.legs + '40' }}>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.legs }}>+ NEW PROGRAM</Text>
+          </TouchableOpacity>
+        </View>
         {programData?.programName && (
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
             <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: colors.legs }} />
@@ -230,9 +249,43 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
         })}
       </ScrollView>
 
+      {/* New Program Modal */}
+      <Modal visible={showNewProgram} transparent animationType="slide" onRequestClose={() => setShowNewProgram(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, padding: 24 }}>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 16 }}>NEW PROGRAM</Text>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>PROGRAM NAME</Text>
+            <TextInput
+              style={{ borderRadius: 12, padding: 14, fontFamily: 'DMSans', fontSize: 16, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, marginBottom: 8 }}
+              placeholder="e.g. 5-Day Upper Lower"
+              placeholderTextColor={colors.muted}
+              value={newProgramName}
+              onChangeText={setNewProgramName}
+              autoFocus
+              onSubmitEditing={handleCreateProgram}
+            />
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginBottom: 20 }}>
+              You'll assign workouts to days after creating the program.
+            </Text>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <TouchableOpacity onPress={() => { setShowNewProgram(false); setNewProgramName('') }}
+                style={{ flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={handleCreateProgram} disabled={creatingProgram || !newProgramName.trim()}
+                style={{ flex: 2, paddingVertical: 14, borderRadius: 12, alignItems: 'center', backgroundColor: newProgramName.trim() ? colors.legs : colors.bg, borderWidth: 1, borderColor: newProgramName.trim() ? colors.legs : colors.border, opacity: creatingProgram ? 0.6 : 1 }}>
+                {creatingProgram
+                  ? <ActivityIndicator color={colors.bg} size="small" />
+                  : <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: newProgramName.trim() ? colors.bg : colors.muted }}>Create Program</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Create Workout Modal */}
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, padding: 24 }}>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 16 }}>NEW WORKOUT</Text>
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>WORKOUT NAME</Text>
@@ -265,7 +318,7 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   )
@@ -461,7 +514,8 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
         {workouts.filter(w => !w.is_morning_routine && w.user_id !== null).map(w => {
           const c = DAY_TYPE_COLORS[w.day_type] || colors.muted
           return (
-            <View key={w.id} style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <TouchableOpacity key={w.id} onPress={() => onOpenWorkout(w.id)}
+              style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
               <View style={{ width: 4, height: 36, borderRadius: 2, backgroundColor: c, marginRight: 12 }} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{w.name}</Text>
@@ -469,7 +523,8 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
                   {w.focus || w.day_type}
                 </Text>
               </View>
-            </View>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: c }}>Edit →</Text>
+            </TouchableOpacity>
           )
         })}
       </ScrollView>

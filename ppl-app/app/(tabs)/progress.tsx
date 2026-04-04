@@ -68,45 +68,148 @@ function VolumeBar({ label, vol, pct, color }: { label: string; vol: number; pct
   )
 }
 
-// Simple heatmap grid - 26 weeks x 7 days
-function HeatmapGrid({ sessions }: { sessions: Array<{ date: string; completed_at: string | null }> }) {
+// Heatmap grid — 26 weeks × 7 days
+// Features: day labels, month markers, workout-type coloring, today border
+function HeatmapGrid({ sessions, screenWidth }: {
+  sessions: Array<{ date: string; completed_at: string | null; day_key?: string }>;
+  screenWidth: number
+}) {
   const { colors } = useTheme()
-  const sessionMap: Record<string, number> = {}
-  sessions.forEach(s => { if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date] || 0) + 1 })
 
+  // Build date → {count, dayKey} map
+  const dateMap: Record<string, { count: number; dayKey: string }> = {}
+  sessions.forEach(s => {
+    if (!s.completed_at) return
+    if (!dateMap[s.date]) dateMap[s.date] = { count: 0, dayKey: s.day_key || '' }
+    dateMap[s.date].count += 1
+    // Prefer strength day_key over cardio
+    if (s.day_key && s.day_key !== 'cardio') dateMap[s.date].dayKey = s.day_key
+  })
+
+  // Build 26 weeks of cells, weeks start on Monday
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const start = new Date(today)
-  start.setDate(today.getDate() - today.getDay()) // rewind to Sunday
-  start.setDate(start.getDate() - 25 * 7)
+  const todayStr = today.toISOString().split('T')[0]
 
-  const cells: { date: string; count: number }[] = []
-  const cursor = new Date(start)
-  while (cursor <= today) {
-    const key = cursor.toISOString().split('T')[0]
-    cells.push({ date: key, count: sessionMap[key] || 0 })
-    cursor.setDate(cursor.getDate() + 1)
+  // Rewind to most recent Monday, then back 25 more weeks
+  const startMonday = new Date(today)
+  const dow = today.getDay() // 0=Sun,1=Mon,...
+  startMonday.setDate(today.getDate() - ((dow + 6) % 7)) // this week's Monday
+  startMonday.setDate(startMonday.getDate() - 25 * 7)    // 26 weeks total
+
+  const weeks: Array<Array<{ date: string; count: number; dayKey: string; future: boolean }>> = []
+  const cursor = new Date(startMonday)
+
+  while (cursor <= today || weeks.length < 26) {
+    const week: typeof weeks[0] = []
+    for (let d = 0; d < 7; d++) {
+      const key = cursor.toISOString().split('T')[0]
+      week.push({
+        date: key,
+        count: dateMap[key]?.count || 0,
+        dayKey: dateMap[key]?.dayKey || '',
+        future: cursor > today,
+      })
+      cursor.setDate(cursor.getDate() + 1)
+    }
+    weeks.push(week)
+    if (cursor > today && weeks.length >= 26) break
   }
 
-  const weeks: typeof cells[] = []
-  for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
+  // Layout constants
+  const GAP       = 2
+  const DAY_LBL_W = 14 // width of day label column
+  const numWeeks  = weeks.length
+  const cellSize  = Math.max(7, Math.floor(
+    (screenWidth - 60 - DAY_LBL_W - GAP - numWeeks * GAP) / numWeeks
+  ))
 
-  const { width: SCREEN_W } = useWindowDimensions()
-  const cellSize = Math.floor((SCREEN_W - 48) / 27)
+  // Month markers — show label at first week of each month
+  const monthLabels: Record<number, string> = {}
+  weeks.forEach((week, wi) => {
+    const d = new Date(week[0].date + 'T12:00:00')
+    const prev = wi === 0 ? null : new Date(weeks[wi - 1][0].date + 'T12:00:00')
+    if (!prev || d.getMonth() !== prev.getMonth()) {
+      monthLabels[wi] = d.toLocaleDateString('en-US', { month: 'short' })
+    }
+  })
+
+  // Color by workout type + intensity
+  const getColor = (count: number, dayKey: string, future: boolean): string => {
+    if (future || count === 0) return colors.border
+    const dk = dayKey.toLowerCase()
+    let base = colors.legs
+    if (dk.includes('push'))      base = colors.push
+    else if (dk.includes('pull')) base = colors.pull
+    else if (dk === 'cardio')     base = colors.pull
+    return count >= 2 ? base : base + 'BB'
+  }
+
+  // Only show labels on Mon, Wed, Fri (indices 0,2,4 in Mon-start week)
+  const DAY_LABELS = ['M', '', 'W', '', 'F', '', '']
 
   return (
-    <View style={{ flexDirection: 'row' }}>
-      {weeks.map((week, wi) => (
-        <View key={wi} style={{ marginRight: 2 }}>
-          {week.map((cell, di) => {
-            const bg = cell.count === 0 ? colors.border :
-              cell.count === 1 ? colors.legs + '70' :
-              cell.count >= 2 ? colors.legs : colors.legs
-            return (
-              <View key={di} style={{ width: cellSize, height: cellSize, borderRadius: 2, backgroundColor: bg, marginBottom: 2 }} />
-            )
-          })}
+    <View>
+      {/* Month labels row */}
+      <View style={{ flexDirection: 'row', marginLeft: DAY_LBL_W + GAP, marginBottom: 3 }}>
+        {weeks.map((week, wi) => (
+          <View key={wi} style={{ width: cellSize, marginRight: GAP }}>
+            {monthLabels[wi] ? (
+              <Text style={{ fontFamily: 'DMMono', fontSize: 7, color: colors.muted, letterSpacing: 0 }}>
+                {monthLabels[wi]}
+              </Text>
+            ) : null}
+          </View>
+        ))}
+      </View>
+
+      {/* Grid rows */}
+      <View style={{ flexDirection: 'row' }}>
+        {/* Day label column */}
+        <View style={{ width: DAY_LBL_W, marginRight: GAP }}>
+          {DAY_LABELS.map((lbl, i) => (
+            <View key={i} style={{ height: cellSize, marginBottom: GAP, justifyContent: 'center' }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 7, color: colors.muted }}>{lbl}</Text>
+            </View>
+          ))}
         </View>
-      ))}
+
+        {/* Week columns */}
+        {weeks.map((week, wi) => (
+          <View key={wi} style={{ marginRight: GAP }}>
+            {week.map((cell, di) => {
+              const isToday = cell.date === todayStr
+              return (
+                <View
+                  key={di}
+                  style={{
+                    width:           cellSize,
+                    height:          cellSize,
+                    borderRadius:    2,
+                    backgroundColor: getColor(cell.count, cell.dayKey, cell.future),
+                    marginBottom:    GAP,
+                    borderWidth:     isToday ? 1.5 : 0,
+                    borderColor:     colors.text,
+                  }}
+                />
+              )
+            })}
+          </View>
+        ))}
+      </View>
+
+      {/* Legend */}
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, gap: 10 }}>
+        {[
+          { label: 'Push', color: colors.push },
+          { label: 'Pull', color: colors.pull },
+          { label: 'Legs', color: colors.legs },
+        ].map(item => (
+          <View key={item.label} style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+            <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: item.color }} />
+            <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>{item.label}</Text>
+          </View>
+        ))}
+      </View>
     </View>
   )
 }
@@ -119,7 +222,7 @@ export default function ProgressScreen() {
   const { entries: measureEntries } = useBodyMeasurements()
   const { settings } = useSettings()
   const router = useRouter()
-  const font   = useFont(require('../../assets/fonts/DMMono-Regular.ttf'), 10)
+  const font   = useFont(require('../../assets/fonts/dm-mono-400.ttf'), 10)
   const [activeTab, setActiveTab] = useState('Overview')
   const [prRange, setPrRange] = useState(90)
   const [selectedEx, setSelectedEx] = useState<string | null>(null)
@@ -130,6 +233,7 @@ export default function ProgressScreen() {
   const [calcFormula, setCalcFormula] = useState<'epley' | 'brzycki' | 'lander'>('epley')
   const [showCalcInfo, setShowCalcInfo] = useState(false)
   const [showPrPicker, setShowPrPicker] = useState(false)
+  const [bwRange, setBwRange] = useState(30)
 
   const { data: sessions = [], refetch, isRefetching, isLoading } = useQuery({
     queryKey: ['allSessions', user?.id],
@@ -231,13 +335,14 @@ export default function ProgressScreen() {
 
   // ── Bodyweight trend ─────────────────────────────────────
   const bwChartData = useMemo(() => {
-    const entries = (bwEntries as any[]).slice(-60)
+    const cutoff = bwRange === 9999 ? null : (() => { const d = new Date(); d.setDate(d.getDate() - bwRange); return d })()
+    const entries = (bwEntries as any[]).filter((e: any) => !cutoff || new Date(e.date + 'T12:00:00') >= cutoff)
     return entries.map((e: any, i: number) => ({
       x: i,
       bw: +(wu === 'kg' ? (e.weight * 0.453592).toFixed(1) : e.weight),
       label: formatDate(e.date, { month: 'short', day: 'numeric' }),
     }))
-  }, [bwEntries, wu])
+  }, [bwEntries, wu, bwRange])
 
   // ── Body fat trend (Navy formula) ────────────────────────────
   const bfTrendData = useMemo(() => {
@@ -348,14 +453,7 @@ export default function ProgressScreen() {
               {/* Activity heatmap */}
               <SectionLabel>ACTIVITY — LAST 26 WEEKS</SectionLabel>
               <View style={{ borderRadius: 14, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 20 }}>
-                <HeatmapGrid sessions={completed} />
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, marginRight: 6 }}>Less</Text>
-                  {[colors.border, colors.legs + '70', colors.legs].map((c, i) => (
-                    <View key={i} style={{ width: 10, height: 10, borderRadius: 2, backgroundColor: c, marginRight: 2 }} />
-                  ))}
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, marginLeft: 4 }}>More</Text>
-                </View>
+                <HeatmapGrid sessions={completed} screenWidth={SCREEN_W} />
               </View>
 
               {/* Weekly volume chart */}
@@ -365,10 +463,10 @@ export default function ProgressScreen() {
                   <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 220 }}>
                     <CartesianChart
                       data={weeklyVolData}
-                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                       xKey="x"
                       yKeys={['vol']}
-                      domainPadding={{ top: 30, left: 20, right: 20, bottom: 10 }}
+                      domainPadding={{ top: 30, left: 5, right: 5, bottom: 10 }}
                       axisOptions={{
                         font,
                         formatXLabel: (v) => weeklyVolData[Math.round(v as number)]?.label || '',
@@ -489,10 +587,10 @@ export default function ProgressScreen() {
                           {chartData.length > 1 ? (
                             <CartesianChart
                               data={chartData}
-                              padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                              padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                               xKey="x"
                               yKeys={['e1rm']}
-                              domainPadding={{ top: 20, left: 10, right: 10 }}
+                              domainPadding={{ top: 20, left: 5, right: 5 }}
                               axisOptions={{
                                 font,
                                 formatXLabel: (v) => chartData[Math.round(v as number)]?.label || '',
@@ -630,16 +728,31 @@ export default function ProgressScreen() {
               )}
 
               {/* Bodyweight trend */}
-              {bwChartData.length > 1 && (
+              {bwChartData.length > 0 && (
                 <>
-                  <SectionLabel>{'BODYWEIGHT (' + wu.toUpperCase() + ')'}</SectionLabel>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, marginTop: 20 }}>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>{'BODYWEIGHT (' + wu.toUpperCase() + ')'}</Text>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                      {[7, 30, 90, 9999].map(d => (
+                        <TouchableOpacity key={d} onPress={() => setBwRange(d)}
+                          style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                            backgroundColor: bwRange === d ? colors.text : colors.card,
+                            borderWidth: 1, borderColor: bwRange === d ? colors.text : colors.border }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 9,
+                            color: bwRange === d ? colors.bg : colors.muted }}>
+                            {d === 9999 ? 'ALL' : d + 'D'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
                   <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 220 }}>
                     <CartesianChart
                       data={bwChartData}
-                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                       xKey="x"
                       yKeys={['bw']}
-                      domainPadding={{ top: 20, left: 10, right: 10 }}
+                      domainPadding={{ top: 20, left: 5, right: 5 }}
                       axisOptions={{
                         font,
                         formatXLabel: (v) => bwChartData[Math.round(v as number)]?.label || '',
@@ -662,14 +775,29 @@ export default function ProgressScreen() {
               {/* Body fat trend */}
               {bfTrendData.length > 1 && (
                 <>
-                  <SectionLabel>BODY FAT % TREND</SectionLabel>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4, marginTop: 20 }}>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>BODY FAT % TREND</Text>
+                    <View style={{ flexDirection: 'row', gap: 4 }}>
+                      {[7, 30, 90, 9999].map(d => (
+                        <TouchableOpacity key={d} onPress={() => setBwRange(d)}
+                          style={{ paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6,
+                            backgroundColor: bwRange === d ? colors.text : colors.card,
+                            borderWidth: 1, borderColor: bwRange === d ? colors.text : colors.border }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 9,
+                            color: bwRange === d ? colors.bg : colors.muted }}>
+                            {d === 9999 ? 'ALL' : d + 'D'}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
                   <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 220 }}>
                     <CartesianChart
                       data={bfTrendData}
-                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                       xKey="x"
                       yKeys={['bf']}
-                      domainPadding={{ top: 20, left: 10, right: 10 }}
+                      domainPadding={{ top: 20, left: 5, right: 5 }}
                       axisOptions={{
                         font,
                         formatXLabel: (v) => bfTrendData[Math.round(v as number)]?.label || '',
@@ -696,10 +824,10 @@ export default function ProgressScreen() {
                   <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 220 }}>
                     <CartesianChart
                       data={waistTrendData}
-                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                       xKey="x"
                       yKeys={['waist']}
-                      domainPadding={{ top: 20, left: 10, right: 10 }}
+                      domainPadding={{ top: 20, left: 5, right: 5 }}
                       axisOptions={{
                         font,
                         formatXLabel: (v) => waistTrendData[Math.round(v as number)]?.label || '',
@@ -828,10 +956,10 @@ export default function ProgressScreen() {
                   <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 220 }}>
                     <CartesianChart
                       data={weeklyVolData}
-                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 20 }}
                       xKey="x"
                       yKeys={['vol']}
-                      domainPadding={{ top: 30, left: 20, right: 20, bottom: 10 }}
+                      domainPadding={{ top: 30, left: 5, right: 5, bottom: 10 }}
                       axisOptions={{
                         font,
                         formatXLabel: (v) => weeklyVolData[Math.round(v as number)]?.label || '',

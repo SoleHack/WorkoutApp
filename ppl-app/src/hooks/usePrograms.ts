@@ -102,11 +102,30 @@ export function usePrograms() {
     },
   })
 
+  const createProgramMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const { data, error } = await supabase
+        .from('programs')
+        .insert({
+          name,
+          user_id: user!.id,
+          split_type: 'custom',
+          is_default: false,
+        })
+        .select('id, name, split_type, description, is_default, user_id')
+        .single()
+      if (error) throw error
+      return data as Program
+    },
+    onSettled: () => qc.invalidateQueries({ queryKey: ['programs', user?.id] }),
+  })
+
   return {
     programs: data?.programs || [],
     activeId: data?.activeId || null,
     loading: isLoading,
     activateProgram: activateMutation.mutateAsync,
+    createProgram: createProgramMutation.mutateAsync,
     refresh: () => qc.invalidateQueries({ queryKey: ['programs', user?.id] }),
   }
 }
@@ -279,7 +298,7 @@ export function useMorningRoutine() {
 
 const WORKOUT_EXERCISE_SELECT = `
   id, exercise_id, sets, reps, rest_seconds, tag, notes, order_index,
-  exercise:exercises(id, name, slug, muscles, secondary_muscles, category, video_url, coaching_notes)
+  exercise:exercises(id, name, slug, category, muscles)
 `
 
 export function useWorkoutEditor(workoutId: string | null) {

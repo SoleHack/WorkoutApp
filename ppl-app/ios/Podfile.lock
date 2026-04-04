@@ -50,10 +50,6 @@ PODS:
     - Yoga
   - ExpoAsset (55.0.10):
     - ExpoModulesCore
-  - ExpoCamera (55.0.11):
-    - ExpoModulesCore
-    - ZXingObjC/OneD
-    - ZXingObjC/PDF417
   - ExpoDomWebView (55.0.3):
     - ExpoModulesCore
   - ExpoFileSystem (55.0.11):
@@ -2331,18 +2327,12 @@ PODS:
     - libwebp (~> 1.0)
     - SDWebImage/Core (~> 5.17)
   - Yoga (0.0.0)
-  - ZXingObjC/Core (3.6.9)
-  - ZXingObjC/OneD (3.6.9):
-    - ZXingObjC/Core
-  - ZXingObjC/PDF417 (3.6.9):
-    - ZXingObjC/Core
 
 DEPENDENCIES:
   - "AsyncStorage (from `../node_modules/@react-native-async-storage/async-storage`)"
   - EXConstants (from `../node_modules/expo-constants/ios`)
   - Expo (from `../node_modules/expo`)
   - ExpoAsset (from `../node_modules/expo/node_modules/expo-asset/ios`)
-  - ExpoCamera (from `../node_modules/expo-camera/ios`)
   - "ExpoDomWebView (from `../node_modules/@expo/dom-webview/ios`)"
   - ExpoFileSystem (from `../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../node_modules/expo-font/ios`)
@@ -2454,7 +2444,6 @@ SPEC REPOS:
     - SDWebImageAVIFCoder
     - SDWebImageSVGCoder
     - SDWebImageWebPCoder
-    - ZXingObjC
 
 EXTERNAL SOURCES:
   AsyncStorage:
@@ -2465,8 +2454,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/expo"
   ExpoAsset:
     :path: "../node_modules/expo/node_modules/expo-asset/ios"
-  ExpoCamera:
-    :path: "../node_modules/expo-camera/ios"
   ExpoDomWebView:
     :path: "../node_modules/@expo/dom-webview/ios"
   ExpoFileSystem:
@@ -2672,7 +2659,6 @@ SPEC CHECKSUMS:
   EXConstants: 898c24a310046c0e68335619d0f379099a52e199
   Expo: d425652228e12e472b46f0eca1032fcdebe55701
   ExpoAsset: 4efd0227e808dfa84d286aa3663ded641ef73479
-  ExpoCamera: fee0aadc5cc2968f39a51d0b2f1ddbdf4dfe5d72
   ExpoDomWebView: f101fb3db4b6eec4163fca51f7507189b7e48661
   ExpoFileSystem: ccbe192dde132e6e97bedcd51018a1642f4fa01c
   ExpoFont: 1aa465cf9f8ac6b670405becba8b15473581b2dd
@@ -2780,7 +2766,6 @@ SPEC CHECKSUMS:
   SDWebImageSVGCoder: 15a300a97ec1c8ac958f009c02220ac0402e936c
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Yoga: dd994d8c85dca5cc9b10f5df8c01f9ef1d0da191
-  ZXingObjC: 8898711ab495761b2dbbdec76d90164a6d7e14c5
 
 PODFILE CHECKSUM: 6387c51832d183adf0ee34eaab632fbd492a2a13
 

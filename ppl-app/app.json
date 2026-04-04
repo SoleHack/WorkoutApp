@@ -2,7 +2,7 @@
   "expo": {
     "name": "PPL Tracker",
     "slug": "my-ppl-tracker",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -44,13 +44,7 @@
     "plugins": [
       "expo-router",
       "expo-font",
-      "expo-video",
-      [
-        "expo-camera",
-        {
-          "cameraPermission": "Allow PPL Tracker to access your camera for progress photos."
-        }
-      ]
+      "expo-video"
     ],
     "scheme": "ppltracker",
     "experiments": {
