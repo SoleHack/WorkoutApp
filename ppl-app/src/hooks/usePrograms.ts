@@ -478,7 +478,7 @@ export function useWorkoutActions() {
       if (!source) return null
 
       const slug =
-        name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now()
+        name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Math.random().toString(36).slice(2, 8)
 
       const { data: newWorkout, error } = await supabase
         .from('workouts')

@@ -35,12 +35,12 @@ const PERCENTAGES = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50]
 
 function e1rmCalc(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
 
-function SectionLabel({ children }: any) {
+function SectionLabel({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme()
   return <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginBottom: 10, marginTop: 20 }}>{children}</Text>
 }
 
-function StatBox({ val, label, color, sub }: any) {
+function StatBox({ val, label, color, sub }: { val: string; label: string; color?: string; sub?: string }) {
   const { colors } = useTheme()
   return (
     <View style={{ borderRadius: 14, padding: 14, flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
@@ -69,7 +69,7 @@ function VolumeBar({ label, vol, pct, color }: { label: string; vol: number; pct
 }
 
 // Simple heatmap grid - 26 weeks x 7 days
-function HeatmapGrid({ sessions }: { sessions: any[] }) {
+function HeatmapGrid({ sessions }: { sessions: Array<{ date: string; completed_at: string | null }> }) {
   const { colors } = useTheme()
   const sessionMap: Record<string, number> = {}
   sessions.forEach(s => { if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date] || 0) + 1 })
