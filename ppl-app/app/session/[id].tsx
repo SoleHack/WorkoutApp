@@ -3,7 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { useSettings } from '@/hooks/useSettings'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 function e1rm(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
 function toDisplay(lbs: number, unit: string) {
@@ -19,6 +19,7 @@ function prettifyDayKey(key: string) {
 }
 
 export default function SessionDetailScreen() {
+  const { colors } = useTheme()
   const params = useLocalSearchParams<{ id: string }>()
   const id     = Array.isArray(params.id) ? params.id[0] : params.id
   const router  = useRouter()

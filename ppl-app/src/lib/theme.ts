@@ -50,15 +50,15 @@ export function getColors(theme: 'dark' | 'light' = 'dark'): ColorScheme {
   return theme === 'light' ? lightColors : darkColors
 }
 
-// Static default (dark) — for files not yet migrated to useTheme()
-export const colors = darkColors
-
-export const dayColors: Record<string, string> = {
-  push:   darkColors.push,
-  pull:   darkColors.pull,
-  legs:   darkColors.legs,
-  core:   darkColors.core,
-  cardio: darkColors.pull,
+// getDayColors — use inside components via useTheme(), not at module level
+export function getDayColors(colors: ColorScheme): Record<string, string> {
+  return {
+    push:   colors.push,
+    pull:   colors.pull,
+    legs:   colors.legs,
+    core:   colors.core,
+    cardio: colors.pull,
+  }
 }
 
 export const spacing = {

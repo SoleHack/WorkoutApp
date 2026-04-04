@@ -14,7 +14,7 @@ import { useWorkoutNotes } from '@/hooks/useWorkoutNotes'
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 const WARMUP_DEFS = [
   { pct: 0.4, reps: 10, label: '40%' },
@@ -34,6 +34,7 @@ function unitLabel(unit: string) { return unit === 'kg' ? 'kg' : 'lbs' }
 function e1rm(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
 
 function RestTimer({ seconds, onDone }: { seconds: number; onDone: () => void }) {
+  const { colors } = useTheme()
   const [remaining, setRemaining] = useState(seconds)
   const [paused, setPaused] = useState(false)
   useEffect(() => {
@@ -81,6 +82,7 @@ function RestTimer({ seconds, onDone }: { seconds: number; onDone: () => void })
 }
 
 function SetInputModal({ visible, exercise, programEx, setNumber, lastSet, lastMax, dayColor, weightUnit, onLog, onCancel }: any) {
+  const { colors } = useTheme()
   const isCardio = exercise?.category === 'cardio'
   const [weight, setWeight] = useState('')
   const [reps, setReps] = useState('')
@@ -209,6 +211,7 @@ function SetInputModal({ visible, exercise, programEx, setNumber, lastSet, lastM
 }
 
 function CardioModal({ visible, onClose, onLog }: any) {
+  const { colors } = useTheme()
   const [slug, setSlug] = useState('treadmill')
   const [duration, setDuration] = useState('')
   const [distance, setDistance] = useState('')
@@ -264,6 +267,7 @@ function CardioModal({ visible, onClose, onLog }: any) {
 }
 
 function ExerciseSearchModal({ visible, onClose, EXERCISES, onAdd, title = "Add Exercise" }: any) {
+  const { colors } = useTheme()
   const [query, setQuery] = useState('')
   const results = (Object.entries(EXERCISES) as [string, any][])
     .filter(([, ex]) => ex.name.toLowerCase().includes(query.toLowerCase()))
@@ -300,6 +304,7 @@ function ExerciseSearchModal({ visible, onClose, EXERCISES, onAdd, title = "Add 
 }
 
 function NotesModal({ visible, note, onChange, onClose }: any) {
+  const { colors } = useTheme()
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -337,6 +342,7 @@ function ExerciseVideoPlayer({ videoUrl }: { videoUrl: string }) {
 }
 
 function ExerciseInfoModal({ exercise, visible, onClose, dayColor }: any) {
+  const { colors } = useTheme()
   if (!exercise) return null
   const primary   = (exercise.muscles?.primary   || []) as string[]
   const secondary = (exercise.muscles?.secondary || []) as string[]
@@ -444,6 +450,7 @@ function ExerciseInfoModal({ exercise, visible, onClose, dayColor }: any) {
 }
 
 export default function WorkoutScreen() {
+  const { colors } = useTheme()
   const { dayKey } = useLocalSearchParams<{ dayKey: string }>()
   const router = useRouter()
   const { user } = useAuth()

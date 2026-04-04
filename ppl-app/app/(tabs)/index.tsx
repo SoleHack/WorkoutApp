@@ -8,12 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/lib/ThemeContext'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { supabase } from '@/lib/supabase'
-import { colors } from '@/lib/theme'
 import { getLocalDate } from '@/lib/date'
 
 const DAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -21,6 +21,7 @@ const DAYS_FULL  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ─── Log Weight Modal ────────────────────────────────────────
 function LogWeightModal({ visible, onClose, onLog, unit }: any) {
+  const { colors } = useTheme()
   const [val, setVal] = useState('')
   const submit = () => { if (!val) return; onLog(parseFloat(val)); setVal(''); onClose() }
   return (
@@ -55,6 +56,7 @@ function LogWeightModal({ visible, onClose, onLog, unit }: any) {
 
 // ─── Edit Cardio Row ──────────────────────────────────────────
 function EditCardioRow({ set, ex, editingCardio, setEditingCardio, idToSlugMap, onUpdate }: any) {
+  const { colors } = useTheme()
   const [dur, setDur]   = useState(editingCardio.duration)
   const [dist, setDist] = useState(editingCardio.distance)
   const [saving, setSaving] = useState(false)
@@ -104,6 +106,7 @@ function EditCardioRow({ set, ex, editingCardio, setEditingCardio, idToSlugMap, 
 
 // ─── Cardio Modal ─────────────────────────────────────────────
 function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: () => void; onLog: (slug: string, duration: string, distance: string) => Promise<void> }) {
+  const { colors } = useTheme()
   const [slug, setSlug] = useState('treadmill')
   const [duration, setDuration] = useState('')
   const [distance, setDistance] = useState('')
@@ -175,6 +178,7 @@ function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: (
 
 // ─── Main Screen ─────────────────────────────────────────────
 export default function TodayScreen() {
+  const { colors } = useTheme()
   const router = useRouter()
   const { user } = useAuth()
   const { programData, loading: programLoading } = useActiveProgram()

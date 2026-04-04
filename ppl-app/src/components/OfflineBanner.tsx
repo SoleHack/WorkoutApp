@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { View, Text, Animated, TouchableOpacity } from 'react-native'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 interface OfflineBannerProps {
   isOnline: boolean
@@ -9,6 +9,7 @@ interface OfflineBannerProps {
 }
 
 export function OfflineBanner({ isOnline, wasOffline, onDismissRecovery }: OfflineBannerProps) {
+  const { colors } = useTheme()
   const anim = useRef(new Animated.Value(0)).current
 
   useEffect(() => {

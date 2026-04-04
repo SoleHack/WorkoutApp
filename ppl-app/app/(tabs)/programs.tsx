@@ -7,19 +7,29 @@ import { useRouter } from 'expo-router'
 import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions } from '@/hooks/usePrograms'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useAuth } from '@/hooks/useAuth'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
+import type { ColorScheme } from '@/lib/theme'
 
 // Mon=0 … Sun=6 (matching DB convention from useActiveProgram)
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 
-const DAY_TYPE_COLORS: Record<string, string> = {
-  push: colors.push, pull: colors.pull, legs: colors.legs,
-  upper: '#A78BFA', lower: '#FB923C', full: '#F472B6',
-  core: colors.muted, custom: colors.muted,
+function getDayTypeColors(colors: ColorScheme): Record<string, string> {
+  return {
+    push:   colors.push,
+    pull:   colors.pull,
+    legs:   colors.legs,
+    upper:  '#A78BFA',
+    lower:  '#FB923C',
+    full:   '#F472B6',
+    core:   colors.muted,
+    custom: colors.muted,
+  }
 }
 
 // ─── Main router ─────────────────────────────────────────────
 export default function ProgramsScreen() {
+  const { colors } = useTheme()
+  const DAY_TYPE_COLORS = getDayTypeColors(colors)
   const [view, setView] = useState<'list' | 'program' | 'workout'>('list')
   const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null)
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null)
@@ -51,6 +61,8 @@ export default function ProgramsScreen() {
 
 // ─── Programs list ────────────────────────────────────────────
 function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id: string) => void; onOpenWorkout: (id: string) => void }) {
+  const { colors } = useTheme()
+  const DAY_TYPE_COLORS = getDayTypeColors(colors)
   const { programs, activeId, loading, activateProgram, refresh } = usePrograms()
   const { workouts, refresh: refreshWorkouts } = useWorkouts()
   const { createWorkout, cloneWorkout } = useWorkoutActions()
@@ -261,6 +273,8 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
 
 // ─── Program editor ───────────────────────────────────────────
 function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: string; onBack: () => void; onOpenWorkout: (id: string) => void }) {
+  const { colors } = useTheme()
+  const DAY_TYPE_COLORS = getDayTypeColors(colors)
   const { user } = useAuth()
   const { program, days, loading, assignWorkout, setRestDay, clearDay } = useProgramEditor(programId)
   const { workouts } = useWorkouts()
@@ -542,6 +556,8 @@ const TAGS = ['compound', 'isolation', 'warmup', 'cooldown']
 const REST_OPTIONS = [30, 45, 60, 90, 120, 150, 180, 240]
 
 function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: () => void }) {
+  const { colors } = useTheme()
+  const DAY_TYPE_COLORS = getDayTypeColors(colors)
   const { workout, exercises, loading, updateWorkout, addExercise, updateExercise, removeExercise } = useWorkoutEditor(workoutId)
   const { exercises: library, loading: libLoading } = useExerciseLibrary()
   const [showAddEx, setShowAddEx] = useState(false)

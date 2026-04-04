@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { View, Text, ScrollView, TouchableOpacity, RefreshControl, Dimensions, TextInput } from 'react-native'
+import { View, Text, ScrollView, TouchableOpacity, RefreshControl, useWindowDimensions, TextInput } from 'react-native'
 import { CartesianChart, Line, Bar, Area } from 'victory-native'
 import { useFont } from '@shopify/react-native-skia'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
+import { useTheme } from '@/lib/ThemeContext'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useBodyMeasurements } from '@/hooks/useBodyComposition'
@@ -11,7 +12,6 @@ import { useVolumeLandmarks } from '@/hooks/useVolumeLandmarks'
 import { useSettings } from '@/hooks/useSettings'
 import { navyBodyFat, bfCategory } from '@/lib/bodyFat'
 import { supabase } from '@/lib/supabase'
-import { colors } from '@/lib/theme'
 import { useRouter } from 'expo-router'
 import { LoadingScreen } from '@/components/LoadingScreen'
 
@@ -32,15 +32,16 @@ const TRAINING_ZONES = [
 ]
 
 const PERCENTAGES = [100, 95, 90, 85, 80, 75, 70, 65, 60, 55, 50]
-const SCREEN_W = Dimensions.get('window').width
 
 function e1rmCalc(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
 
 function SectionLabel({ children }: any) {
+  const { colors } = useTheme()
   return <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginBottom: 10, marginTop: 20 }}>{children}</Text>
 }
 
 function StatBox({ val, label, color, sub }: any) {
+  const { colors } = useTheme()
   return (
     <View style={{ borderRadius: 14, padding: 14, flex: 1, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
       <Text style={{ fontFamily: 'BebasNeue', fontSize: 30, letterSpacing: 1, color: color || colors.text, lineHeight: 32 }}>{val}</Text>
@@ -51,6 +52,7 @@ function StatBox({ val, label, color, sub }: any) {
 }
 
 function VolumeBar({ label, vol, pct, color }: { label: string; vol: number; pct: number; color: string }) {
+  const { colors } = useTheme()
   return (
     <View style={{ marginBottom: 14 }}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 }}>
@@ -68,6 +70,7 @@ function VolumeBar({ label, vol, pct, color }: { label: string; vol: number; pct
 
 // Simple heatmap grid - 26 weeks x 7 days
 function HeatmapGrid({ sessions }: { sessions: any[] }) {
+  const { colors } = useTheme()
   const sessionMap: Record<string, number> = {}
   sessions.forEach(s => { if (s.completed_at) sessionMap[s.date] = (sessionMap[s.date] || 0) + 1 })
 
@@ -87,6 +90,7 @@ function HeatmapGrid({ sessions }: { sessions: any[] }) {
   const weeks: typeof cells[] = []
   for (let i = 0; i < cells.length; i += 7) weeks.push(cells.slice(i, i + 7))
 
+  const { width: SCREEN_W } = useWindowDimensions()
   const cellSize = Math.floor((SCREEN_W - 48) / 27)
 
   return (
@@ -108,6 +112,7 @@ function HeatmapGrid({ sessions }: { sessions: any[] }) {
 }
 
 export default function ProgressScreen() {
+  const { colors } = useTheme()
   const { user } = useAuth()
   const { programData } = useActiveProgram()
   const { entries: bwEntries } = useBodyweight()
@@ -270,6 +275,7 @@ export default function ProgressScreen() {
   })
   const typeTotal = Object.values(byType).reduce((a, b) => a + b, 0)
 
+  const { width: SCREEN_W } = useWindowDimensions()
   const chartW = SCREEN_W - 32
   const chartH = 180
 

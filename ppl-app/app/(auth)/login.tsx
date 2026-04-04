@@ -4,11 +4,12 @@ import {
   Platform, ScrollView, ActivityIndicator, Image,
 } from 'react-native'
 import { useAuth } from '@/hooks/useAuth'
-import { colors } from '@/lib/theme'
+import { useTheme } from '@/lib/ThemeContext'
 
 type Mode = 'login' | 'signup' | 'reset'
 
 export default function LoginScreen() {
+  const { colors } = useTheme()
   const { signIn, signUp, resetPassword } = useAuth()
   const [mode, setMode] = useState<Mode>('login')
   const [email, setEmail] = useState('')
