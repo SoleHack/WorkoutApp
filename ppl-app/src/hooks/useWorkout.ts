@@ -1,4 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import { getLocalDate } from '@/lib/date'
@@ -18,6 +19,7 @@ export type SetsMap = Record<string, (LoggedSet | undefined)[]>
 
 export function useWorkout(dayKey: string) {
   const { user } = useAuth()
+  const qc = useQueryClient()
   const [session, setSession] = useState<any>(null)
   const [sets, setSets] = useState<SetsMap>({})
   const [loading, setLoading] = useState(false)
@@ -55,7 +57,10 @@ export function useWorkout(dayKey: string) {
 
     if (existing) {
       if (workoutId && !existing.workout_id) {
-        await supabase.from('workout_sessions').update({ workout_id: workoutId }).eq('id', existing.id)
+        await supabase
+          .from('workout_sessions')
+          .update({ workout_id: workoutId })
+          .eq('id', existing.id)
       }
       updateSession({ ...existing, workout_id: workoutId || existing.workout_id })
       const setsMap: SetsMap = {}
@@ -63,9 +68,14 @@ export function useWorkout(dayKey: string) {
         if (!setsMap[s.exercise_id]) setsMap[s.exercise_id] = []
         const idx = s.set_number > 0 ? s.set_number - 1 : Math.abs(s.set_number) - 1
         setsMap[s.exercise_id][idx] = {
-          id: s.id, weight: s.weight, reps: s.reps, completed: s.completed,
-          rpe: s.rpe, isWarmup: s.is_warmup,
-          durationSeconds: s.duration_seconds, distanceMeters: s.distance_meters,
+          id: s.id,
+          weight: s.weight,
+          reps: s.reps,
+          completed: s.completed,
+          rpe: s.rpe,
+          isWarmup: s.is_warmup,
+          durationSeconds: s.duration_seconds,
+          distanceMeters: s.distance_meters,
         }
       })
       updateSets(() => setsMap)
@@ -73,7 +83,12 @@ export function useWorkout(dayKey: string) {
       const { data: newSession, error: insertErr } = await supabase
         .from('workout_sessions')
         .upsert(
-          { user_id: user.id, day_key: dayKey, date: today, ...(workoutId ? { workout_id: workoutId } : {}) },
+          {
+            user_id: user.id,
+            day_key: dayKey,
+            date: today,
+            ...(workoutId ? { workout_id: workoutId } : {}),
+          },
           { onConflict: 'user_id,day_key,date' }
         )
         .select('id, day_key, date, user_id, workout_id')
@@ -110,14 +125,15 @@ export function useWorkout(dayKey: string) {
         return { ...prev, [exerciseId]: exSets }
       })
       if (existing?.id) {
-        await supabase.from('session_sets')
+        await supabase
+          .from('session_sets')
           .update({ completed: false, weight: null, reps: null, rpe: null })
           .eq('id', existing.id)
       }
       return
     }
 
-    // Optimistic update
+    // Optimistic update first — UI responds immediately
     updateSets(prev => {
       const exSets = [...(prev[exerciseId] || [])]
       exSets[idx] = { ...(existing || {}), weight, reps, completed: true, rpe, isWarmup, durationSeconds, distanceMeters }
@@ -160,7 +176,10 @@ export function useWorkout(dayKey: string) {
       completed_at: new Date().toISOString(),
       ...(durationSeconds ? { duration_seconds: durationSeconds } : {}),
     }).eq('id', currentSession.id)
-  }, [])
+
+    // Tell the Today screen to refetch — its recentSessions query is now stale
+    qc.invalidateQueries({ queryKey: ['recentSessions', user?.id] })
+  }, [user, qc])
 
   const cancelSession = useCallback(async () => {
     const currentSession = sessionRef.current
@@ -168,7 +187,10 @@ export function useWorkout(dayKey: string) {
     await supabase.from('workout_sessions').delete().eq('id', currentSession.id)
     updateSession(null)
     updateSets(() => ({}))
-  }, [])
+
+    // Clean up any stale session data from the Today screen cache
+    qc.invalidateQueries({ queryKey: ['recentSessions', user?.id] })
+  }, [user, qc])
 
   return { session, sets, loading, error, startSession, logSet, finishSession, cancelSession }
 }

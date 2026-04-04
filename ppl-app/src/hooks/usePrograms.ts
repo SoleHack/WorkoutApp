@@ -1,6 +1,9 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
+
+// ─── Types ────────────────────────────────────────────────────
 
 export interface Program {
   id: string
@@ -37,160 +40,6 @@ export interface Workout {
   user_id: string | null
 }
 
-// ─── Programs list + activation ──────────────────────────────
-export function usePrograms() {
-  const { user } = useAuth()
-  const [programs, setPrograms] = useState<Program[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-
-    const [{ data: progs }, { data: enrollment }] = await Promise.all([
-      supabase
-        .from('programs')
-        .select('id, name, split_type, description, is_default, user_id')
-        .or(`user_id.eq.${user.id},user_id.is.null`)
-        .order('is_default', { ascending: false })
-        .order('created_at', { ascending: true }),
-      supabase.from('user_programs').select('program_id').eq('user_id', user.id).maybeSingle(),
-    ])
-
-    setPrograms(progs || [])
-    setActiveId(enrollment?.program_id || null)
-    setLoading(false)
-  }, [user])
-
-  useEffect(() => { load() }, [load])
-
-  const activateProgram = useCallback(async (programId: string) => {
-    if (!user) return
-    await supabase.from('user_programs').upsert(
-      { user_id: user.id, program_id: programId, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
-    setActiveId(programId)
-  }, [user])
-
-  return { programs, activeId, loading, activateProgram, refresh: load }
-}
-
-// ─── Program editor (schedule + morning routine) ──────────────
-export function useProgramEditor(programId: string | null) {
-  const { user } = useAuth()
-  const [program, setProgram] = useState<Program | null>(null)
-  const [days, setDays] = useState<ProgramDay[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    if (!programId) return
-    setLoading(true)
-    const { data } = await supabase
-      .from('programs')
-      .select(`
-        id, name, split_type, description, is_default, user_id,
-        program_days(
-          id, day_index, is_rest, workout_id,
-          workout:workouts(id, name, slug, color, day_type, focus)
-        )
-      `)
-      .eq('id', programId)
-      .single()
-
-    if (data) {
-      setProgram({ id: data.id, name: data.name, split_type: data.split_type, description: data.description, is_default: data.is_default, user_id: data.user_id })
-      const mapped: ProgramDay[] = (data.program_days || [])
-        .sort((a: any, b: any) => a.day_index - b.day_index)
-        .map((d: any) => ({
-          id: d.id,
-          day_index: d.day_index,
-          is_rest: d.is_rest,
-          workout_id: d.workout_id,
-          // Supabase returns joined relation as array — take first element
-          workout: Array.isArray(d.workout) ? d.workout[0] ?? null : d.workout ?? null,
-        }))
-      setDays(mapped)
-    }
-    setLoading(false)
-  }, [programId])
-
-  useEffect(() => { load() }, [load])
-
-  const assignWorkout = useCallback(async (dayIndex: number, workoutId: string) => {
-    if (!programId || !program?.user_id) return // block edits on system programs
-    const existing = days.find(d => d.day_index === dayIndex)
-    if (existing) {
-      await supabase.from('program_days').update({ workout_id: workoutId, is_rest: false }).eq('id', existing.id)
-    } else {
-      await supabase.from('program_days').insert({ program_id: programId, day_index: dayIndex, workout_id: workoutId, is_rest: false })
-    }
-    await load()
-  }, [programId, program, days, load])
-
-  const setRestDay = useCallback(async (dayIndex: number, isRest: boolean) => {
-    if (!programId || !program?.user_id) return // block edits on system programs
-    const existing = days.find(d => d.day_index === dayIndex)
-    if (existing) {
-      await supabase.from('program_days').update({ is_rest: isRest, workout_id: isRest ? null : existing.workout_id }).eq('id', existing.id)
-    } else if (isRest) {
-      await supabase.from('program_days').insert({ program_id: programId, day_index: dayIndex, is_rest: true })
-    }
-    await load()
-  }, [programId, program, days, load])
-
-  const clearDay = useCallback(async (dayIndex: number) => {
-    if (!program?.user_id) return // block edits on system programs
-    const existing = days.find(d => d.day_index === dayIndex)
-    if (existing) {
-      await supabase.from('program_days').delete().eq('id', existing.id)
-      await load()
-    }
-  }, [program, days, load])
-
-  return { program, days, loading, assignWorkout, setRestDay, clearDay, refresh: load }
-}
-
-// ─── Workouts library ─────────────────────────────────────────
-export function useWorkouts() {
-  const { user } = useAuth()
-  const [workouts, setWorkouts] = useState<Workout[]>([])
-  const [loading, setLoading] = useState(true)
-
-  const load = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-    const { data } = await supabase
-      .from('workouts')
-      .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id')
-      .or(`user_id.eq.${user.id},user_id.is.null`)
-      .order('name', { ascending: true })
-    setWorkouts(data || [])
-    setLoading(false)
-  }, [user])
-
-  useEffect(() => { load() }, [load])
-
-  return { workouts, loading, refresh: load }
-}
-
-// ─── Morning routine ──────────────────────────────────────────
-export function useMorningRoutine() {
-  const { user } = useAuth()
-
-  const setMorningWorkout = useCallback(async (programId: string, workoutId: string | null) => {
-    if (!user) return
-    await supabase.from('user_programs').upsert(
-      { user_id: user.id, program_id: programId, morning_workout_id: workoutId, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id' }
-    )
-  }, [user])
-
-  return { setMorningWorkout }
-}
-
-// ─── Workout editor ───────────────────────────────────────────
 export interface WorkoutExercise {
   id: string
   exercise_id: string
@@ -200,67 +49,370 @@ export interface WorkoutExercise {
   tag: string
   notes: string | null
   order_index: number
-  exercise?: { id: string; name: string; category: string; slug: string }
+  exercise?: any
 }
+
+// ─── usePrograms ──────────────────────────────────────────────
+
+export function usePrograms() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['programs', user?.id],
+    queryFn: async () => {
+      const [{ data: progs }, { data: enrollment }] = await Promise.all([
+        supabase
+          .from('programs')
+          .select('id, name, split_type, description, is_default, user_id')
+          .or(`user_id.eq.${user!.id},user_id.is.null`)
+          .order('is_default', { ascending: false })
+          .order('created_at', { ascending: true }),
+        supabase
+          .from('user_programs')
+          .select('program_id')
+          .eq('user_id', user!.id)
+          .maybeSingle(),
+      ])
+      return {
+        programs: (progs || []) as Program[],
+        activeId: enrollment?.program_id || null,
+      }
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  const activateMutation = useMutation({
+    mutationFn: async (programId: string) => {
+      await supabase.from('user_programs').upsert(
+        { user_id: user!.id, program_id: programId, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id' }
+      )
+    },
+    onSuccess: (_, programId) => {
+      qc.setQueryData(['programs', user?.id], (old: any) =>
+        old ? { ...old, activeId: programId } : old
+      )
+      // Active program cache needs rebuilding
+      qc.invalidateQueries({ queryKey: ['activeProgram', user?.id] })
+    },
+    onError: () => {
+      qc.invalidateQueries({ queryKey: ['programs', user?.id] })
+    },
+  })
+
+  return {
+    programs: data?.programs || [],
+    activeId: data?.activeId || null,
+    loading: isLoading,
+    activateProgram: activateMutation.mutateAsync,
+    refresh: () => qc.invalidateQueries({ queryKey: ['programs', user?.id] }),
+  }
+}
+
+// ─── useProgramEditor ─────────────────────────────────────────
+
+export function useProgramEditor(programId: string | null) {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['programEditor', programId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('programs')
+        .select(`
+          id, name, split_type, description, is_default, user_id,
+          program_days(
+            id, day_index, is_rest, workout_id,
+            workout:workouts(id, name, slug, color, day_type, focus)
+          )
+        `)
+        .eq('id', programId!)
+        .single()
+
+      if (!data) return { program: null, days: [] }
+
+      const program: Program = {
+        id: data.id,
+        name: data.name,
+        split_type: data.split_type,
+        description: data.description,
+        is_default: data.is_default,
+        user_id: data.user_id,
+      }
+      const days: ProgramDay[] = (data.program_days || [])
+        .sort((a: any, b: any) => a.day_index - b.day_index)
+        .map((d: any) => ({
+          id: d.id,
+          day_index: d.day_index,
+          is_rest: d.is_rest,
+          workout_id: d.workout_id,
+          workout: Array.isArray(d.workout) ? d.workout[0] ?? null : d.workout ?? null,
+        }))
+
+      return { program, days }
+    },
+    enabled: !!programId,
+    staleTime: 1000 * 60 * 2,
+  })
+
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ['programEditor', programId] })
+
+  const assignWorkoutMutation = useMutation({
+    mutationFn: async ({ dayIndex, workoutId }: { dayIndex: number; workoutId: string }) => {
+      if (!data?.program?.user_id) return
+      const existing = data.days.find(d => d.day_index === dayIndex)
+      if (existing) {
+        await supabase
+          .from('program_days')
+          .update({ workout_id: workoutId, is_rest: false })
+          .eq('id', existing.id)
+      } else {
+        await supabase
+          .from('program_days')
+          .insert({ program_id: programId, day_index: dayIndex, workout_id: workoutId, is_rest: false })
+      }
+    },
+    onSettled: invalidate,
+  })
+
+  const setRestDayMutation = useMutation({
+    mutationFn: async ({ dayIndex, isRest }: { dayIndex: number; isRest: boolean }) => {
+      if (!data?.program?.user_id) return
+      const existing = data.days.find(d => d.day_index === dayIndex)
+      if (existing) {
+        await supabase
+          .from('program_days')
+          .update({ is_rest: isRest, workout_id: isRest ? null : existing.workout_id })
+          .eq('id', existing.id)
+      } else if (isRest) {
+        await supabase
+          .from('program_days')
+          .insert({ program_id: programId, day_index: dayIndex, is_rest: true })
+      }
+    },
+    onSettled: invalidate,
+  })
+
+  const clearDayMutation = useMutation({
+    mutationFn: async (dayIndex: number) => {
+      if (!data?.program?.user_id) return
+      const existing = data.days.find(d => d.day_index === dayIndex)
+      if (existing) {
+        await supabase.from('program_days').delete().eq('id', existing.id)
+      }
+    },
+    onSettled: invalidate,
+  })
+
+  return {
+    program: data?.program || null,
+    days: data?.days || [],
+    loading: isLoading,
+    assignWorkout: (dayIndex: number, workoutId: string) =>
+      assignWorkoutMutation.mutateAsync({ dayIndex, workoutId }),
+    setRestDay: (dayIndex: number, isRest: boolean) =>
+      setRestDayMutation.mutateAsync({ dayIndex, isRest }),
+    clearDay: clearDayMutation.mutateAsync,
+    refresh: invalidate,
+  }
+}
+
+// ─── useWorkouts ──────────────────────────────────────────────
+
+export function useWorkouts() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+
+  const { data: workouts = [], isLoading } = useQuery({
+    queryKey: ['workouts', user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('workouts')
+        .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id')
+        .or(`user_id.eq.${user!.id},user_id.is.null`)
+        .order('name', { ascending: true })
+      return (data || []) as Workout[]
+    },
+    enabled: !!user,
+    staleTime: 1000 * 60 * 5,
+  })
+
+  return {
+    workouts,
+    loading: isLoading,
+    refresh: () => qc.invalidateQueries({ queryKey: ['workouts', user?.id] }),
+  }
+}
+
+// ─── useMorningRoutine ────────────────────────────────────────
+// Mutation-only hook — no query needed
+
+export function useMorningRoutine() {
+  const { user } = useAuth()
+  const qc = useQueryClient()
+
+  const setMorningWorkout = useCallback(
+    async (programId: string, workoutId: string | null) => {
+      if (!user) return
+      await supabase.from('user_programs').upsert(
+        {
+          user_id: user.id,
+          program_id: programId,
+          morning_workout_id: workoutId,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'user_id' }
+      )
+      qc.invalidateQueries({ queryKey: ['activeProgram', user.id] })
+    },
+    [user]
+  )
+
+  return { setMorningWorkout }
+}
+
+// ─── useWorkoutEditor ─────────────────────────────────────────
+
+const WORKOUT_EXERCISE_SELECT = `
+  id, exercise_id, sets, reps, rest_seconds, tag, notes, order_index,
+  exercise:exercises(id, name, slug, muscles, secondary_muscles, category, video_url, coaching_notes)
+`
 
 export function useWorkoutEditor(workoutId: string | null) {
-  const { user } = useAuth()
-  const [workout, setWorkout] = useState<Workout | null>(null)
-  const [exercises, setExercises] = useState<WorkoutExercise[]>([])
-  const [loading, setLoading] = useState(true)
+  const qc = useQueryClient()
 
-  const load = useCallback(async () => {
-    if (!workoutId) return
-    setLoading(true)
-    const [{ data: w }, { data: exs }] = await Promise.all([
-      supabase.from('workouts').select('id, name, slug, color, day_type, focus, is_morning_routine, user_id').eq('id', workoutId).single(),
-      supabase.from('workout_exercises').select('id, exercise_id, sets, reps, rest_seconds, tag, notes, order_index, exercise:exercises(id, name, category, slug)').eq('workout_id', workoutId).order('order_index'),
-    ])
-    if (w) setWorkout(w)
-    setExercises((exs || []).map((e: any) => ({
-      ...e,
-      exercise: Array.isArray(e.exercise) ? e.exercise[0] ?? null : e.exercise ?? null,
-    })))
-    setLoading(false)
-  }, [workoutId])
+  const { data, isLoading } = useQuery({
+    queryKey: ['workoutEditor', workoutId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('workouts')
+        .select(`
+          id, name, slug, color, day_type, focus, is_morning_routine, user_id,
+          workout_exercises(${WORKOUT_EXERCISE_SELECT})
+        `)
+        .eq('id', workoutId!)
+        .single()
 
-  useEffect(() => { load() }, [load])
+      if (!data) return { workout: null, exercises: [] }
 
-  const updateWorkout = useCallback(async (updates: Partial<Pick<Workout, 'name' | 'color' | 'day_type' | 'focus'>>) => {
-    if (!workoutId || !workout?.user_id) return
-    await supabase.from('workouts').update(updates).eq('id', workoutId)
-    setWorkout(prev => prev ? { ...prev, ...updates } : prev)
-  }, [workoutId, workout])
+      const exercises: WorkoutExercise[] = (data.workout_exercises || [])
+        .sort((a: any, b: any) => a.order_index - b.order_index)
+        .map((we: any) => ({
+          id: we.id,
+          exercise_id: we.exercise_id,
+          sets: we.sets,
+          reps: we.reps,
+          rest_seconds: we.rest_seconds,
+          tag: we.tag,
+          notes: we.notes,
+          order_index: we.order_index,
+          exercise: Array.isArray(we.exercise) ? we.exercise[0] ?? null : we.exercise ?? null,
+        }))
 
-  const addExercise = useCallback(async (exerciseId: string, defaults: { sets: number; reps: string; rest_seconds: number; tag: string }) => {
-    if (!workoutId || !workout?.user_id) return
-    const nextIndex = exercises.length
-    const { data } = await supabase.from('workout_exercises')
-      .insert({ workout_id: workoutId, exercise_id: exerciseId, order_index: nextIndex, ...defaults })
-      .select('id, exercise_id, sets, reps, rest_seconds, tag, notes, order_index, exercise:exercises(id, name, category, slug)')
-      .single()
-    if (data) {
-      const mapped = { ...data, exercise: Array.isArray(data.exercise) ? data.exercise[0] ?? null : data.exercise ?? null }
-      setExercises(prev => [...prev, mapped])
-    }
-  }, [workoutId, workout, exercises])
+      return { workout: data as Workout, exercises }
+    },
+    enabled: !!workoutId,
+    staleTime: 1000 * 60 * 2,
+  })
 
-  const updateExercise = useCallback(async (weId: string, updates: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'rest_seconds' | 'tag' | 'notes'>>) => {
-    if (!workout?.user_id) return
-    await supabase.from('workout_exercises').update(updates).eq('id', weId)
-    setExercises(prev => prev.map(e => e.id === weId ? { ...e, ...updates } : e))
-  }, [workout])
+  const invalidate = () =>
+    qc.invalidateQueries({ queryKey: ['workoutEditor', workoutId] })
 
-  const removeExercise = useCallback(async (weId: string) => {
-    if (!workout?.user_id) return
-    await supabase.from('workout_exercises').delete().eq('id', weId)
-    setExercises(prev => prev.filter(e => e.id !== weId))
-  }, [workout])
+  const updateWorkoutMutation = useMutation({
+    mutationFn: async (updates: Partial<Pick<Workout, 'name' | 'color' | 'day_type' | 'focus'>>) => {
+      if (!data?.workout?.user_id) return
+      await supabase.from('workouts').update(updates).eq('id', workoutId!)
+    },
+    onSettled: invalidate,
+  })
 
-  return { workout, exercises, loading, updateWorkout, addExercise, updateExercise, removeExercise, refresh: load }
+  const addExerciseMutation = useMutation({
+    mutationFn: async ({
+      exerciseId,
+      defaults,
+    }: {
+      exerciseId: string
+      defaults?: { sets?: number; reps?: string; rest_seconds?: number; tag?: string }
+    }) => {
+      if (!data?.workout?.user_id) return
+      const nextOrder = (data?.exercises || []).length
+      await supabase.from('workout_exercises').insert({
+        workout_id: workoutId,
+        exercise_id: exerciseId,
+        sets: defaults?.sets || 3,
+        reps: defaults?.reps || '8-12',
+        rest_seconds: defaults?.rest_seconds || 90,
+        tag: defaults?.tag || 'iso',
+        notes: null,
+        order_index: nextOrder,
+      })
+    },
+    onSettled: invalidate,
+  })
+
+  const updateExerciseMutation = useMutation({
+    mutationFn: async ({
+      weId,
+      updates,
+    }: {
+      weId: string
+      updates: Partial<Pick<WorkoutExercise, 'sets' | 'reps' | 'rest_seconds' | 'tag' | 'notes'>>
+    }) => {
+      if (!data?.workout?.user_id) return
+      await supabase.from('workout_exercises').update(updates).eq('id', weId)
+    },
+    onMutate: async ({ weId, updates }) => {
+      // Optimistic update
+      qc.setQueryData(['workoutEditor', workoutId], (old: any) =>
+        old
+          ? {
+              ...old,
+              exercises: old.exercises.map((e: WorkoutExercise) =>
+                e.id === weId ? { ...e, ...updates } : e
+              ),
+            }
+          : old
+      )
+    },
+    onError: () => invalidate(),
+  })
+
+  const removeExerciseMutation = useMutation({
+    mutationFn: async (weId: string) => {
+      if (!data?.workout?.user_id) return
+      await supabase.from('workout_exercises').delete().eq('id', weId)
+    },
+    onMutate: async (weId) => {
+      // Optimistic removal
+      qc.setQueryData(['workoutEditor', workoutId], (old: any) =>
+        old
+          ? { ...old, exercises: old.exercises.filter((e: WorkoutExercise) => e.id !== weId) }
+          : old
+      )
+    },
+    onError: () => invalidate(),
+  })
+
+  return {
+    workout: data?.workout || null,
+    exercises: data?.exercises || [],
+    loading: isLoading,
+    updateWorkout: updateWorkoutMutation.mutateAsync,
+    addExercise: (exerciseId: string, defaults?: any) =>
+      addExerciseMutation.mutateAsync({ exerciseId, defaults }),
+    updateExercise: (weId: string, updates: any) =>
+      updateExerciseMutation.mutateAsync({ weId, updates }),
+    removeExercise: removeExerciseMutation.mutateAsync,
+    refresh: invalidate,
+  }
 }
 
-// ─── Exercise library ─────────────────────────────────────────
+// ─── useExerciseLibrary ───────────────────────────────────────
+
 export interface ExerciseLib {
   id: string
   name: string
@@ -270,49 +422,100 @@ export interface ExerciseLib {
 }
 
 export function useExerciseLibrary() {
-  const [exercises, setExercises] = useState<ExerciseLib[]>([])
-  const [loading, setLoading] = useState(true)
+  const { data: exercises = [], isLoading } = useQuery({
+    queryKey: ['exercises'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('exercises')
+        .select('id, name, category, slug, tags')
+        .order('name')
+      return (data || []) as ExerciseLib[]
+    },
+    staleTime: Infinity, // exercise list never changes during a session
+  })
 
-  useEffect(() => {
-    supabase.from('exercises').select('id, name, category, slug, tags').order('name').then(({ data }) => {
-      setExercises(data || [])
-      setLoading(false)
-    })
-  }, [])
-
-  return { exercises, loading }
+  return { exercises, loading: isLoading }
 }
 
-// ─── Create / clone workouts ──────────────────────────────────
+// ─── useWorkoutActions ────────────────────────────────────────
+
 export function useWorkoutActions() {
   const { user } = useAuth()
+  const qc = useQueryClient()
 
-  const createWorkout = useCallback(async (fields: { name: string; day_type: string; color: string }) => {
-    if (!user) return null
-    const slug = fields.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now()
-    const { data, error } = await supabase.from('workouts')
-      .insert({ ...fields, slug, user_id: user.id, focus: null, is_morning_routine: false })
-      .select().single()
-    return error ? null : data
-  }, [user])
+  const invalidateWorkouts = () =>
+    qc.invalidateQueries({ queryKey: ['workouts', user?.id] })
 
-  const cloneWorkout = useCallback(async (workoutId: string, baseName: string) => {
-    if (!user) return null
-    // Clone workout row
-    const newSlug = baseName.toLowerCase().replace(/\s+/g, '-') + '-copy-' + Date.now()
-    const { data: src } = await supabase.from('workouts').select('name, day_type, color, focus, is_morning_routine').eq('id', workoutId).single()
-    if (!src) return null
-    const { data: newW } = await supabase.from('workouts')
-      .insert({ ...src, name: src.name + ' (copy)', slug: newSlug, user_id: user.id })
-      .select().single()
-    if (!newW) return null
-    // Clone exercises
-    const { data: exs } = await supabase.from('workout_exercises').select('exercise_id, sets, reps, rest_seconds, tag, notes, order_index').eq('workout_id', workoutId)
-    if (exs?.length) {
-      await supabase.from('workout_exercises').insert(exs.map(e => ({ ...e, workout_id: newW.id })))
-    }
-    return newW
-  }, [user])
+  const createWorkout = useCallback(
+    async (fields: { name: string; day_type: string; color: string }) => {
+      if (!user) return null
+      const slug =
+        fields.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') +
+        '-' +
+        Date.now()
+      const { data, error } = await supabase
+        .from('workouts')
+        .insert({ ...fields, slug, user_id: user.id, focus: null, is_morning_routine: false })
+        .select()
+        .single()
+      if (!error) invalidateWorkouts()
+      return error ? null : data
+    },
+    [user]
+  )
+
+  const cloneWorkout = useCallback(
+    async (workoutId: string, name: string) => {
+      if (!user) return null
+
+      // Fetch source workout + exercises
+      const { data: source } = await supabase
+        .from('workouts')
+        .select('*, workout_exercises(exercise_id, sets, reps, rest_seconds, tag, notes, order_index)')
+        .eq('id', workoutId)
+        .single()
+
+      if (!source) return null
+
+      const slug =
+        name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') + '-' + Date.now()
+
+      const { data: newWorkout, error } = await supabase
+        .from('workouts')
+        .insert({
+          name,
+          slug,
+          color: source.color,
+          day_type: source.day_type,
+          focus: source.focus,
+          is_morning_routine: false,
+          user_id: user.id,
+        })
+        .select()
+        .single()
+
+      if (error || !newWorkout) return null
+
+      if (source.workout_exercises?.length) {
+        await supabase.from('workout_exercises').insert(
+          source.workout_exercises.map((we: any) => ({
+            workout_id: newWorkout.id,
+            exercise_id: we.exercise_id,
+            sets: we.sets,
+            reps: we.reps,
+            rest_seconds: we.rest_seconds,
+            tag: we.tag,
+            notes: we.notes,
+            order_index: we.order_index,
+          }))
+        )
+      }
+
+      invalidateWorkouts()
+      return newWorkout
+    },
+    [user]
+  )
 
   return { createWorkout, cloneWorkout }
 }

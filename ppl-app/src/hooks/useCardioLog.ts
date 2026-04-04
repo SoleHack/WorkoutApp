@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from './useAuth'
 import { getLocalDate } from '@/lib/date'
@@ -16,104 +16,164 @@ export const CARDIO_EXERCISES = [
   { slug: 'outdoor-run',    name: 'Outdoor Run',    icon: '🌿', metric: 'duration+distance' },
 ]
 
+// ─── Fetch helpers ────────────────────────────────────────────
+
+async function fetchCardioExerciseIds(): Promise<Record<string, string>> {
+  const { data } = await supabase
+    .from('exercises')
+    .select('id, slug')
+    .in('slug', CARDIO_EXERCISES.map(e => e.slug))
+  const map: Record<string, string> = {}
+  data?.forEach(e => { map[e.id] = e.slug })
+  return map
+}
+
+async function fetchCardioLogs(userId: string) {
+  const today = getLocalDate()
+  const { data } = await supabase
+    .from('workout_sessions')
+    .select('id, date, day_key, session_sets(id, exercise_id, duration_seconds, distance_meters, completed)')
+    .eq('user_id', userId)
+    .eq('day_key', 'cardio')
+    .gte('date', today)
+    .order('date', { ascending: false })
+    .limit(10)
+  return data || []
+}
+
+// ─── Hook ─────────────────────────────────────────────────────
+
 export function useCardioLog() {
   const { user } = useAuth()
-  const [recentLogs, setRecentLogs] = useState<any[]>([])
-  const [idToSlugMap, setIdToSlugMap] = useState<Record<string, string>>({})
-  const [loading, setLoading] = useState(false)
+  const qc = useQueryClient()
 
-  const loadLogs = useCallback(async () => {
-    if (!user) return
-    setLoading(true)
-    const today = getLocalDate()
+  // Static exercise ID map — fetched once and cached forever
+  const { data: idToSlugMap = {} } = useQuery({
+    queryKey: ['cardioExerciseIds'],
+    queryFn: fetchCardioExerciseIds,
+    staleTime: Infinity,
+  })
 
-    // Load exercise ID → slug map
-    const { data: exData } = await supabase
-      .from('exercises')
-      .select('id, slug')
-      .in('slug', CARDIO_EXERCISES.map(e => e.slug))
+  // Recent cardio logs for today
+  const { data: recentLogs = [], isLoading } = useQuery({
+    queryKey: ['cardioLogs', user?.id],
+    queryFn: () => fetchCardioLogs(user!.id),
+    enabled: !!user,
+    staleTime: 1000 * 60 * 2,
+  })
 
-    const map: Record<string, string> = {}
-    exData?.forEach(e => { map[e.id] = e.slug })
-    setIdToSlugMap(map)
+  const invalidateLogs = () =>
+    qc.invalidateQueries({ queryKey: ['cardioLogs', user?.id] })
 
-    // Load recent cardio sessions
-    const { data } = await supabase
-      .from('workout_sessions')
-      .select('id, date, day_key, session_sets(id, exercise_id, duration_seconds, distance_meters, completed)')
-      .eq('user_id', user.id)
-      .eq('day_key', 'cardio')
-      .gte('date', today)
-      .order('date', { ascending: false })
-      .limit(10)
+  // ── Log a new cardio set ──────────────────────────────────
+  const logCardioMutation = useMutation({
+    mutationFn: async ({
+      slug,
+      durationMinutes,
+      distanceMiles,
+    }: {
+      slug: string
+      durationMinutes: string
+      distanceMiles: string
+    }) => {
+      const today = getLocalDate()
 
-    setRecentLogs(data || [])
-    setLoading(false)
-  }, [user])
-
-  useEffect(() => { loadLogs() }, [loadLogs])
-
-  const logCardio = useCallback(async ({
-    slug, durationMinutes, distanceMiles
-  }: { slug: string; durationMinutes: string; distanceMiles: string }) => {
-    if (!user) return
-    const today = getLocalDate()
-
-    // Get or create cardio session for today
-    let { data: session } = await supabase
-      .from('workout_sessions')
-      .select('id')
-      .eq('user_id', user.id)
-      .eq('day_key', 'cardio')
-      .eq('date', today)
-      .maybeSingle()
-
-    if (!session) {
-      const { data: newSession } = await supabase
+      // Get or create today's cardio session
+      let { data: session } = await supabase
         .from('workout_sessions')
-        .insert({ user_id: user.id, day_key: 'cardio', date: today, completed_at: new Date().toISOString() })
         .select('id')
+        .eq('user_id', user!.id)
+        .eq('day_key', 'cardio')
+        .eq('date', today)
+        .maybeSingle()
+
+      if (!session) {
+        const { data: newSession } = await supabase
+          .from('workout_sessions')
+          .insert({
+            user_id: user!.id,
+            day_key: 'cardio',
+            date: today,
+            completed_at: new Date().toISOString(),
+          })
+          .select('id')
+          .single()
+        session = newSession
+      }
+
+      const { data: exData } = await supabase
+        .from('exercises')
+        .select('id')
+        .eq('slug', slug)
         .single()
-      session = newSession
-    }
 
-    // Get exercise ID
-    const { data: exData } = await supabase
-      .from('exercises')
-      .select('id')
-      .eq('slug', slug)
-      .single()
+      if (!exData || !session) throw new Error('Exercise or session not found')
 
-    if (!exData || !session) return
+      const durationSeconds = durationMinutes
+        ? Math.round(parseFloat(durationMinutes) * 60)
+        : null
+      const distanceMeters = distanceMiles
+        ? Math.round(parseFloat(distanceMiles) * 1609.34)
+        : null
 
-    const durationSeconds = durationMinutes ? Math.round(parseFloat(durationMinutes) * 60) : null
-    const distanceMeters = distanceMiles ? Math.round(parseFloat(distanceMiles) * 1609.34) : null
+      await supabase.from('session_sets').insert({
+        session_id: session.id,
+        exercise_id: exData.id,
+        set_number: 1,
+        weight: 0,
+        reps: 0,
+        completed: true,
+        duration_seconds: durationSeconds,
+        distance_meters: distanceMeters,
+      })
+    },
+    onSettled: invalidateLogs,
+  })
 
-    await supabase.from('session_sets').insert({
-      session_id: session.id,
-      exercise_id: exData.id,
-      set_number: 1,
-      weight: 0,
-      reps: 0,
-      completed: true,
-      duration_seconds: durationSeconds,
-      distance_meters: distanceMeters,
-    })
+  // ── Update a cardio set ───────────────────────────────────
+  const updateCardioSetMutation = useMutation({
+    mutationFn: async ({
+      setId,
+      durationMinutes,
+      distanceMiles,
+    }: {
+      setId: string
+      durationMinutes: string
+      distanceMiles: string
+    }) => {
+      const durationSeconds = durationMinutes
+        ? Math.round(parseFloat(durationMinutes) * 60)
+        : null
+      const distanceMeters = distanceMiles
+        ? Math.round(parseFloat(distanceMiles) * 1609.34)
+        : null
+      await supabase
+        .from('session_sets')
+        .update({ duration_seconds: durationSeconds, distance_meters: distanceMeters })
+        .eq('id', setId)
+    },
+    onSettled: invalidateLogs,
+  })
 
-    await loadLogs()
-  }, [user, loadLogs])
+  // ── Delete a cardio set ───────────────────────────────────
+  const deleteCardioSetMutation = useMutation({
+    mutationFn: async (setId: string) => {
+      await supabase.from('session_sets').delete().eq('id', setId)
+    },
+    onSettled: invalidateLogs,
+  })
 
-  const updateCardioSet = useCallback(async (setId: string, { durationMinutes, distanceMiles }: any) => {
-    const durationSeconds = durationMinutes ? Math.round(parseFloat(durationMinutes) * 60) : null
-    const distanceMeters = distanceMiles ? Math.round(parseFloat(distanceMiles) * 1609.34) : null
-    await supabase.from('session_sets').update({ duration_seconds: durationSeconds, distance_meters: distanceMeters }).eq('id', setId)
-    await loadLogs()
-  }, [loadLogs])
-
-  const deleteCardioSet = useCallback(async (setId: string) => {
-    await supabase.from('session_sets').delete().eq('id', setId)
-    await loadLogs()
-  }, [loadLogs])
-
-  return { recentLogs, idToSlugMap, loading, logCardio, updateCardioSet, deleteCardioSet, refresh: loadLogs }
+  return {
+    recentLogs,
+    idToSlugMap,
+    loading: isLoading,
+    logCardio: logCardioMutation.mutateAsync,
+    // Preserve original (setId, { durationMinutes, distanceMiles }) signature
+    updateCardioSet: (
+      setId: string,
+      opts: { durationMinutes: string; distanceMiles: string }
+    ) => updateCardioSetMutation.mutateAsync({ setId, ...opts }),
+    deleteCardioSet: deleteCardioSetMutation.mutateAsync,
+    refresh: invalidateLogs,
+  }
 }
