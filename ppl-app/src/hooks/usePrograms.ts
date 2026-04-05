@@ -260,7 +260,7 @@ export function useWorkouts() {
         : `user_id.eq.${user!.id},user_id.is.null`
       const { data } = await supabase
         .from('workouts')
-        .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id')
+        .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id').eq('is_archived', false)
         .or(orFilter)
         .order('name', { ascending: true })
       return (data || []) as Workout[]
