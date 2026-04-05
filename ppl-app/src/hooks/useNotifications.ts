@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Platform } from 'react-native'
 import * as Notifications from 'expo-notifications'
+import { supabase } from '@/lib/supabase'
 import { storage } from '@/lib/storage'
 
 // ─── Storage keys ─────────────────────────────────────────────
@@ -59,6 +60,22 @@ export function useNotifications() {
     const granted = status === 'granted'
     setPermissionGranted(granted)
     return granted
+  }, [])
+
+  // Register push token and save to user_settings
+  const registerPushToken = useCallback(async (userId: string) => {
+    try {
+      const token = await Notifications.getExpoPushTokenAsync({
+        projectId: 'bb56aa8b-9d59-40da-a6f3-61139d97f6e8',
+      })
+      if (token?.data) {
+        await supabase
+          .from('user_settings')
+          .upsert({ user_id: userId, push_token: token.data, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+      }
+    } catch (e) {
+      // Simulator or permissions denied — silently ignore
+    }
   }, [])
 
   // ── Schedule / cancel workout reminder ────────────────────
@@ -189,6 +206,7 @@ export function useNotifications() {
   return {
     permissionGranted,
     requestPermissions,
+    registerPushToken,
     reminderEnabled,
     reminderHour,
     reminderMinute,

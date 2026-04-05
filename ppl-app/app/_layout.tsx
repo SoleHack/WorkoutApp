@@ -10,6 +10,7 @@ import { AuthProvider, useAuth } from '@/hooks/useAuth'
 import { QueryProvider } from '@/lib/queryClient'
 import { ThemeProvider, useTheme } from '@/lib/ThemeContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
+import { useNotifications } from '@/hooks/useNotifications'
 import { OfflineBanner } from '@/components/OfflineBanner'
 
 SplashScreen.preventAutoHideAsync()
@@ -18,6 +19,7 @@ function AuthGate() {
   const { session, loading } = useAuth()
   const segments = useSegments()
   const router = useRouter()
+  const { registerPushToken } = useNotifications()
 
   useEffect(() => {
     if (loading) return
@@ -26,6 +28,10 @@ function AuthGate() {
       router.replace('/(auth)/login')
     } else if (session && inAuth) {
       router.replace('/(tabs)')
+    }
+    // Register push token whenever we have a session
+    if (session?.user?.id) {
+      registerPushToken(session.user.id)
     }
   }, [session, loading, segments])
 
