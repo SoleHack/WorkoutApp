@@ -233,6 +233,7 @@ export default function ProgressScreen() {
   const [calcFormula, setCalcFormula] = useState<'epley' | 'brzycki' | 'lander'>('epley')
   const [showCalcInfo, setShowCalcInfo] = useState(false)
   const [showPrPicker, setShowPrPicker] = useState(false)
+  const [historySearch, setHistorySearch] = useState('')
   const [calcBarWeight, setCalcBarWeight] = useState('')
   const [calcBarType, setCalcBarType]     = useState<'standard' | 'ez' | 'hex'>('standard')
   const [bwRange, setBwRange] = useState(30)
@@ -629,7 +630,20 @@ export default function ProgressScreen() {
               <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1 }}>NO HISTORY YET</Text>
             </View>
           ) : (
-            completed.map((s: any) => {
+            <>
+              <TextInput
+                style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontFamily: 'DMSans', fontSize: 14, color: colors.text, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}
+                placeholder="Search workouts..."
+                placeholderTextColor={colors.muted}
+                value={historySearch}
+                onChangeText={setHistorySearch}
+              />
+              {completed.filter((s: any) => {
+                if (!historySearch.trim()) return true
+                const q = historySearch.toLowerCase()
+                const label = PROGRAM[s.day_key]?.label || s.day_key || ''
+                return label.toLowerCase().includes(q) || s.date.includes(q) || s.notes?.toLowerCase().includes(q)
+              }).map((s: any) => {
               const isCardio = s.day_key === 'cardio'
               const workout  = isCardio ? null : PROGRAM[s.day_key]
               const dayColor = workout?.color || (isCardio ? colors.pull : colors.muted)
@@ -666,7 +680,8 @@ export default function ProgressScreen() {
                   </View>
                 </TouchableOpacity>
               )
-            })
+            })}
+            </>
           )
         )}
 

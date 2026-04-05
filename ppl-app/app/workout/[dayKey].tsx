@@ -199,7 +199,7 @@ export default function WorkoutScreen() {
               <Text style={{ fontSize: 14 }}>📝</Text>
             </TouchableOpacity>
             {allDone && (
-              <TouchableOpacity onPress={async () => { setFinishing(true); await finishSession(elapsed); router.back() }} disabled={finishing}
+              <TouchableOpacity onPress={async () => { setFinishing(true); await finishSession(elapsed); await handleWorkoutComplete(); router.back() }} disabled={finishing}
                 style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.legs }}>
                 <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.bg }}>{finishing ? '...' : 'Finish ✓'}</Text>
               </TouchableOpacity>
@@ -602,7 +602,7 @@ export default function WorkoutScreen() {
               <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.legs, letterSpacing: 1 }}>💪 ALL SETS COMPLETE!</Text>
               <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 4 }}>Add any notes, then finish your session.</Text>
             </View>
-            <TouchableOpacity onPress={async () => { setFinishing(true); await finishSession(elapsed); router.back() }} disabled={finishing}
+            <TouchableOpacity onPress={async () => { setFinishing(true); await finishSession(elapsed); await handleWorkoutComplete(); router.back() }} disabled={finishing}
               style={{ borderRadius: 16, paddingVertical: 20, alignItems: 'center', marginBottom: 12, backgroundColor: colors.legs }}>
               <Text style={{ fontFamily: 'BebasNeue', fontSize: 24, color: colors.bg, letterSpacing: 2 }}>{finishing ? 'SAVING...' : '✓ FINISH WORKOUT'}</Text>
               <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.bg, opacity: 0.8, marginTop: 2 }}>

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Switch, Alert, Modal, KeyboardAvoidingView, Platform,
-  Image, ActivityIndicator, Dimensions,
+  Image, ActivityIndicator, Dimensions, Share,
 } from 'react-native'
 import { useAuth } from '@/hooks/useAuth'
 import { useSettings } from '@/hooks/useSettings'
@@ -12,6 +12,7 @@ import { useHealthKit } from '@/hooks/useHealthKit'
 import { useNotifications } from '@/hooks/useNotifications'
 import { navyBodyFat, bfCategory, leanMass } from '@/lib/bodyFat'
 import { useTheme } from '@/lib/ThemeContext'
+import { supabase } from '@/lib/supabase'
 
 // ─── Measurement field definitions (matching DB columns) ──────
 const MEASUREMENT_FIELDS = [
@@ -497,8 +498,17 @@ export default function SettingsScreen() {
           <Row label="Weight Unit">
             <SegmentControl options={['lbs', 'kg']} value={wu} onChange={v => save({ weightUnit: v as 'lbs' | 'kg' })} />
           </Row>
-          <Row label="Theme" last>
+          <Row label="Theme">
             <SegmentControl options={['dark', 'light']} value={theme} onChange={v => { const t = v as 'dark' | 'light'; setTheme(t); save({ theme: t }) }} />
+          </Row>
+          <Row label="Apple Health" sublabel={hkEnabled ? "Bodyweight syncing ✓" : Platform.OS === 'ios' ? "Sync bodyweight to & from Health" : "iOS only"} last>
+            <Switch
+              value={hkEnabled}
+              onValueChange={Platform.OS === 'ios' ? setHkEnabled : undefined}
+              disabled={Platform.OS !== 'ios'}
+              trackColor={{ false: colors.border, true: colors.legs }}
+              thumbColor={colors.bg}
+            />
           </Row>
         </Section>
 
@@ -565,7 +575,7 @@ export default function SettingsScreen() {
             />
           </Row>
           {reminderEnabled && (
-            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 14 }}>
               <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 10 }}>REMINDER TIME</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                 {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(h => {
@@ -618,6 +628,34 @@ export default function SettingsScreen() {
         <Section title="ACCOUNT">
           <Row label="Email" sublabel={user?.email} last />
         </Section>
+
+        {/* ── Export ── */}
+        <TouchableOpacity
+          onPress={async () => {
+            try {
+              const { data } = await supabase
+                .from('workout_sessions')
+                .select('date, day_key, duration_seconds, completed_at, session_sets(exercise_id, set_number, weight, reps, rpe, completed, is_warmup)')
+                .eq('user_id', user!.id)
+                .not('completed_at', 'is', null)
+                .order('date', { ascending: false })
+                .limit(500)
+              if (!data?.length) { Alert.alert('No data to export'); return }
+              const rows = ['Date,Workout,Duration(min),Exercise,Set,Weight(lbs),Reps,RPE,IsWarmup']
+              data.forEach((s: any) => {
+                const dur = s.duration_seconds ? Math.round(s.duration_seconds / 60) : ''
+                ;(s.session_sets || []).filter((x: any) => x.completed).forEach((x: any) => {
+                  rows.push([s.date, s.day_key, dur, x.exercise_id, x.set_number, x.weight || 0, x.reps || 0, x.rpe || '', x.is_warmup ? 1 : 0].join(','))
+                })
+              })
+              await Share.share({ message: rows.join('\n'), title: 'PPL Tracker Export' })
+            } catch (e) {
+              Alert.alert('Export failed', 'Please try again.')
+            }
+          }}
+          style={{ borderRadius: 16, paddingVertical: 16, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}>
+          <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>Export Workout Data (CSV)</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           onPress={() => Alert.alert('Sign Out', 'Are you sure?', [

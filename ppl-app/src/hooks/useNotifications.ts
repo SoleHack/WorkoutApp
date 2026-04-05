@@ -84,13 +84,19 @@ export function useNotifications() {
   }, [])
 
   // ── Schedule streak alert (daily at 8pm) ──────────────────
-  const scheduleStreakAlert = useCallback(async () => {
+  const scheduleStreakAlert = useCallback(async (currentStreak = 1) => {
     await Notifications.cancelScheduledNotificationAsync(NOTIF_IDS.streak).catch(() => {})
+    if (currentStreak <= 0) return // no streak to protect
+    const streakMsg = currentStreak >= 7
+      ? `Your ${currentStreak}-day streak is on the line! 🔥`
+      : currentStreak >= 3
+      ? `${currentStreak} days strong — don't stop now!`
+      : "You haven't logged a workout today. Keep it going!"
     await Notifications.scheduleNotificationAsync({
       identifier: NOTIF_IDS.streak,
       content: {
         title: "Streak at risk 🔥",
-        body:  "You haven't logged a workout today. Don't break your streak!",
+        body:  streakMsg,
         sound: true,
       },
       trigger: {

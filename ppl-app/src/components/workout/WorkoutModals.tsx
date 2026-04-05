@@ -131,7 +131,7 @@ export function NotesModal({ visible, note, onChange, onClose }: NotesModalProps
 // ─── ExerciseVideoPlayer ──────────────────────────────────────
 
 export function ExerciseVideoPlayer({ videoUrl }: { videoUrl: string }) {
-  const player = useVideoPlayer(videoUrl, p => { p.loop = true })
+  const player = useVideoPlayer(videoUrl, p => { p.loop = true; p.play() })
   return (
     <View style={{ marginBottom: 20, borderRadius: 14, overflow: 'hidden', backgroundColor: '#000' }}>
       <VideoView

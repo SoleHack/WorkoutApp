@@ -6,6 +6,8 @@
 	<string>Read your bodyweight from Apple Health to track progress.</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>Write your bodyweight to Apple Health when you log it.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>CFBundleDevelopmentRegion</key>
