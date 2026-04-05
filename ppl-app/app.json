@@ -19,6 +19,7 @@
       "supportsTablet": false,
       "bundleIdentifier": "com.solehack.ppltracker",
       "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false,
         "NSCameraUsageDescription": "Take progress photos to track your physique over time.",
         "NSPhotoLibraryUsageDescription": "Choose photos from your library for progress tracking.",
         "NSPhotoLibraryAddUsageDescription": "Save progress photos to your library."

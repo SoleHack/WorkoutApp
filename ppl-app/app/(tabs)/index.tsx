@@ -4,6 +4,7 @@ import {
   TextInput, Modal, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
+import Svg, { Polyline } from 'react-native-svg'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
@@ -182,14 +183,20 @@ export default function TodayScreen() {
   const router = useRouter()
   const { user } = useAuth()
   const { programData, loading: programLoading } = useActiveProgram()
-  const { latest: bwLatest, change: bwChange, logWeight } = useBodyweight()
+  const { entries: bwEntries, latest: bwLatest, change: bwChange, logWeight } = useBodyweight()
   const { settings } = useSettings()
   const { recentLogs, idToSlugMap, logCardio, updateCardioSet, deleteCardioSet } = useCardioLog()
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
+  const _storedRestDate = storage.getString('ppl_rest_override')
+  const _todayForRest = getLocalDate()
+  // Clear stale rest override from a previous day
+  if (_storedRestDate && _storedRestDate !== _todayForRest) {
+    storage.remove('ppl_rest_override')
+  }
   const [restDayOverride, setRestDayOverride] = useState(
-    storage.getString('ppl_rest_override') === getLocalDate()
+    _storedRestDate === _todayForRest
   )
 
   const today        = new Date()
@@ -225,14 +232,34 @@ export default function TodayScreen() {
   useFocusEffect(useCallback(() => {
     if (user) refetch()
   }, [user, refetch]))
-  const handleRestDay = () => {
-    storage.set('ppl_rest_override', getLocalDate())
+  const handleRestDay = async () => {
+    const d = getLocalDate()
+    storage.set('ppl_rest_override', d)
     setRestDayOverride(true)
+    // Record the rest day as a session so it appears in history
+    if (user) {
+      await supabase.from('workout_sessions').upsert({
+        user_id: user.id,
+        day_key: 'rest',
+        date: d,
+        completed_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,date,day_key' })
+      refetch()
+    }
   }
 
-  const handleUndoRest = () => {
+  const handleUndoRest = async () => {
     storage.remove('ppl_rest_override')
     setRestDayOverride(false)
+    // Remove the rest day session record
+    if (user) {
+      await supabase.from('workout_sessions')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('day_key', 'rest')
+        .eq('date', getLocalDate())
+      refetch()
+    }
   }
 
   const sessions = recentSessions as any[]
@@ -283,6 +310,23 @@ export default function TodayScreen() {
   const bwDisplay = bwLatest
     ? wu === 'kg' ? (bwLatest.weight * 0.453592).toFixed(1) : bwLatest.weight.toString()
     : null
+
+  // 7-day sparkline points
+  const sparkPoints = (() => {
+    const recent = (bwEntries as any[]).slice(-7)
+    if (recent.length < 2) return null
+    const W = 60, H = 28
+    const weights = recent.map((e: any) => wu === 'kg' ? e.weight * 0.453592 : e.weight)
+    const min = Math.min(...weights)
+    const max = Math.max(...weights)
+    const range = max - min || 1
+    return recent.map((e: any, i: number) => {
+      const w = wu === 'kg' ? e.weight * 0.453592 : e.weight
+      const x = (i / (recent.length - 1)) * W
+      const y = H - ((w - min) / range) * H
+      return `${x},${y}`
+    }).join(' ')
+  })()
 
   // ── Week day status ────────────────────────────────────────
   const getWeekStatus = (jsDayIdx: number): string => {
@@ -413,12 +457,28 @@ export default function TodayScreen() {
           {/* Bodyweight */}
           <TouchableOpacity onPress={() => setShowWeightModal(true)}
             style={{ flex: 1, borderRadius: 16, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 1, lineHeight: 34 }}>
-              {bwDisplay || '—'}
-            </Text>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginTop: 2 }}>
-              {wu.toUpperCase()}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 1, lineHeight: 34 }}>
+                  {bwDisplay || '—'}
+                </Text>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginTop: 2 }}>
+                  {wu.toUpperCase()}
+                </Text>
+              </View>
+              {sparkPoints && (
+                <Svg width={60} height={28} style={{ marginTop: 4 }}>
+                  <Polyline
+                    points={sparkPoints}
+                    fill="none"
+                    stroke={colors.pull}
+                    strokeWidth={1.5}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </Svg>
+              )}
+            </View>
             {bwChange !== null && (
               <Text style={{ fontFamily: 'DMMono', fontSize: 11, marginTop: 3, color: bwChange < 0 ? colors.success : bwChange > 0 ? colors.danger : colors.muted }}>
                 {bwChange > 0 ? '+' : ''}{wu === 'kg' ? (bwChange * 0.453592).toFixed(1) : bwChange.toFixed(1)} {wu}
@@ -495,6 +555,11 @@ export default function TodayScreen() {
                 <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>Undo — take me back to the workout</Text>
               </TouchableOpacity>
             )}
+            {/* Cardio quick-log on rest days */}
+            <TouchableOpacity onPress={() => setShowCardioModal(true)}
+              style={{ marginTop: 12, borderRadius: 10, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.pull + '15', borderWidth: 1, borderColor: colors.pull + '40' }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.pull }}>+ LOG CARDIO</Text>
+            </TouchableOpacity>
           </View>
 
         ) : todayWorkout ? (
