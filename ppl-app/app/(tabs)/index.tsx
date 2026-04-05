@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useRouter, useFocusEffect } from 'expo-router'
 import Svg, { Polyline } from 'react-native-svg'
+import { OnboardingModal } from '@/components/OnboardingModal'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useQuery } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
@@ -189,6 +190,7 @@ export default function TodayScreen() {
   const { settings } = useSettings()
   const { recentLogs, idToSlugMap, logCardio, updateCardioSet, deleteCardioSet } = useCardioLog()
   const [showWeightModal, setShowWeightModal] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
   const _storedRestDate = storage.getString('ppl_rest_override')
@@ -234,6 +236,13 @@ export default function TodayScreen() {
   useFocusEffect(useCallback(() => {
     if (user) refetch()
   }, [user, refetch]))
+
+  // Show onboarding for new users (no program, no display name)
+  useEffect(() => {
+    if (!programLoading && !programData && user) {
+      setShowOnboarding(true)
+    }
+  }, [programLoading, programData, user])
   const handleRestDay = async () => {
     const d = getLocalDate()
     storage.set('ppl_rest_override', d)
@@ -767,6 +776,11 @@ export default function TodayScreen() {
           )
         })()}
       </ScrollView>
+
+      <OnboardingModal
+        visible={showOnboarding}
+        onComplete={() => setShowOnboarding(false)}
+      />
 
       <LogWeightModal
         visible={showWeightModal}

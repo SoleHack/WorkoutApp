@@ -234,6 +234,7 @@ export default function ProgressScreen() {
   const [showCalcInfo, setShowCalcInfo] = useState(false)
   const [showPrPicker, setShowPrPicker] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
+  const [historyFilter, setHistoryFilter] = useState<string | null>(null)
   const [calcBarWeight, setCalcBarWeight] = useState('')
   const [calcBarType, setCalcBarType]     = useState<'standard' | 'ez' | 'hex'>('standard')
   const [bwRange, setBwRange] = useState(30)
@@ -632,13 +633,38 @@ export default function ProgressScreen() {
           ) : (
             <>
               <TextInput
-                style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontFamily: 'DMSans', fontSize: 14, color: colors.text, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}
+                style={{ borderRadius: 12, paddingHorizontal: 14, paddingVertical: 10, fontFamily: 'DMSans', fontSize: 14, color: colors.text, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 10 }}
                 placeholder="Search workouts..."
                 placeholderTextColor={colors.muted}
                 value={historySearch}
                 onChangeText={setHistorySearch}
               />
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 12 }}>
+                <View style={{ flexDirection: 'row', gap: 8 }}>
+                  {[null, 'push', 'pull', 'legs', 'cardio'].map(f => {
+                    const label = f === null ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)
+                    const active = historyFilter === f
+                    const col = f === 'push' ? colors.push : f === 'pull' ? colors.pull : f === 'legs' ? colors.legs : colors.muted
+                    return (
+                      <TouchableOpacity key={String(f)} onPress={() => setHistoryFilter(f)}
+                        style={{ borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7,
+                          backgroundColor: active ? (f ? col : colors.text) : colors.card,
+                          borderWidth: 1, borderColor: active ? (f ? col : colors.text) : colors.border }}>
+                        <Text style={{ fontFamily: 'DMMono', fontSize: 11,
+                          color: active ? colors.bg : colors.muted }}>
+                          {label.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    )
+                  })}
+                </View>
+              </ScrollView>
               {completed.filter((s: any) => {
+                if (historyFilter) {
+                  const workout = PROGRAM[s.day_key]
+                  if (historyFilter === 'cardio' && s.day_key !== 'cardio') return false
+                  if (historyFilter !== 'cardio' && workout?.dayType?.toLowerCase() !== historyFilter) return false
+                }
                 if (!historySearch.trim()) return true
                 const q = historySearch.toLowerCase()
                 const label = PROGRAM[s.day_key]?.label || s.day_key || ''

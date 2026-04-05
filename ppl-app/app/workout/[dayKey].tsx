@@ -15,6 +15,7 @@ import { useNotifications } from '@/hooks/useNotifications'
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer'
 import { RestTimer, SetInputModal, CardioModal, ExerciseSearchModal, NotesModal, ExerciseInfoModal } from '@/components/workout'
 import { PRBanner } from '@/components/workout/PRBanner'
+import { WorkoutShareCard } from '@/components/WorkoutShareCard'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/lib/ThemeContext'
@@ -73,6 +74,8 @@ export default function WorkoutScreen() {
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prTracker = useRef<Record<string, number>>({})
   const [showPR, setShowPR] = useState<{ name: string; e1rm: number } | null>(null)
+  const [showShareCard, setShowShareCard] = useState(false)
+  const [finishedSession, setFinishedSession] = useState<{ duration: number; volume: number; sets: number; prs: string[] } | null>(null)
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteVal, setEditingNoteVal] = useState('')
   const { getNote, setNote: saveExNote } = useExerciseNotes()
@@ -658,6 +661,20 @@ export default function WorkoutScreen() {
         }}
       />
       <NotesModal visible={showNotes} note={note} onChange={handleNoteChange} onClose={() => setShowNotes(false)} />
+      {finishedSession && (
+        <WorkoutShareCard
+          visible={showShareCard}
+          onClose={() => { setShowShareCard(false); router.back() }}
+          workoutLabel={day?.label || dayKey}
+          workoutColor={day?.color || '#888'}
+          duration={finishedSession.duration}
+          totalSets={finishedSession.sets}
+          totalVolume={finishedSession.volume}
+          prs={finishedSession.prs}
+          streak={0}
+          weightUnit={weightUnit}
+        />
+      )}
       <ExerciseInfoModal exercise={infoExercise} visible={!!infoExercise} onClose={() => setInfoExercise(null)} dayColor={day.color} />
     </View>
   )

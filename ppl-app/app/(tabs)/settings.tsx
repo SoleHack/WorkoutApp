@@ -578,11 +578,15 @@ export default function SettingsScreen() {
             <View style={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 14 }}>
               <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 10 }}>REMINDER TIME</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(h => {
-                  const label = h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`
-                  const isSelected = reminderHour === h && reminderMinute === 0
+                {[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5, 14, 14.5, 15, 15.5, 16, 16.5, 17, 17.5, 18, 18.5, 19, 19.5, 20].map(t => {
+                  const h = Math.floor(t)
+                  const m = t % 1 === 0.5 ? 30 : 0
+                  const hDisplay = h === 12 ? 12 : h > 12 ? h - 12 : h
+                  const ampm = h < 12 ? 'AM' : 'PM'
+                  const label = m === 30 ? `${hDisplay}:30 ${ampm}` : h === 12 ? `12 PM` : `${hDisplay} ${ampm}`
+                  const isSelected = reminderHour === h && reminderMinute === m
                   return (
-                    <TouchableOpacity key={h} onPress={() => setReminderTime(h, 0)}
+                    <TouchableOpacity key={t} onPress={() => setReminderTime(h, m)}
                       style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
                         backgroundColor: isSelected ? colors.push : colors.bg,
                         borderWidth: 1, borderColor: isSelected ? colors.push : colors.border }}>
