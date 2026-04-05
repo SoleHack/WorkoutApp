@@ -10,9 +10,10 @@ import { useWorkout } from '@/hooks/useWorkout'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
-import { useWorkoutNotes } from '@/hooks/useWorkoutNotes'
+import { useWorkoutNotes, useExerciseNotes } from '@/hooks/useWorkoutNotes'
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer'
 import { RestTimer, SetInputModal, CardioModal, ExerciseSearchModal, NotesModal, ExerciseInfoModal } from '@/components/workout'
+import { PRBanner } from '@/components/workout/PRBanner'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/lib/ThemeContext'
@@ -70,6 +71,8 @@ export default function WorkoutScreen() {
   const [editingCardio, setEditingCardio] = useState<{ setId: string; duration: string; distance: string; ex: any } | null>(null)
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prTracker = useRef<Record<string, number>>({})
+  const [showPR, setShowPR] = useState<{ name: string; e1rm: number } | null>(null)
+  const { getNote, setNote: saveExNote } = useExerciseNotes()
 
   useEffect(() => {
     if (day && !session && !loading) startSession(day.id)
@@ -120,7 +123,11 @@ export default function WorkoutScreen() {
     const estimated = e1rm(weight, reps)
     const lastMax = lastSessions[exerciseId]?.length ? Math.max(...lastSessions[exerciseId].map((s: any) => e1rm(s.weight || 0, s.reps || 0))) : 0
     const sessionBest = prTracker.current[exerciseId] || 0
-    if (estimated > lastMax && estimated > sessionBest) prTracker.current[exerciseId] = estimated
+    if (estimated > lastMax && estimated > sessionBest) {
+      prTracker.current[exerciseId] = estimated
+      const exName = EXERCISES[exerciseId]?.name || day?.exercises.find((e: any) => e.exerciseDbId === exerciseId)?.id || 'Exercise'
+      setShowPR({ name: exName, e1rm: estimated })
+    }
     setActiveSetModal(null)
     const exId = ex?.exerciseDbId
     const effectiveRest = exId ? (customRest[exId] ?? ex?.rest ?? 90) : (ex?.rest ?? 90)
@@ -206,6 +213,15 @@ export default function WorkoutScreen() {
 
       {restTimer !== null && <RestTimer seconds={restTimer} onDone={() => setRestTimer(null)} />}
 
+      {showPR && (
+        <PRBanner
+          exerciseName={showPR.name}
+          e1rm={showPR.e1rm}
+          weightUnit={weightUnit}
+          onDismiss={() => setShowPR(null)}
+        />
+      )}
+
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
         {allExercises.map((programEx: any) => {
           if (!programEx) return null
@@ -283,6 +299,14 @@ export default function WorkoutScreen() {
                 {programEx.note && (
                   <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.pull, marginTop: 4 }}>💡 {programEx.note}</Text>
                 )}
+                {/* Per-exercise personal note */}
+                {(() => {
+                  const exNote = getNote(programEx.exerciseDbId)
+                  if (!exNote) return null
+                  return (
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 4 }}>📝 {exNote}</Text>
+                  )
+                })()}
               </View>
 
               <View style={{ paddingHorizontal: 16, paddingBottom: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -548,6 +572,7 @@ export default function WorkoutScreen() {
         lastMax={activeSetModal && lastSessions[activeSetModal.exerciseId]?.length
           ? Math.max(...(lastSessions[activeSetModal.exerciseId] || []).map((s: any) => s.weight || 0))
           : null}
+        lastSessionSets={activeSetModal ? (lastSessions[activeSetModal.exerciseId] || []) : []}
         dayColor={day.color}
         weightUnit={weightUnit}
         onLog={(w: number, r: number, rpe?: number) => activeSetModal && handleLogSet(activeSetModal.exerciseId, activeSetModal.setNumber, w, r, rpe)}
