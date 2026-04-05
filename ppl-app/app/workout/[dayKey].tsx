@@ -72,6 +72,8 @@ export default function WorkoutScreen() {
   const noteTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const prTracker = useRef<Record<string, number>>({})
   const [showPR, setShowPR] = useState<{ name: string; e1rm: number } | null>(null)
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
+  const [editingNoteVal, setEditingNoteVal] = useState('')
   const { getNote, setNote: saveExNote } = useExerciseNotes()
 
   useEffect(() => {
@@ -299,12 +301,57 @@ export default function WorkoutScreen() {
                 {programEx.note && (
                   <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.pull, marginTop: 4 }}>💡 {programEx.note}</Text>
                 )}
-                {/* Per-exercise personal note */}
+                {/* Per-exercise personal note — tap to edit, long press to add */}
                 {(() => {
-                  const exNote = getNote(programEx.exerciseDbId)
-                  if (!exNote) return null
+                  const exId   = programEx.exerciseDbId
+                  const exNote = getNote(exId)
+                  const isEditingThis = editingNoteId === exId
+
+                  if (isEditingThis) {
+                    return (
+                      <View style={{ marginTop: 6, flexDirection: 'row', gap: 6 }}>
+                        <TextInput
+                          style={{ flex: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontFamily: 'DMSans', fontSize: 12, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull }}
+                          value={editingNoteVal}
+                          onChangeText={setEditingNoteVal}
+                          placeholder="Note for next time..."
+                          placeholderTextColor={colors.muted}
+                          autoFocus
+                          multiline
+                        />
+                        <TouchableOpacity
+                          onPress={() => {
+                            saveExNote(exId, editingNoteVal)
+                            setEditingNoteId(null)
+                          }}
+                          style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.pull, justifyContent: 'center' }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.bg }}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => setEditingNoteId(null)}
+                          style={{ borderRadius: 8, paddingHorizontal: 8, paddingVertical: 6, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )
+                  }
+
+                  if (exNote) {
+                    return (
+                      <TouchableOpacity
+                        onPress={() => { setEditingNoteId(exId); setEditingNoteVal(exNote) }}
+                        style={{ marginTop: 4 }}>
+                        <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>📝 {exNote} <Text style={{ color: colors.border }}>· tap to edit</Text></Text>
+                      </TouchableOpacity>
+                    )
+                  }
+
                   return (
-                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 4 }}>📝 {exNote}</Text>
+                    <TouchableOpacity
+                      onPress={() => { setEditingNoteId(exId); setEditingNoteVal('') }}
+                      style={{ marginTop: 4 }}>
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.border }}>📝 Add note for next time</Text>
+                    </TouchableOpacity>
                   )
                 })()}
               </View>

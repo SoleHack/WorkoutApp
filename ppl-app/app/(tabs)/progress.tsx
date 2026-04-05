@@ -1070,18 +1070,34 @@ export default function ProgressScreen() {
             </View>
           ) : (
             <>
-              {/* Deload detection */}
+              {/* Sustained deload detection — checks last 2 weeks */}
               {(() => {
                 const overMrv = landmarks.filter(lm => lm.status === 'over')
                 if (overMrv.length < 2) return null
+
+                // Check if we were also over MRV the previous week
+                const twoWeeksAgo = new Date()
+                twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
+                const prevWeekEnd = new Date()
+                prevWeekEnd.setDate(prevWeekEnd.getDate() - 7)
+                const prevWeekSessions = strength.filter((s: any) => {
+                  const d = new Date(s.date + 'T12:00:00')
+                  return d >= twoWeeksAgo && d < prevWeekEnd
+                })
+                const sustained = prevWeekSessions.length >= 3 // had meaningful training last week too
+
                 return (
                   <View style={{ borderRadius: 14, padding: 14, marginBottom: 16,
-                    backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '50' }}>
-                    <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.danger, marginBottom: 4 }}>
-                      ⚠️ Deload Recommended
+                    backgroundColor: (sustained ? colors.danger : colors.push) + '12',
+                    borderWidth: 1, borderColor: (sustained ? colors.danger : colors.push) + '50' }}>
+                    <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: sustained ? colors.danger : colors.push, marginBottom: 4 }}>
+                      {sustained ? '⚠️ Deload Recommended' : '📈 Approaching Limit'}
                     </Text>
                     <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, lineHeight: 20 }}>
-                      {overMrv.length} muscle groups ({overMrv.map(lm => lm.label).join(', ')}) are above MRV. Consider a deload week — reduce volume by 40–50% to recover and come back stronger.
+                      {sustained
+                        ? `${overMrv.length} muscle groups (${overMrv.map((lm: any) => lm.label).join(', ')}) have been above MRV for 2+ weeks. Reduce volume by 40–50% this week to recover and come back stronger.`
+                        : `${overMrv.length} muscle groups (${overMrv.map((lm: any) => lm.label).join(', ')}) are above MRV this week. Consider backing off next week if fatigue builds.`
+                      }
                     </Text>
                   </View>
                 )

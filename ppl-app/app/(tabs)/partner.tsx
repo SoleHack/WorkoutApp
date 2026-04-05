@@ -366,18 +366,35 @@ export default function PartnerScreen() {
                           {/* This week */}
                           <View style={{ marginTop: 16, borderRadius: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
                             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>THIS WEEK</Text>
-                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 20, justifyContent: 'center', marginBottom: 8 }}>
-                              {/* My bar */}
+                            <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, justifyContent: 'center', marginBottom: 8 }}>
+                              {/* My sessions bar */}
                               <View style={{ alignItems: 'center', gap: 4 }}>
-                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.push, letterSpacing: 1 }}>{myWeek}</Text>
-                                <View style={{ width: 40, borderRadius: 4, backgroundColor: colors.push, height: Math.max(8, (myWeek / maxWeek) * 60) }} />
-                                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }}>YOU</Text>
+                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.push, letterSpacing: 1 }}>{myWeek}</Text>
+                                <View style={{ width: 32, borderRadius: 4, backgroundColor: colors.push, height: Math.max(8, (myWeek / maxWeek) * 50) }} />
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>MY</Text>
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>SESSIONS</Text>
                               </View>
-                              {/* Partner bar */}
+                              {/* Partner sessions bar */}
                               <View style={{ alignItems: 'center', gap: 4 }}>
-                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.pull, letterSpacing: 1 }}>{partnerWeek}</Text>
-                                <View style={{ width: 40, borderRadius: 4, backgroundColor: colors.pull, height: Math.max(8, (partnerWeek / maxWeek) * 60) }} />
-                                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }} numberOfLines={1}>{partnerName.split(' ')[0].toUpperCase()}</Text>
+                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.pull, letterSpacing: 1 }}>{partnerWeek}</Text>
+                                <View style={{ width: 32, borderRadius: 4, backgroundColor: colors.pull, height: Math.max(8, (partnerWeek / maxWeek) * 50) }} />
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }} numberOfLines={1}>{partnerName.split(' ')[0].toUpperCase()}</Text>
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>SESSIONS</Text>
+                              </View>
+                              {/* Divider */}
+                              <View style={{ width: 1, height: 60, backgroundColor: colors.border, marginHorizontal: 4 }} />
+                              {/* All-time volume comparison */}
+                              <View style={{ alignItems: 'center', gap: 4 }}>
+                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.push, letterSpacing: 1 }}>{myStats.totalVol}k</Text>
+                                <View style={{ width: 32, borderRadius: 4, backgroundColor: colors.push + '80', height: Math.max(8, (myStats.totalVol / Math.max(myStats.totalVol, partnerStats.totalVol, 1)) * 50) }} />
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>MY</Text>
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>VOLUME</Text>
+                              </View>
+                              <View style={{ alignItems: 'center', gap: 4 }}>
+                                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.pull, letterSpacing: 1 }}>{partnerStats.totalVol}k</Text>
+                                <View style={{ width: 32, borderRadius: 4, backgroundColor: colors.pull + '80', height: Math.max(8, (partnerStats.totalVol / Math.max(myStats.totalVol, partnerStats.totalVol, 1)) * 50) }} />
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }} numberOfLines={1}>{partnerName.split(' ')[0].toUpperCase()}</Text>
+                                <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.muted }}>VOLUME</Text>
                               </View>
                             </View>
                             {motivation && (
