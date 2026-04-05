@@ -138,7 +138,8 @@ export default function WorkoutScreen() {
     }
     setActiveSetModal(null)
     const exId = ex?.exerciseDbId
-    const effectiveRest = exId ? (customRest[exId] ?? ex?.rest ?? 90) : (ex?.rest ?? 90)
+    const smartDefault = ex?.tag === 'compound' ? 150 : ex?.tag === 'iso' || ex?.tag === 'isolation' ? 90 : 90
+    const effectiveRest = exId ? (customRest[exId] ?? ex?.rest ?? smartDefault) : (ex?.rest ?? smartDefault)
     setRestTimer(effectiveRest)
   }, [day, logSet, lastSessions])
 
@@ -379,7 +380,13 @@ export default function WorkoutScreen() {
                 {/* Rest timer button + inline picker */}
                 {!isCardio && (() => {
                   const exId = programEx.exerciseDbId
-                  const defaultRest = programEx.rest || 90
+                  const defaultRest = programEx.rest || (
+                    programEx.tag === 'compound'  ? 150 :
+                    programEx.tag === 'iso'        ? 90  :
+                    programEx.tag === 'isolation'  ? 90  :
+                    programEx.tag === 'warmup'     ? 45  :
+                    90
+                  )
                   const effectiveRest = customRest[exId] ?? defaultRest
                   const isPickerOpen = restPickerEx === exId
                   const REST_OPTS = [30, 45, 60, 90, 120, 150, 180, 240, 300]

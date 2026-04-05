@@ -235,6 +235,8 @@ export default function ProgressScreen() {
   const [showPrPicker, setShowPrPicker] = useState(false)
   const [historySearch, setHistorySearch] = useState('')
   const [historyFilter, setHistoryFilter] = useState<string | null>(null)
+  const [editingSessionNote, setEditingSessionNote] = useState<string | null>(null)
+  const [sessionNoteVal, setSessionNoteVal] = useState('')
   const [calcBarWeight, setCalcBarWeight] = useState('')
   const [calcBarType, setCalcBarType]     = useState<'standard' | 'ez' | 'hex'>('standard')
   const [bwRange, setBwRange] = useState(30)
@@ -359,7 +361,7 @@ export default function ProgressScreen() {
     }).filter(Boolean) as { x: number; bf: number; label: string }[]
   }, [measureEntries, settings])
 
-  // ── Waist trend ───────────────────────────────────────────────
+  // ── Measurement trends ────────────────────────────────────────
   const waistTrendData = useMemo(() => {
     return [...(measureEntries as any[])].reverse()
       .filter((e: any) => e.waist)
@@ -368,6 +370,40 @@ export default function ProgressScreen() {
         label: formatDate(e.date, { month: 'short', day: 'numeric' }),
       }))
   }, [measureEntries])
+
+  const makeFieldTrend = (field: string) => {
+    return [...(measureEntries as any[])].reverse()
+      .filter((e: any) => e[field])
+      .map((e: any, i: number) => ({
+        x: i, val: e[field] as number,
+        label: formatDate(e.date, { month: 'short', day: 'numeric' }),
+      }))
+  }
+
+  // ── RPE weekly trend ─────────────────────────────────────────
+  const rpeTrendData = useMemo(() => {
+    const weeks: Record<string, number[]> = {}
+    strength.forEach((s: any) => {
+      const weekStart = new Date(s.date + 'T12:00:00')
+      weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1)
+      const key = weekStart.toISOString().split('T')[0]
+      const rpes = (s.session_sets || [])
+        .filter((x: any) => x.completed && x.rpe && !x.is_warmup)
+        .map((x: any) => x.rpe)
+      if (rpes.length > 0) {
+        if (!weeks[key]) weeks[key] = []
+        weeks[key].push(...rpes)
+      }
+    })
+    return Object.entries(weeks)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .slice(-12)
+      .map(([date, rpes], i) => ({
+        x: i,
+        rpe: Math.round((rpes.reduce((a, b) => a + b, 0) / rpes.length) * 10) / 10,
+        label: new Date(date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      }))
+  }, [strength])
 
   // ── Volume landmarks ──────────────────────────────────────────
   const { landmarks } = useVolumeLandmarks(EXERCISES, completed)
@@ -540,6 +576,41 @@ export default function ProgressScreen() {
             </View>
           ) : (
             <>
+              {/* Hall of Fame — top 3 all-time */}
+              {(() => {
+                const allTime = Object.entries(prs)
+                  .map(([slug, pr]) => ({ slug, name: EXERCISES[slug]?.name || slug, ...(pr as any) }))
+                  .sort((a: any, b: any) => b.e1rm - a.e1rm)
+                  .slice(0, 3)
+                if (allTime.length === 0) return null
+                const medals = ['🥇', '🥈', '🥉']
+                return (
+                  <View style={{ borderRadius: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.push + '40', overflow: 'hidden', marginBottom: 20 }}>
+                    <View style={{ height: 3, backgroundColor: colors.push }} />
+                    <View style={{ padding: 14 }}>
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.push, letterSpacing: 1.5, marginBottom: 12 }}>🏆 HALL OF FAME · ALL TIME</Text>
+                      {allTime.map((pr: any, i: number) => (
+                        <View key={pr.slug} style={{ flexDirection: 'row', alignItems: 'center', marginBottom: i < 2 ? 12 : 0 }}>
+                          <Text style={{ fontSize: 22, marginRight: 12 }}>{medals[i]}</Text>
+                          <View style={{ flex: 1 }}>
+                            <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{pr.name}</Text>
+                            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 1 }}>
+                              {toDStr(pr.weight)} {wu} × {pr.reps} · {formatDate(pr.date)}
+                            </Text>
+                          </View>
+                          <View style={{ alignItems: 'flex-end' }}>
+                            <Text style={{ fontFamily: 'BebasNeue', fontSize: 24, color: colors.push, letterSpacing: 1 }}>
+                              {toDStr(pr.e1rm)}
+                            </Text>
+                            <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }}>E1RM</Text>
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+                )
+              })()}
+
               {/* Range selector */}
               <View style={{ flexDirection: 'row', marginBottom: 16 }}>
                 {[30, 90, 365, 9999].map(d => (
@@ -695,11 +766,42 @@ export default function ProgressScreen() {
                         dur ? String(dur) + 'm' : null,
                       ].filter(Boolean).join(' · ')}
                     </Text>
-                    {s.notes ? (
-                      <Text style={{ fontFamily: 'DMSans', fontSize: 12, color: colors.muted, marginTop: 6, fontStyle: 'italic' }} numberOfLines={2}>
-                        {s.notes}
-                      </Text>
-                    ) : null}
+                    {editingSessionNote === s.id ? (
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 8 }}>
+                        <TextInput
+                          style={{ flex: 1, borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, fontFamily: 'DMSans', fontSize: 12, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull }}
+                          value={sessionNoteVal}
+                          onChangeText={setSessionNoteVal}
+                          placeholder="Session notes..."
+                          placeholderTextColor={colors.muted}
+                          autoFocus
+                          multiline
+                        />
+                        <TouchableOpacity
+                          onPress={async () => {
+                            await supabase.from('workout_sessions').update({ notes: sessionNoteVal.trim() || null }).eq('id', s.id)
+                            setEditingSessionNote(null)
+                            refetch()
+                          }}
+                          style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.pull, justifyContent: 'center' }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.bg }}>Save</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setEditingSessionNote(null)}
+                          style={{ borderRadius: 8, paddingHorizontal: 8, justifyContent: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted }}>✕</Text>
+                        </TouchableOpacity>
+                      </View>
+                    ) : s.notes ? (
+                      <TouchableOpacity onPress={() => { setEditingSessionNote(s.id); setSessionNoteVal(s.notes) }} style={{ marginTop: 6 }}>
+                        <Text style={{ fontFamily: 'DMSans', fontSize: 12, color: colors.muted, fontStyle: 'italic' }} numberOfLines={2}>
+                          📝 {s.notes}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <TouchableOpacity onPress={() => { setEditingSessionNote(s.id); setSessionNoteVal('') }} style={{ marginTop: 6 }}>
+                        <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.border }}>+ Add note</Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
                   <View style={{ justifyContent: 'center', paddingRight: 14 }}>
                     <Text style={{ color: colors.muted, fontSize: 16 }}>→</Text>
@@ -889,6 +991,46 @@ export default function ProgressScreen() {
                   </View>
                 </>
               )}
+
+              {/* Per-measurement trend charts */}
+              {[
+                { key: 'hips',        label: 'HIPS TREND (IN)',         color: colors.push },
+                { key: 'chest',       label: 'CHEST TREND (IN)',        color: colors.pull },
+                { key: 'left_arm',    label: 'ARM TREND (IN)',          color: '#F472B6' },
+                { key: 'left_thigh',  label: 'THIGH TREND (IN)',        color: '#FB923C' },
+                { key: 'neck',        label: 'NECK TREND (IN)',         color: colors.legs },
+              ].map(({ key, label, color }) => {
+                const data = makeFieldTrend(key)
+                if (data.length < 2) return null
+                return (
+                  <View key={key}>
+                    <SectionLabel>{label}</SectionLabel>
+                    <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 20, height: 200 }}>
+                      <CartesianChart
+                        data={data}
+                        padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                        xKey="x"
+                        yKeys={['val']}
+                        domainPadding={{ top: 20, left: 10, right: 10 }}
+                        axisOptions={{
+                          font,
+                          formatXLabel: (v) => data[Math.round(v as number)]?.label || '',
+                          formatYLabel: (v) => String(v) + '"',
+                          tickCount: { x: 4, y: 4 },
+                          lineColor: colors.border,
+                          labelColor: colors.muted,
+                        }}>
+                        {({ points }) => (
+                          <>
+                            <Area points={points.val} color={color} opacity={0.12} curveType="natural" y0={Math.min(...data.map(d => d.val)) - 1} />
+                            <Line points={points.val} color={color} strokeWidth={2} curveType="natural" />
+                          </>
+                        )}
+                      </CartesianChart>
+                    </View>
+                  </View>
+                )
+              })}
 
               {/* Measurements snapshot */}
               {latestM && (
@@ -1185,6 +1327,54 @@ export default function ProgressScreen() {
                       )}
                     </CartesianChart>
                   </View>
+                </>
+              )}
+
+              {/* RPE trend */}
+              {rpeTrendData.length > 1 && (
+                <>
+                  <SectionLabel>AVG RPE PER WEEK</SectionLabel>
+                  <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, overflow: 'hidden', marginBottom: 8, height: 200 }}>
+                    <CartesianChart
+                      data={rpeTrendData}
+                      padding={{ left: 50, bottom: 30, top: 10, right: 10 }}
+                      xKey="x"
+                      yKeys={['rpe']}
+                      domain={{ y: [5, 10] }}
+                      domainPadding={{ top: 10, left: 10, right: 10 }}
+                      axisOptions={{
+                        font,
+                        formatXLabel: (v) => rpeTrendData[Math.round(v as number)]?.label || '',
+                        formatYLabel: (v) => String(v),
+                        tickCount: { x: 4, y: 5 },
+                        lineColor: colors.border,
+                        labelColor: colors.muted,
+                      }}>
+                      {({ points }) => (
+                        <>
+                          <Area points={points.rpe} color={colors.push} opacity={0.12} curveType="natural" y0={5} />
+                          <Line points={points.rpe} color={colors.push} strokeWidth={2} curveType="natural" />
+                        </>
+                      )}
+                    </CartesianChart>
+                  </View>
+                  {rpeTrendData.length >= 3 && (() => {
+                    const recent = rpeTrendData.slice(-3).map(d => d.rpe)
+                    const avg = recent.reduce((a, b) => a + b, 0) / recent.length
+                    const prev = rpeTrendData.slice(-6, -3).map(d => d.rpe)
+                    const prevAvg = prev.length ? prev.reduce((a, b) => a + b, 0) / prev.length : null
+                    if (avg >= 9 && prevAvg && avg > prevAvg + 0.3) {
+                      return (
+                        <View style={{ borderRadius: 12, padding: 12, marginBottom: 16, backgroundColor: colors.danger + '12', borderWidth: 1, borderColor: colors.danger + '50' }}>
+                          <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.danger }}>⚠️ High fatigue detected</Text>
+                          <Text style={{ fontFamily: 'DMSans', fontSize: 12, color: colors.muted, marginTop: 4 }}>
+                            Your avg RPE has been {avg.toFixed(1)} for 3 weeks. Consider a deload or lighter sessions.
+                          </Text>
+                        </View>
+                      )
+                    }
+                    return null
+                  })()}
                 </>
               )}
 

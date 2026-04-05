@@ -3,6 +3,7 @@ import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator } from 'rea
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import { supabase } from '@/lib/supabase'
 import { useSettings } from '@/hooks/useSettings'
+import { storage } from '@/lib/storage'
 import { useTheme } from '@/lib/ThemeContext'
 
 function e1rm(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
@@ -158,19 +159,23 @@ export default function SessionDetailScreen() {
         showsVerticalScrollIndicator={false}>
 
         {/* Notes */}
-        {session.notes?.trim() && (
-          <View style={{
-            borderRadius: 12, padding: 14, marginBottom: 16,
-            backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
-          }}>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 6 }}>
-              SESSION NOTES
-            </Text>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text, lineHeight: 20 }}>
-              {session.notes}
-            </Text>
-          </View>
-        )}
+        {(() => {
+          const dbNote = session.notes?.trim()
+          const mmkvNote = storage.getString('session_note:' + session.id)
+          const note = dbNote || mmkvNote
+          if (!note) return null
+          return (
+            <View style={{
+              borderRadius: 12, padding: 14, marginBottom: 16,
+              backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+            }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 6 }}>
+                SESSION NOTES
+              </Text>
+              <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text, lineHeight: 20 }}>{note}</Text>
+            </View>
+          )
+        })()}
 
         {sets.length === 0 && (
           <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, textAlign: 'center', paddingTop: 40 }}>

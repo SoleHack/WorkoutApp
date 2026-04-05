@@ -191,6 +191,12 @@ export default function TodayScreen() {
   const { recentLogs, idToSlugMap, logCardio, updateCardioSet, deleteCardioSet } = useCardioLog()
   const [showWeightModal, setShowWeightModal] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(false)
+  const [goalWeight, setGoalWeightState] = useState<number | null>(() => {
+    const v = storage.getString('goal_weight')
+    return v ? parseFloat(v) : null
+  })
+  const [editingGoal, setEditingGoal] = useState(false)
+  const [goalInput, setGoalInput] = useState('')
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
   const _storedRestDate = storage.getString('ppl_rest_override')
@@ -370,6 +376,23 @@ export default function TodayScreen() {
     if (hkEnabled) hkWriteWeight(lbs).catch(() => {})
   }
 
+  const handleSetGoal = (val: string) => {
+    const num = parseFloat(val)
+    if (!isNaN(num) && num > 0) {
+      const lbs = wu === 'kg' ? Math.round(num / 0.453592 * 10) / 10 : num
+      storage.set('goal_weight', lbs.toString())
+      setGoalWeightState(lbs)
+    }
+    setEditingGoal(false)
+    setGoalInput('')
+  }
+
+  const handleClearGoal = () => {
+    storage.remove('goal_weight')
+    setGoalWeightState(null)
+    setEditingGoal(false)
+  }
+
   // ── Dot colors & sizes for week strip ────────────────────
   // done=green, missed=red, rest=grey border only, future=dark, today=highlighted
   const dotStyle = (status: string, isToday: boolean, workoutColor: string) => {
@@ -492,6 +515,50 @@ export default function TodayScreen() {
                 </Svg>
               )}
             </View>
+            {/* Goal weight progress */}
+            {goalWeight !== null && bwLatest && (() => {
+              const current  = bwLatest.weight
+              const goalDisp = wu === 'kg' ? (goalWeight * 0.453592).toFixed(1) : goalWeight.toString()
+              const losing   = goalWeight < current
+              const startW   = (bwEntries as any[]).length > 0
+                ? (losing
+                    ? Math.max(...(bwEntries as any[]).map((e: any) => e.weight))
+                    : Math.min(...(bwEntries as any[]).map((e: any) => e.weight)))
+                : current
+              const total    = Math.abs(startW - goalWeight)
+              const done     = Math.abs(current - goalWeight)
+              const pct      = total > 0 ? Math.max(0, Math.min(1, 1 - done / total)) : 1
+              const reached  = (losing && current <= goalWeight) || (!losing && current >= goalWeight)
+              return (
+                <View style={{ marginTop: 8 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>
+                      GOAL: {goalDisp} {wu.toUpperCase()}
+                    </Text>
+                    <TouchableOpacity onPress={() => { setGoalInput(''); setEditingGoal(true) }}>
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted }}>Edit</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <View style={{ height: 4, borderRadius: 2, backgroundColor: colors.border }}>
+                    <View style={{ height: 4, borderRadius: 2, width: `${pct * 100}%`,
+                      backgroundColor: reached ? colors.legs : colors.pull }} />
+                  </View>
+                  {reached && (
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.legs, marginTop: 3 }}>
+                      🎯 Goal reached!
+                    </Text>
+                  )}
+                </View>
+              )
+            })()}
+            {goalWeight === null && bwLatest && (
+              <TouchableOpacity onPress={() => { setGoalInput(''); setEditingGoal(true) }}
+                style={{ marginTop: 8 }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.border, letterSpacing: 0.5 }}>
+                  + Set goal weight
+                </Text>
+              </TouchableOpacity>
+            )}
             {bwChange !== null && (
               <Text style={{ fontFamily: 'DMMono', fontSize: 11, marginTop: 3, color: bwChange < 0 ? colors.success : bwChange > 0 ? colors.danger : colors.muted }}>
                 {bwChange > 0 ? '+' : ''}{wu === 'kg' ? (bwChange * 0.453592).toFixed(1) : bwChange.toFixed(1)} {wu}
@@ -776,6 +843,41 @@ export default function TodayScreen() {
           )
         })()}
       </ScrollView>
+
+      {/* Goal weight edit inline modal */}
+      {editingGoal && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
+          <View style={{ borderRadius: 20, padding: 24, backgroundColor: colors.card, width: '100%' }}>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 4 }}>SET GOAL WEIGHT</Text>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginBottom: 16 }}>{wu.toUpperCase()}</Text>
+            <TextInput
+              style={{ borderRadius: 12, padding: 14, fontFamily: 'DMMono', fontSize: 28, color: colors.text, backgroundColor: colors.bg, borderWidth: 1.5, borderColor: colors.pull, textAlign: 'center', marginBottom: 16 }}
+              value={goalInput}
+              onChangeText={setGoalInput}
+              keyboardType="decimal-pad"
+              placeholder={wu === 'kg' ? '80' : '180'}
+              placeholderTextColor={colors.muted}
+              autoFocus
+            />
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              {goalWeight !== null && (
+                <TouchableOpacity onPress={handleClearGoal}
+                  style={{ flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.danger + '50' }}>
+                  <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.danger }}>Clear</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => setEditingGoal(false)}
+                style={{ flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => handleSetGoal(goalInput)}
+                style={{ flex: 2, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.pull }}>
+                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
 
       <OnboardingModal
         visible={showOnboarding}
