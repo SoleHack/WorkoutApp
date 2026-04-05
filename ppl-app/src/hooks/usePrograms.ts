@@ -65,7 +65,6 @@ export function usePrograms() {
         supabase
           .from('programs')
           .select('id, name, split_type, description, is_default, user_id')
-          .or(`user_id.eq.${user!.id},user_id.is.null`)
           .order('is_default', { ascending: false })
           .order('created_at', { ascending: true }),
         supabase
@@ -249,10 +248,20 @@ export function useWorkouts() {
   const { data: workouts = [], isLoading } = useQuery({
     queryKey: ['workouts', user?.id],
     queryFn: async () => {
+      // Get partner_user_id to include their workouts
+      const { data: settingsRow } = await supabase
+        .from('user_settings')
+        .select('partner_user_id')
+        .eq('user_id', user!.id)
+        .maybeSingle()
+      const partnerId = settingsRow?.partner_user_id
+      const orFilter = partnerId
+        ? `user_id.eq.${user!.id},user_id.is.null,user_id.eq.${partnerId}`
+        : `user_id.eq.${user!.id},user_id.is.null`
       const { data } = await supabase
         .from('workouts')
         .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id')
-        .or(`user_id.eq.${user!.id},user_id.is.null`)
+        .or(orFilter)
         .order('name', { ascending: true })
       return (data || []) as Workout[]
     },
