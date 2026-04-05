@@ -12,6 +12,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { useWorkoutNotes, useExerciseNotes } from '@/hooks/useWorkoutNotes'
 import { useNotifications } from '@/hooks/useNotifications'
+import { useWorkoutTemplates } from '@/hooks/useWorkoutTemplates'
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer'
 import { RestTimer, SetInputModal, CardioModal, ExerciseSearchModal, NotesModal, ExerciseInfoModal } from '@/components/workout'
 import { PRBanner } from '@/components/workout/PRBanner'
@@ -80,6 +81,7 @@ export default function WorkoutScreen() {
   const [editingNoteVal, setEditingNoteVal] = useState('')
   const { getNote, setNote: saveExNote } = useExerciseNotes()
   const { sendPRNotification, handleWorkoutComplete } = useNotifications()
+  const { save: saveTemplate, getAll: getTemplates } = useWorkoutTemplates()
 
   useEffect(() => {
     if (day && !session && !loading) startSession(day.id)
@@ -201,6 +203,21 @@ export default function WorkoutScreen() {
             <TouchableOpacity onPress={() => setShowNotes(true)}
               style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: note ? colors.push + '30' : colors.card, borderWidth: 1, borderColor: note ? colors.push : colors.border }}>
               <Text style={{ fontSize: 14 }}>📝</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                const exercises = (day?.exercises || []).map((ex: any) => ({
+                  exerciseId: ex.exerciseDbId,
+                  sets: ex.sets,
+                  reps: ex.reps,
+                  rest: ex.rest || 90,
+                  tag: ex.tag || 'iso',
+                }))
+                saveTemplate(day?.label || dayKey, exercises)
+                Alert.alert('Template Saved', `"${day?.label || dayKey}" saved as a template.`)
+              }}
+              style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontSize: 14 }}>📋</Text>
             </TouchableOpacity>
             {allDone && (
               <TouchableOpacity onPress={async () => { setFinishing(true); await finishSession(elapsed); await handleWorkoutComplete(); router.back() }} disabled={finishing}

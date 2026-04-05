@@ -7,6 +7,7 @@ import { useRouter } from 'expo-router'
 import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions } from '@/hooks/usePrograms'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useAuth } from '@/hooks/useAuth'
+import { useWorkoutTemplates } from '@/hooks/useWorkoutTemplates'
 import { useTheme } from '@/lib/ThemeContext'
 import type { ColorScheme } from '@/lib/theme'
 
@@ -145,6 +146,58 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
+        {/* ── Weekly Calendar ── */}
+        {programData && (() => {
+          const schedule = (programData.SCHEDULE || []) as any[]
+          const PROGRAM  = programData.PROGRAM || {}
+          const today    = new Date().getDay()
+          const toDbDay  = (js: number) => (js + 6) % 7
+          const todayDb  = toDbDay(today)
+          const days     = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+          return (
+            <View style={{ borderRadius: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 14, marginBottom: 20 }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>
+                THIS WEEK · {programData.programName?.toUpperCase()}
+              </Text>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                {[0, 1, 2, 3, 4, 5, 6].map(dbDay => {
+                  const slot    = schedule.find((s: any) => s.dayIndex === dbDay)
+                  const workout = slot?.dayKey ? PROGRAM[slot.dayKey] : null
+                  const isRest  = slot?.isRest || !slot?.dayKey
+                  const isToday = dbDay === todayDb
+                  const col     = workout?.color || colors.border
+                  return (
+                    <View key={dbDay} style={{ flex: 1, alignItems: 'center', gap: 6 }}>
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: isToday ? colors.text : colors.muted }}>
+                        {days[dbDay]}
+                      </Text>
+                      <View style={{
+                        width: 32, height: 48, borderRadius: 8,
+                        backgroundColor: isRest ? 'transparent' : col + '30',
+                        borderWidth: isToday ? 2 : 1,
+                        borderColor: isToday ? col : isRest ? colors.border + '50' : col + '60',
+                        alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        {!isRest && (
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 7, color: col, textAlign: 'center', letterSpacing: 0.3 }} numberOfLines={2}>
+                            {workout?.label?.split(' ')[0]?.toUpperCase().slice(0, 4) || ''}
+                          </Text>
+                        )}
+                        {isRest && (
+                          <Text style={{ fontFamily: 'DMMono', fontSize: 8, color: colors.border }}>—</Text>
+                        )}
+                      </View>
+                      {isToday && (
+                        <View style={{ width: 4, height: 4, borderRadius: 2, backgroundColor: col }} />
+                      )}
+                    </View>
+                  )
+                })}
+              </View>
+            </View>
+          )
+        })()}
+
         {/* Programs */}
         {programs.length === 0 ? (
           <View style={{ alignItems: 'center', paddingTop: 60 }}>
@@ -229,7 +282,7 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
           })
         )}
 
-        {/* System workouts — clone to edit */}
+        {/* System workouts */}
         <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 24, marginBottom: 12 }}>SYSTEM WORKOUTS</Text>
         {systemWorkouts.map(w => {
           const c = DAY_TYPE_COLORS[w.day_type] || colors.muted
@@ -285,7 +338,7 @@ function ProgramsListView({ onOpenProgram, onOpenWorkout }: { onOpenProgram: (id
 
       {/* Create Workout Modal */}
       <Modal visible={showCreate} transparent animationType="slide" onRequestClose={() => setShowCreate(false)}>
-  <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
           <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, padding: 24 }}>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 16 }}>NEW WORKOUT</Text>
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>WORKOUT NAME</Text>
@@ -339,8 +392,8 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
   const [morningPicker, setMorningPicker] = useState(false)
   const [morningWorkoutId, setMorningWorkoutId] = useState<string | null>(programData?.morningWorkoutId || null)
 
-  const isActive   = program?.id === activeId
-  const isSystem   = program && !program.user_id
+  const isActive = program?.id === activeId
+  const isSystem = program && !program.user_id
 
   const handleAssign = async (workoutId: string) => {
     if (dayPicker === null) return
@@ -383,7 +436,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
-      {/* Header */}
       <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
           <TouchableOpacity onPress={onBack}>
@@ -408,7 +460,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
-        {/* System warning */}
         {isSystem && (
           <View style={{ borderRadius: 14, padding: 14, marginBottom: 20, backgroundColor: colors.push + '15', borderWidth: 1, borderColor: colors.push + '40' }}>
             <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.push }}>🔒 System Program</Text>
@@ -418,7 +469,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
           </View>
         )}
 
-        {/* Weekly Schedule */}
         <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>
           WEEKLY SCHEDULE
         </Text>
@@ -428,15 +478,11 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
             const assigned = slot?.workout
             const isRest   = slot?.is_rest
             const dayColor = assigned ? (DAY_TYPE_COLORS[assigned.day_type] || colors.muted) : colors.muted
-
             return (
               <View key={i} style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 14, borderBottomWidth: i < 6 ? 1 : 0, borderBottomColor: colors.border }}>
-                {/* Day name */}
                 <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, width: 36 }}>
                   {dayName.toUpperCase()}
                 </Text>
-
-                {/* Slot content */}
                 {assigned ? (
                   <>
                     <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: dayColor, marginRight: 10 }} />
@@ -484,7 +530,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
           })}
         </View>
 
-        {/* Morning Routine */}
         <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>
           MORNING ROUTINE
         </Text>
@@ -507,7 +552,6 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
           )}
         </TouchableOpacity>
 
-        {/* Workout Library */}
         <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>
           ALL WORKOUTS
         </Text>
@@ -519,9 +563,7 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout }: { programId: st
               <View style={{ width: 4, height: 36, borderRadius: 2, backgroundColor: c, marginRight: 12 }} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{w.name}</Text>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 2 }}>
-                  {w.focus || w.day_type}
-                </Text>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 2 }}>{w.focus || w.day_type}</Text>
               </View>
               <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: c }}>Edit →</Text>
             </TouchableOpacity>
@@ -615,7 +657,9 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
   const DAY_TYPE_COLORS = getDayTypeColors(colors)
   const { workout, exercises, loading, updateWorkout, addExercise, updateExercise, removeExercise } = useWorkoutEditor(workoutId)
   const { exercises: library, loading: libLoading } = useExerciseLibrary()
+  const { getAll: getTemplates } = useWorkoutTemplates()
   const [showAddEx, setShowAddEx] = useState(false)
+  const [showTemplates, setShowTemplates] = useState(false)
   const [exSearch, setExSearch] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState(false)
@@ -640,12 +684,26 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
     setExSearch('')
   }
 
+  const handleLoadTemplate = async (template: any) => {
+    for (const ex of template.exercises) {
+      await addExercise(ex.exerciseId, {
+        sets: ex.sets,
+        reps: ex.reps,
+        rest_seconds: ex.rest,
+        tag: ex.tag,
+      })
+    }
+    setShowTemplates(false)
+    Alert.alert('Template Loaded', template.exercises.length + ' exercises added.')
+  }
+
   const handleSaveName = async () => {
     if (nameVal.trim()) await updateWorkout({ name: nameVal.trim() })
     setEditName(false)
   }
 
   const workoutColor = DAY_TYPE_COLORS[workout?.day_type || ''] || colors.muted
+  const templates = getTemplates()
 
   if (loading) return (
     <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
@@ -678,10 +736,18 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
             </TouchableOpacity>
           )}
           {isOwned && (
-            <TouchableOpacity onPress={() => setShowAddEx(true)}
-              style={{ borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: workoutColor + '25', borderWidth: 1, borderColor: workoutColor + '60' }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: workoutColor }}>+ EXERCISE</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {templates.length > 0 && (
+                <TouchableOpacity onPress={() => setShowTemplates(true)}
+                  style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, backgroundColor: colors.legs + '20', borderWidth: 1, borderColor: colors.legs + '40' }}>
+                  <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.legs }}>📋</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity onPress={() => setShowAddEx(true)}
+                style={{ borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: workoutColor + '25', borderWidth: 1, borderColor: workoutColor + '60' }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: workoutColor }}>+ EXERCISE</Text>
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </View>
@@ -711,7 +777,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
             const c = workoutColor
             return (
               <View key={ex.id} style={{ borderRadius: 14, marginBottom: 10, backgroundColor: colors.card, borderWidth: isEditing ? 1.5 : 1, borderColor: isEditing ? c : colors.border, overflow: 'hidden' }}>
-                {/* Exercise header */}
                 <TouchableOpacity onPress={() => isOwned && setEditingId(isEditing ? null : ex.id)}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
                   <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: c + '20', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
@@ -731,10 +796,8 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                   )}
                 </TouchableOpacity>
 
-                {/* Edit panel */}
                 {isEditing && isOwned && (
                   <View style={{ paddingHorizontal: 14, paddingBottom: 14, borderTopWidth: 1, borderTopColor: colors.border }}>
-                    {/* Sets */}
                     <View style={{ flexDirection: 'row', marginTop: 12, marginBottom: 12 }}>
                       <View style={{ flex: 1, marginRight: 8 }}>
                         <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>SETS</Text>
@@ -749,7 +812,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                       </View>
                     </View>
 
-                    {/* Reps */}
                     <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>REPS / RANGE</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
                       {['5', '6-8', '8-10', '10-12', '12-15', '15-20', 'AMRAP'].map(r => (
@@ -765,7 +827,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                         onChangeText={v => updateExercise(ex.id, { reps: v })} />
                     </View>
 
-                    {/* Rest */}
                     <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>REST (SECONDS)</Text>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 12 }}>
                       {REST_OPTIONS.map(r => (
@@ -776,7 +837,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                       ))}
                     </View>
 
-                    {/* Tag */}
                     <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>TYPE</Text>
                     <View style={{ flexDirection: 'row', marginBottom: 12 }}>
                       {TAGS.map(t => (
@@ -787,7 +847,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                       ))}
                     </View>
 
-                    {/* Notes */}
                     <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>NOTES (OPTIONAL)</Text>
                     <TextInput
                       style={{ borderRadius: 10, padding: 10, fontFamily: 'DMSans', fontSize: 13, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, marginBottom: 12 }}
@@ -795,7 +854,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                       value={ex.notes || ''} onChangeText={v => updateExercise(ex.id, { notes: v || null })}
                       multiline />
 
-                    {/* Remove */}
                     {confirmRemove === ex.id ? (
                       <View style={{ flexDirection: 'row' }}>
                         <TouchableOpacity onPress={() => setConfirmRemove(null)}
@@ -850,6 +908,31 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                   </TouchableOpacity>
                 ))
               )}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Template Picker Modal */}
+      <Modal visible={showTemplates} transparent animationType="slide" onRequestClose={() => setShowTemplates(false)}>
+        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+          <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, maxHeight: '60%' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1 }}>LOAD TEMPLATE</Text>
+              <TouchableOpacity onPress={() => setShowTemplates(false)}>
+                <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView contentContainerStyle={{ padding: 16 }}>
+              {templates.map((t: any) => (
+                <TouchableOpacity key={t.id} onPress={() => handleLoadTemplate(t)}
+                  style={{ borderRadius: 12, padding: 14, marginBottom: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                  <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{t.name}</Text>
+                  <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 4 }}>
+                    {t.exercises.length} exercises · {new Date(t.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </Text>
+                </TouchableOpacity>
+              ))}
             </ScrollView>
           </View>
         </View>
