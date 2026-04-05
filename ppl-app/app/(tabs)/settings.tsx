@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useSettings } from '@/hooks/useSettings'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useBodyMeasurements, useProgressPhotos } from '@/hooks/useBodyComposition'
+import { useHealthKit } from '@/hooks/useHealthKit'
 import { navyBodyFat, bfCategory, leanMass } from '@/lib/bodyFat'
 import { useTheme } from '@/lib/ThemeContext'
 
@@ -75,7 +76,6 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
   const [vals, setVals] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
-  // Pre-fill from latest
   useEffect(() => {
     if (!visible) return
     if (latest) {
@@ -98,8 +98,7 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
     height: heightInches || null,
     sex: sex || 'male',
   })
-  const cat      = bfCategory(bf, sex || 'male')
-  const bwLatest = null // lean mass calc done in main screen
+  const cat = bfCategory(bf, sex || 'male')
 
   const save = async () => {
     setSaving(true)
@@ -112,9 +111,8 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
     onClose()
   }
 
-  // Render fields in 2-column grid, arms/thighs as pairs
-  const topFields    = MEASUREMENT_FIELDS.slice(0, 4) // waist, hips, chest, neck — full width each
-  const bottomFields = MEASUREMENT_FIELDS.slice(4)    // arms + thighs — half width pairs
+  const topFields    = MEASUREMENT_FIELDS.slice(0, 4)
+  const bottomFields = MEASUREMENT_FIELDS.slice(4)
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
@@ -138,7 +136,6 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
             ALL VALUES IN INCHES
           </Text>
 
-          {/* Top fields — 2 per row */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
             {topFields.map(f => (
               <View key={f.key} style={{ width: '46%' }}>
@@ -153,7 +150,6 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
             ))}
           </View>
 
-          {/* Bottom fields — arms then thighs, paired */}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginBottom: 4 }}>
             {bottomFields.map(f => (
               <View key={f.key} style={{ width: '46%' }}>
@@ -168,7 +164,6 @@ function MeasurementsModal({ visible, onClose, heightInches, sex }: any) {
             ))}
           </View>
 
-          {/* Live BF result */}
           {bf !== null && cat && (
             <View style={{ borderRadius: 16, padding: 20, marginTop: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: cat.color + '60', alignItems: 'center' }}>
               <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>BODY FAT ESTIMATE</Text>
@@ -260,7 +255,6 @@ function PhotosModal({ visible, onClose }: any) {
           </View>
         </View>
 
-        {/* Side-by-side comparison panel */}
         {compareMode && comparePhotos.length === 2 && (
           <View style={{ flexDirection: 'row', padding: 16, gap: 8, borderBottomWidth: 1, borderBottomColor: colors.border }}>
             {comparePhotos.map((photo) => (
@@ -275,7 +269,6 @@ function PhotosModal({ visible, onClose }: any) {
         )}
 
         <ScrollView contentContainerStyle={{ padding: 16 }}>
-          {/* Add button — hidden in compare mode */}
           {!compareMode && (
             <TouchableOpacity onPress={handleAdd} disabled={uploading}
               style={{ borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginBottom: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' }}>
@@ -336,7 +329,6 @@ function PhotosModal({ visible, onClose }: any) {
         </ScrollView>
       </View>
 
-      {/* Full-screen photo viewer */}
       <Modal visible={!!viewingPhoto} transparent animationType="fade" onRequestClose={() => setViewingPhoto(null)}>
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.95)', alignItems: 'center', justifyContent: 'center' }}
           onPress={() => setViewingPhoto(null)} activeOpacity={1}>
@@ -365,6 +357,7 @@ export default function SettingsScreen() {
   const { colors, theme, setTheme } = useTheme()
   const { settings, save } = useSettings()
   const { entries: bwEntries, latest: bwLatest } = useBodyweight()
+  const { available: hkAvailable, enabled: hkEnabled, setEnabled: setHkEnabled } = useHealthKit()
   const { latest: latestMeasurements } = useBodyMeasurements()
 
   const [showMeasurements, setShowMeasurements] = useState(false)
@@ -381,7 +374,6 @@ export default function SettingsScreen() {
   const sex       = (settings as any).sex || 'male'
   const heightIn  = settings.heightInches
 
-  // Body fat from latest measurements + height from settings
   const bf = latestMeasurements ? navyBodyFat({
     waist:  latestMeasurements.waist,
     neck:   latestMeasurements.neck,
@@ -392,12 +384,6 @@ export default function SettingsScreen() {
   const cat      = bfCategory(bf, sex)
   const bwWeight = bwLatest?.weight ?? null
   const lean     = leanMass(bwWeight, bf)
-
-  const bwDisplay = bwLatest
-    ? wu === 'kg'
-      ? `${(bwLatest.weight * 0.453592).toFixed(1)} kg`
-      : `${bwLatest.weight} lbs`
-    : null
 
   const bwChange = (bwEntries as any[]).length >= 2
     ? (bwEntries as any[])[0].weight - (bwEntries as any[])[1].weight
@@ -417,7 +403,6 @@ export default function SettingsScreen() {
 
         {/* ── Body summary ── */}
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 24 }}>
-          {/* Weight */}
           <View style={{ flex: 1, borderRadius: 14, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 1, lineHeight: 34 }}>
               {bwLatest
@@ -435,7 +420,6 @@ export default function SettingsScreen() {
             )}
           </View>
 
-          {/* Body fat */}
           <View style={{ flex: 1, borderRadius: 14, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: cat ? cat.color + '50' : colors.border }}>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: cat?.color || colors.muted, letterSpacing: 1, lineHeight: 34 }}>
               {bf !== null ? `${bf}%` : '—'}
@@ -512,6 +496,16 @@ export default function SettingsScreen() {
 
         {/* ── Body Tracking ── */}
         <Section title="BODY TRACKING">
+          {hkAvailable && (
+            <Row label="Apple Health" sublabel={hkEnabled ? 'Bodyweight syncing ✓' : 'Sync bodyweight to & from Health'}>
+              <Switch
+                value={hkEnabled}
+                onValueChange={setHkEnabled}
+                trackColor={{ false: colors.border, true: colors.legs }}
+                thumbColor={colors.bg}
+              />
+            </Row>
+          )}
           <Row label="Measurements"
             sublabel={latestMeasurements
               ? `Last: ${fmtDate(latestMeasurements.date)}${bf !== null ? ` · ${bf}% BF` : ''}`

@@ -15,6 +15,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { supabase } from '@/lib/supabase'
 import { storage } from '@/lib/storage'
+import { useHealthKit } from '@/hooks/useHealthKit'
 import { getLocalDate } from '@/lib/date'
 
 const DAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
@@ -184,6 +185,7 @@ export default function TodayScreen() {
   const { user } = useAuth()
   const { programData, loading: programLoading } = useActiveProgram()
   const { entries: bwEntries, latest: bwLatest, change: bwChange, logWeight } = useBodyweight()
+  const { enabled: hkEnabled, writeWeight: hkWriteWeight } = useHealthKit()
   const { settings } = useSettings()
   const { recentLogs, idToSlugMap, logCardio, updateCardioSet, deleteCardioSet } = useCardioLog()
   const [showWeightModal, setShowWeightModal] = useState(false)
@@ -355,6 +357,8 @@ export default function TodayScreen() {
   const handleLogWeight = async (val: number) => {
     const lbs = wu === 'kg' ? Math.round(val / 0.453592 * 10) / 10 : val
     await logWeight({ weight: lbs })
+    // Mirror to Apple Health if enabled
+    if (hkEnabled) hkWriteWeight(lbs).catch(() => {})
   }
 
   // ── Dot colors & sizes for week strip ────────────────────

@@ -50,3 +50,7 @@ android/.gradle/
 .DS_Store
 *.log
 google-service-account.json
+
+# Fix/patch scripts
+fix-*.py
+apply-*.sh
