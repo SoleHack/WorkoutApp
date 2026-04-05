@@ -11,6 +11,7 @@ import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { useWorkoutNotes, useExerciseNotes } from '@/hooks/useWorkoutNotes'
+import { useNotifications } from '@/hooks/useNotifications'
 import { useWorkoutTimer } from '@/hooks/useWorkoutTimer'
 import { RestTimer, SetInputModal, CardioModal, ExerciseSearchModal, NotesModal, ExerciseInfoModal } from '@/components/workout'
 import { PRBanner } from '@/components/workout/PRBanner'
@@ -75,6 +76,7 @@ export default function WorkoutScreen() {
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null)
   const [editingNoteVal, setEditingNoteVal] = useState('')
   const { getNote, setNote: saveExNote } = useExerciseNotes()
+  const { sendPRNotification, handleWorkoutComplete } = useNotifications()
 
   useEffect(() => {
     if (day && !session && !loading) startSession(day.id)
@@ -129,6 +131,7 @@ export default function WorkoutScreen() {
       prTracker.current[exerciseId] = estimated
       const exName = EXERCISES[exerciseId]?.name || day?.exercises.find((e: any) => e.exerciseDbId === exerciseId)?.id || 'Exercise'
       setShowPR({ name: exName, e1rm: estimated })
+      sendPRNotification(exName, estimated, weightUnit)
     }
     setActiveSetModal(null)
     const exId = ex?.exerciseDbId

@@ -9,6 +9,7 @@ import { useSettings } from '@/hooks/useSettings'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useBodyMeasurements, useProgressPhotos } from '@/hooks/useBodyComposition'
 import { useHealthKit } from '@/hooks/useHealthKit'
+import { useNotifications } from '@/hooks/useNotifications'
 import { navyBodyFat, bfCategory, leanMass } from '@/lib/bodyFat'
 import { useTheme } from '@/lib/ThemeContext'
 
@@ -358,9 +359,16 @@ export default function SettingsScreen() {
   const { settings, save } = useSettings()
   const { entries: bwEntries, latest: bwLatest } = useBodyweight()
   const { available: hkAvailable, enabled: hkEnabled, setEnabled: setHkEnabled } = useHealthKit()
+  const {
+    reminderEnabled, reminderHour, reminderMinute,
+    streakEnabled, prEnabled,
+    setReminderEnabled, setReminderTime,
+    setStreakEnabled, setPrEnabled,
+  } = useNotifications()
   const { latest: latestMeasurements } = useBodyMeasurements()
 
   const [showMeasurements, setShowMeasurements] = useState(false)
+  const [showTimePicker, setShowTimePicker] = useState(false)
   const [showPhotos, setShowPhotos] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [editingHeight, setEditingHeight] = useState(false)
@@ -545,6 +553,55 @@ export default function SettingsScreen() {
             })}
           </Section>
         )}
+
+        {/* ── Notifications ── */}
+        <Section title="NOTIFICATIONS">
+          <Row label="Workout Reminder" sublabel={reminderEnabled ? `Daily at ${reminderHour % 12 || 12}:${String(reminderMinute).padStart(2, '0')} ${reminderHour >= 12 ? 'PM' : 'AM'}` : 'Get reminded to train each day'}>
+            <Switch
+              value={reminderEnabled}
+              onValueChange={setReminderEnabled}
+              trackColor={{ false: colors.border, true: colors.push }}
+              thumbColor={colors.bg}
+            />
+          </Row>
+          {reminderEnabled && (
+            <View style={{ paddingHorizontal: 16, paddingBottom: 14 }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 10 }}>REMINDER TIME</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {[6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(h => {
+                  const label = h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`
+                  const isSelected = reminderHour === h && reminderMinute === 0
+                  return (
+                    <TouchableOpacity key={h} onPress={() => setReminderTime(h, 0)}
+                      style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6,
+                        backgroundColor: isSelected ? colors.push : colors.bg,
+                        borderWidth: 1, borderColor: isSelected ? colors.push : colors.border }}>
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: isSelected ? colors.bg : colors.muted }}>
+                        {label}
+                      </Text>
+                    </TouchableOpacity>
+                  )
+                })}
+              </View>
+            </View>
+          )}
+          <Row label="Streak Alert" sublabel="8 PM reminder if streak is at risk">
+            <Switch
+              value={streakEnabled}
+              onValueChange={setStreakEnabled}
+              trackColor={{ false: colors.border, true: colors.push }}
+              thumbColor={colors.bg}
+            />
+          </Row>
+          <Row label="PR Celebrations" sublabel="Instant notification on new personal records" last>
+            <Switch
+              value={prEnabled}
+              onValueChange={setPrEnabled}
+              trackColor={{ false: colors.border, true: colors.legs }}
+              thumbColor={colors.bg}
+            />
+          </Row>
+        </Section>
 
         {/* ── Social ── */}
         <Section title="SOCIAL">

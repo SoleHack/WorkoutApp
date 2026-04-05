@@ -52,7 +52,15 @@
       "expo-router",
       "expo-font",
       "expo-video",
-      "react-native-health"
+      "react-native-health",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#0C0C0B",
+          "sounds": []
+        }
+      ]
     ],
     "scheme": "ppltracker",
     "experiments": {
