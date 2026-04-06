@@ -45,9 +45,12 @@ export function useVolumeLandmarks(
   sessions: any[]
 ) {
   const landmarks = useMemo(() => {
-    // Count working sets per muscle group in the last 7 days
-    const sevenDaysAgo = new Date()
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    // Count working sets per muscle group since Monday of this week
+    const now = new Date()
+    const monday = new Date(now)
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7))
+    monday.setHours(0, 0, 0, 0)
+    const sevenDaysAgo = monday
 
     const setsByMuscle: Record<string, number> = {}
 
