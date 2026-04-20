@@ -13,6 +13,7 @@ const LANDMARKS: Record<string, { label: string; mev: number; mav: number; mrv: 
   calves:     { label: 'Calves',      mev: 8,  mav: 16, mrv: 20 },
   abs:        { label: 'Abs / Core',  mev: 6,  mav: 16, mrv: 20 },
   forearms:   { label: 'Forearms',    mev: 4,  mav: 10, mrv: 14 },
+  adductors:  { label: 'Adductors',   mev: 4,  mav: 10, mrv: 14 },
 }
 
 // Map exercise muscle names → landmark keys
@@ -28,6 +29,8 @@ const MUSCLE_MAP: Record<string, string> = {
   'calves': 'calves', 'calf': 'calves',
   'abs': 'abs', 'core': 'abs', 'abdominals': 'abs',
   'forearms': 'forearms',
+  'adductors': 'adductors', 'adductor': 'adductors', 'inner thigh': 'adductors',
+  'tibialis': 'calves',
 }
 
 function normalizeMuscle(m: string): string | null {

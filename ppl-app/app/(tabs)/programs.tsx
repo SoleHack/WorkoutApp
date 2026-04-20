@@ -881,7 +881,10 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
 
       {/* Add Exercise Modal */}
       <Modal visible={showAddEx} transparent animationType="slide" onRequestClose={() => setShowAddEx(false)}>
-        <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}
+        >
           <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, backgroundColor: colors.card, maxHeight: '85%' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border }}>
               <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1 }}>ADD EXERCISE</Text>
@@ -895,7 +898,11 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                 placeholder="Search exercises..." placeholderTextColor={colors.muted}
                 value={exSearch} onChangeText={setExSearch} autoFocus />
             </View>
-            <ScrollView contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+            <ScrollView
+              contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
+              keyboardShouldPersistTaps="handled"
+              keyboardDismissMode="on-drag"
+            >
               {libLoading ? <ActivityIndicator color={colors.muted} style={{ marginTop: 20 }} /> : (
                 filteredLib.map(ex => (
                   <TouchableOpacity key={ex.id} onPress={() => handleAddExercise(ex)}
@@ -910,7 +917,7 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
               )}
             </ScrollView>
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Template Picker Modal */}

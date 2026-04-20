@@ -28,7 +28,7 @@ export function ExerciseSearchModal({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: colors.bg }}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: colors.bg }}>
         <View style={{
           paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16,
           flexDirection: 'row', alignItems: 'center', gap: 12,
@@ -51,7 +51,11 @@ export function ExerciseSearchModal({
           </TouchableOpacity>
         </View>
 
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
+        <ScrollView
+          contentContainerStyle={{ padding: 16, paddingBottom: 80 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
+        >
           {results.map(([slug, ex]) => (
             <TouchableOpacity
               key={slug}
@@ -79,7 +83,7 @@ export function ExerciseSearchModal({
             </Text>
           )}
         </ScrollView>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   )
 }
