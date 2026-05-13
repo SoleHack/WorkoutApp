@@ -40,135 +40,260 @@ export default function LoginScreen() {
     setLoading(false)
   }
 
+  const submitLabel =
+    mode === 'login'  ? 'LOG IN'         :
+    mode === 'signup' ? 'CREATE ACCOUNT' :
+                        'SEND RESET LINK'
+
   return (
     <KeyboardAvoidingView
-      className="flex-1 bg-bg"
+      style={{ flex: 1, backgroundColor: colors.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView
-        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24 }}
+        contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', paddingHorizontal: 24, paddingVertical: 32 }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Logo */}
-        <View className="items-center mb-10">
+        {/* Brand block — centered industrial header */}
+        <View style={{ marginBottom: 40, alignItems: 'center' }}>
           <Image
             source={require('../../assets/icon.png')}
-            style={{ width: 80, height: 80, resizeMode: 'contain' }}
+            style={{ width: 56, height: 56, resizeMode: 'contain', marginBottom: 16 }}
           />
-          <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 3, marginTop: 12 }}>
-            PPL TRACKER
+          <Text style={{
+            fontFamily: 'BebasNeue',
+            fontSize: 64,
+            color: colors.push,
+            letterSpacing: 4,
+            lineHeight: 64,
+            textAlign: 'center',
+          }}>
+            THE FORGE
           </Text>
-          <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 2, marginTop: 4 }}>
-            WORKOUTS & PROGRESS
-          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8 }}>
+            <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginRight: 10 }} />
+            <Text style={{
+              fontFamily: 'DMMono',
+              fontSize: 10,
+              color: colors.muted,
+              letterSpacing: 3,
+            }}>
+              FORGE PROTOCOL v1.0
+            </Text>
+            <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
+          </View>
         </View>
 
-        {/* Tab switcher */}
+        {/* Tab switcher — sharp, mono caps, orange active fill */}
         {mode !== 'reset' && (
-          <View className="flex-row mb-6 bg-card rounded-xl p-1">
-            {(['login', 'signup'] as const).map(m => (
-              <TouchableOpacity
-                key={m}
-                onPress={() => { setMode(m); setError(''); setMessage('') }}
-                className="flex-1 py-3 rounded-lg items-center"
-                style={{ backgroundColor: mode === m ? colors.text : 'transparent' }}
-              >
-                <Text style={{
-                  fontFamily: 'DMSans_500',
-                  fontSize: 14,
-                  color: mode === m ? colors.bg : colors.muted,
-                }}>
-                  {m === 'login' ? 'Log in' : 'Sign up'}
-                </Text>
-              </TouchableOpacity>
-            ))}
+          <View style={{ flexDirection: 'row', marginBottom: 28, gap: 8 }}>
+            {(['login', 'signup'] as const).map(m => {
+              const active = mode === m
+              return (
+                <TouchableOpacity
+                  key={m}
+                  onPress={() => { setMode(m); setError(''); setMessage('') }}
+                  style={{
+                    flex: 1,
+                    paddingVertical: 14,
+                    alignItems: 'center',
+                    backgroundColor: active ? colors.push : 'transparent',
+                    borderWidth: 1,
+                    borderColor: active ? colors.push : colors.border,
+                    borderRadius: 4,
+                  }}
+                >
+                  <Text style={{
+                    fontFamily: 'DMMono_500',
+                    fontSize: 11,
+                    color: active ? colors.bg : colors.muted,
+                    letterSpacing: 2,
+                  }}>
+                    {m === 'login' ? 'LOG IN' : 'SIGN UP'}
+                  </Text>
+                </TouchableOpacity>
+              )
+            })}
           </View>
         )}
 
         {mode === 'reset' && (
-          <View className="mb-6">
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 24, color: colors.text, letterSpacing: 1 }}>
-              Reset Password
+          <View style={{ marginBottom: 28, borderLeftWidth: 3, borderLeftColor: colors.push, paddingLeft: 14 }}>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 2 }}>
+              RESET PASSWORD
             </Text>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 4 }}>
+            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 4, lineHeight: 18 }}>
               Enter your email and we'll send a reset link.
             </Text>
           </View>
         )}
 
-        {/* Inputs */}
-        <TextInput
-          className="bg-card rounded-xl px-4 py-4 mb-3 text-text"
-          style={{ fontFamily: 'DMSans', fontSize: 15, borderWidth: 1, borderColor: colors.border }}
-          placeholder="Email"
-          placeholderTextColor={colors.muted}
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          autoComplete="email"
-        />
-
-        {mode !== 'reset' && (
+        {/* Email */}
+        <View style={{ marginBottom: 16 }}>
+          <Text style={{
+            fontFamily: 'DMMono_500',
+            fontSize: 10,
+            color: colors.muted,
+            letterSpacing: 2,
+            marginBottom: 6,
+          }}>
+            EMAIL
+          </Text>
           <TextInput
-            className="bg-card rounded-xl px-4 py-4 mb-4 text-text"
-            style={{ fontFamily: 'DMSans', fontSize: 15, borderWidth: 1, borderColor: colors.border }}
-            placeholder="Password"
+            style={{
+              fontFamily: 'DMSans',
+              fontSize: 15,
+              color: colors.text,
+              backgroundColor: colors.card,
+              borderWidth: 1,
+              borderColor: colors.border,
+              borderRadius: 6,
+              paddingHorizontal: 14,
+              paddingVertical: 14,
+            }}
+            placeholder="you@example.com"
             placeholderTextColor={colors.muted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-            autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
           />
+        </View>
+
+        {/* Password */}
+        {mode !== 'reset' && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{
+              fontFamily: 'DMMono_500',
+              fontSize: 10,
+              color: colors.muted,
+              letterSpacing: 2,
+              marginBottom: 6,
+            }}>
+              PASSWORD
+            </Text>
+            <TextInput
+              style={{
+                fontFamily: 'DMSans',
+                fontSize: 15,
+                color: colors.text,
+                backgroundColor: colors.card,
+                borderWidth: 1,
+                borderColor: colors.border,
+                borderRadius: 6,
+                paddingHorizontal: 14,
+                paddingVertical: 14,
+              }}
+              placeholder="••••••••"
+              placeholderTextColor={colors.muted}
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
+            />
+          </View>
         )}
 
+        {/* Error / Message blocks with FORGE border-left accent */}
         {error ? (
-          <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.danger, marginBottom: 12 }}>
-            {error}
-          </Text>
+          <View style={{
+            borderLeftWidth: 3,
+            borderLeftColor: colors.danger,
+            backgroundColor: colors.danger + '14',
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            marginBottom: 16,
+            borderRadius: 4,
+          }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.danger, letterSpacing: 2, marginBottom: 2 }}>
+              ERROR
+            </Text>
+            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text }}>
+              {error}
+            </Text>
+          </View>
         ) : null}
         {message ? (
-          <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.success, marginBottom: 12 }}>
-            {message}
-          </Text>
+          <View style={{
+            borderLeftWidth: 3,
+            borderLeftColor: colors.success,
+            backgroundColor: colors.success + '14',
+            paddingVertical: 10,
+            paddingHorizontal: 14,
+            marginBottom: 16,
+            borderRadius: 4,
+          }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.success, letterSpacing: 2, marginBottom: 2 }}>
+              CHECK YOUR INBOX
+            </Text>
+            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text }}>
+              {message}
+            </Text>
+          </View>
         ) : null}
 
-        {/* Submit */}
+        {/* Primary action — orange filled, mono caps, sharp */}
         <TouchableOpacity
           onPress={handle}
           disabled={loading}
-          className="rounded-xl py-4 items-center mb-4"
-          style={{ backgroundColor: colors.text, opacity: loading ? 0.7 : 1 }}
+          activeOpacity={0.85}
+          style={{
+            backgroundColor: colors.push,
+            borderRadius: 6,
+            paddingVertical: 16,
+            alignItems: 'center',
+            marginBottom: 16,
+            opacity: loading ? 0.7 : 1,
+          }}
         >
           {loading
             ? <ActivityIndicator color={colors.bg} />
-            : <Text style={{ fontFamily: 'DMSans_500', fontSize: 15, color: colors.bg }}>
-                {mode === 'login' ? 'Log in' : mode === 'signup' ? 'Create account' : 'Send reset link'}
+            : <Text style={{
+                fontFamily: 'DMMono_500',
+                fontSize: 12,
+                color: colors.bg,
+                letterSpacing: 3,
+              }}>
+                {submitLabel} →
               </Text>
           }
         </TouchableOpacity>
 
-        {/* Forgot / Back */}
+        {/* Secondary link — mono caps, muted */}
         {mode === 'login' && (
           <TouchableOpacity
             onPress={() => { setMode('reset'); setError(''); setMessage('') }}
-            className="items-center py-2"
+            style={{ alignItems: 'center', paddingVertical: 10 }}
           >
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted }}>
-              Forgot password?
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>
+              FORGOT PASSWORD?
             </Text>
           </TouchableOpacity>
         )}
         {mode === 'reset' && (
           <TouchableOpacity
             onPress={() => { setMode('login'); setError(''); setMessage('') }}
-            className="items-center py-2"
+            style={{ alignItems: 'center', paddingVertical: 10 }}
           >
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted }}>
-              ← Back to login
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>
+              ← BACK TO LOG IN
             </Text>
           </TouchableOpacity>
         )}
+
+        {/* Footer tagline — distant industrial */}
+        <View style={{ marginTop: 40, alignItems: 'center' }}>
+          <Text style={{
+            fontFamily: 'DMMono',
+            fontSize: 9,
+            color: colors.muted,
+            letterSpacing: 2,
+            opacity: 0.6,
+          }}>
+            BUILD · BREAK · REPEAT
+          </Text>
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   )

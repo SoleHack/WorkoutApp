@@ -1,4 +1,3 @@
-import '../src/styles/global.css'
 import { useEffect } from 'react'
 import { View } from 'react-native'
 import { Stack, useRouter, useSegments } from 'expo-router'
@@ -12,6 +11,7 @@ import { ThemeProvider, useTheme } from '@/lib/ThemeContext'
 import { useNetworkStatus } from '@/hooks/useNetworkStatus'
 import { useNotifications } from '@/hooks/useNotifications'
 import { OfflineBanner } from '@/components/OfflineBanner'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 SplashScreen.preventAutoHideAsync()
 
@@ -69,14 +69,16 @@ export default function RootLayout() {
   if (!fontsLoaded) return null
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryProvider>
-        <AuthProvider>
-          <ThemeProvider>
-            <AppShell />
-          </ThemeProvider>
-        </AuthProvider>
-      </QueryProvider>
-    </GestureHandlerRootView>
+    <ErrorBoundary scope="The Forge">
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <QueryProvider>
+          <AuthProvider>
+            <ThemeProvider>
+              <AppShell />
+            </ThemeProvider>
+          </AuthProvider>
+        </QueryProvider>
+      </GestureHandlerRootView>
+    </ErrorBoundary>
   )
 }

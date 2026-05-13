@@ -54,3 +54,8 @@ google-service-account.json
 # Fix/patch scripts
 fix-*.py
 apply-*.sh
+patch_*.py
+
+# Claude Code (local-only context, not for sharing — remove this line to commit)
+CLAUDE.md
+.claude/

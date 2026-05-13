@@ -30,30 +30,37 @@ export function useNetworkStatus() {
       })
     } catch {
       setChecked(true)
-      setIsOnline(prev => {
-        // Only mark offline after first successful check — avoids false negatives on startup
-        return prev === false ? false : false
-      })
       setIsOnline(false)
     }
   }, [])
 
   useEffect(() => {
+    const startPolling = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = setInterval(checkConnectivity, PING_INTERVAL)
+    }
+    const stopPolling = () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+    }
+
     checkConnectivity()
-    intervalRef.current = setInterval(checkConnectivity, PING_INTERVAL)
+    startPolling()
 
     const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
       if (next === 'active' && appState.current !== 'active') {
         checkConnectivity()
-        intervalRef.current = setInterval(checkConnectivity, PING_INTERVAL)
+        startPolling()
       } else if (next !== 'active') {
-        if (intervalRef.current) clearInterval(intervalRef.current)
+        stopPolling()
       }
       appState.current = next
     })
 
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
+      stopPolling()
       sub.remove()
     }
   }, [checkConnectivity])

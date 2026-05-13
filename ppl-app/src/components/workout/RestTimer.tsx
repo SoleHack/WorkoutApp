@@ -85,12 +85,12 @@ const RestTimer = memo(function RestTimer({ seconds, onDone }: RestTimerProps) {
         flexDirection: 'row', alignItems: 'center',
         justifyContent: 'space-between', paddingHorizontal: 16, paddingVertical: 10,
       }}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-          <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+          <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2.5 }}>
             REST
           </Text>
           <Text style={{
-            fontFamily: 'BebasNeue', fontSize: 28, letterSpacing: 2,
+            fontFamily: 'BebasNeue', fontSize: 30, letterSpacing: 3, lineHeight: 30,
             color: display < 10 ? colors.danger : colors.pull,
           }}>
             {min}:{sec.toString().padStart(2, '0')}
@@ -100,18 +100,18 @@ const RestTimer = memo(function RestTimer({ seconds, onDone }: RestTimerProps) {
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
           <TouchableOpacity
             onPress={() => adjust(-15)}
-            style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>-15s</Text>
+            style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>−15S</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => adjust(30)}
-            style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>+30s</Text>
+            style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>+30S</Text>
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => onDoneRef.current()}
-            style={{ paddingHorizontal: 16, paddingVertical: 8, borderRadius: 12, backgroundColor: colors.border }}>
-            <Text style={{ fontFamily: 'DMSans_500', fontSize: 12, color: colors.text }}>Skip</Text>
+            style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 4, backgroundColor: colors.pull }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.bg, letterSpacing: 2 }}>SKIP</Text>
           </TouchableOpacity>
         </View>
       </View>

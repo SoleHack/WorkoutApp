@@ -17,15 +17,40 @@ export interface LoggedSet {
 
 export type SetsMap = Record<string, (LoggedSet | undefined)[]>
 
+export interface WorkoutSession {
+  id: string
+  user_id: string
+  day_key: string
+  date: string
+  workout_id?: string | null
+  completed_at?: string | null
+  duration_seconds?: number | null
+  notes?: string | null
+}
+
+// Raw row from supabase `session_sets` when returned via the nested workout_sessions select.
+interface RawSessionSet {
+  id: string
+  exercise_id: string
+  set_number: number
+  weight: number | null
+  reps: number | null
+  rpe: number | null
+  completed: boolean
+  is_warmup: boolean
+  duration_seconds: number | null
+  distance_meters: number | null
+}
+
 export function useWorkout(dayKey: string) {
   const { user } = useAuth()
   const qc = useQueryClient()
-  const [session, setSession] = useState<any>(null)
+  const [session, setSession] = useState<WorkoutSession | null>(null)
   const [sets, setSets] = useState<SetsMap>({})
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const sessionRef = useRef<any>(null)
+  const sessionRef = useRef<WorkoutSession | null>(null)
   const setsRef = useRef<SetsMap>({})
 
   const updateSets = (updater: (prev: SetsMap) => SetsMap) => {
@@ -36,7 +61,7 @@ export function useWorkout(dayKey: string) {
     })
   }
 
-  const updateSession = (s: any) => {
+  const updateSession = (s: WorkoutSession | null) => {
     sessionRef.current = s
     setSession(s)
   }
@@ -64,18 +89,19 @@ export function useWorkout(dayKey: string) {
       }
       updateSession({ ...existing, workout_id: workoutId || existing.workout_id })
       const setsMap: SetsMap = {}
-      existing.session_sets.forEach((s: any) => {
+      const rawSets: RawSessionSet[] = existing.session_sets || []
+      rawSets.forEach(s => {
         if (!setsMap[s.exercise_id]) setsMap[s.exercise_id] = []
         const idx = s.set_number > 0 ? s.set_number - 1 : Math.abs(s.set_number) - 1
         setsMap[s.exercise_id][idx] = {
           id: s.id,
-          weight: s.weight,
-          reps: s.reps,
+          weight: s.weight ?? 0,
+          reps: s.reps ?? 0,
           completed: s.completed,
-          rpe: s.rpe,
+          rpe: s.rpe ?? undefined,
           isWarmup: s.is_warmup,
-          durationSeconds: s.duration_seconds,
-          distanceMeters: s.distance_meters,
+          durationSeconds: s.duration_seconds ?? undefined,
+          distanceMeters: s.distance_meters ?? undefined,
         }
       })
       updateSets(() => setsMap)
@@ -125,10 +151,11 @@ export function useWorkout(dayKey: string) {
         return { ...prev, [exerciseId]: exSets }
       })
       if (existing?.id) {
-        await supabase
+        const { error } = await supabase
           .from('session_sets')
           .update({ completed: false, weight: null, reps: null, rpe: null })
           .eq('id', existing.id)
+        if (error) console.warn('[useWorkout] clear set failed:', error.message)
       }
       return
     }
@@ -141,14 +168,15 @@ export function useWorkout(dayKey: string) {
     })
 
     if (existing?.id) {
-      await supabase.from('session_sets').update({
+      const { error } = await supabase.from('session_sets').update({
         weight, reps, completed: true,
         ...(rpe ? { rpe } : {}),
         ...(durationSeconds ? { duration_seconds: durationSeconds } : {}),
         ...(distanceMeters ? { distance_meters: distanceMeters } : {}),
       }).eq('id', existing.id)
+      if (error) console.warn('[useWorkout] update set failed:', error.message)
     } else {
-      const { data } = await supabase.from('session_sets').insert({
+      const { data, error } = await supabase.from('session_sets').insert({
         session_id: currentSession.id,
         exercise_id: exerciseId,
         set_number: setNumber,
@@ -159,13 +187,23 @@ export function useWorkout(dayKey: string) {
         ...(distanceMeters ? { distance_meters: distanceMeters } : {}),
       }).select('id').single()
 
-      if (data) {
+      if (error || !data) {
+        // Roll back optimistic update so the user can retry — without an id
+        // the set will never reconcile with the server on next refetch.
+        console.warn('[useWorkout] insert set failed:', error?.message)
         updateSets(prev => {
           const exSets = [...(prev[exerciseId] || [])]
-          exSets[idx] = { weight, reps, completed: true, id: data.id, rpe, isWarmup, durationSeconds, distanceMeters }
+          exSets[idx] = existing || { weight: 0, reps: 0, completed: false }
           return { ...prev, [exerciseId]: exSets }
         })
+        return
       }
+
+      updateSets(prev => {
+        const exSets = [...(prev[exerciseId] || [])]
+        exSets[idx] = { weight, reps, completed: true, id: data.id, rpe, isWarmup, durationSeconds, distanceMeters }
+        return { ...prev, [exerciseId]: exSets }
+      })
     }
   }, [])
 
@@ -177,8 +215,19 @@ export function useWorkout(dayKey: string) {
       ...(durationSeconds ? { duration_seconds: durationSeconds } : {}),
     }).eq('id', currentSession.id)
 
-    // Tell the Today screen to refetch — its recentSessions query is now stale
     qc.invalidateQueries({ queryKey: ['recentSessions', user?.id] })
+
+    // Auto-advance periodized programs when the user has completed the week.
+    // RPC returns { advanced: true, current_week: N } on advance; we only
+    // invalidate the program cache when something actually changed.
+    try {
+      const { data: result } = await supabase.rpc('advance_program_week')
+      if (result && (result as { advanced?: boolean }).advanced) {
+        qc.invalidateQueries({ queryKey: ['activeProgram', user?.id] })
+      }
+    } catch {
+      // Non-fatal — advancement will re-attempt on next finish.
+    }
   }, [user, qc])
 
   const cancelSession = useCallback(async () => {

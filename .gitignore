@@ -26,6 +26,9 @@ ppl-app/android/app/build/
 .DS_Store
 *.log
 
+# Claude Code (local-only agent configs, not for sharing)
+.claude/
+
 # Secrets
 google-service-account.json
 *.p8

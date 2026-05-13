@@ -22,33 +22,39 @@ export function ExerciseSearchModal({
   const { colors } = useTheme()
   const [query, setQuery] = useState('')
 
-  const results = (Object.entries(EXERCISES) as [string, any][])
-    .filter(([, ex]) => ex.name.toLowerCase().includes(query.toLowerCase()))
+  // EXERCISES is dual-keyed (slug AND uuid → same entry) so a naive entries()
+  // walk yields duplicates. Filter to slug-keyed rows only — that also ensures
+  // onAdd(slug) receives a real slug, not a UUID-shaped string.
+  const results = (Object.entries(EXERCISES) as [string, { slug?: string; name?: string; category?: string; cardioMetric?: string | null; muscles?: { primary?: string[] } }][])
+    .filter(([key, ex]) => ex.slug === key)
+    .filter(([, ex]) => (ex.name || '').toLowerCase().includes(query.toLowerCase()))
     .slice(0, 30)
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: colors.bg }}>
         <View style={{
-          paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16,
-          flexDirection: 'row', alignItems: 'center', gap: 12,
+          paddingTop: 56, paddingHorizontal: 20, paddingBottom: 14,
           borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.text, letterSpacing: 2.5, lineHeight: 26 }}>{title.toUpperCase()}</Text>
+            <TouchableOpacity onPress={() => { setQuery(''); onClose() }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>CANCEL</Text>
+            </TouchableOpacity>
+          </View>
           <TextInput
             style={{
-              flex: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12,
+              borderRadius: 6, paddingHorizontal: 14, paddingVertical: 12,
               fontFamily: 'DMSans', fontSize: 14, color: colors.text,
               backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
             }}
-            placeholder="Search exercises..."
+            placeholder="SEARCH EXERCISES…"
             placeholderTextColor={colors.muted}
             value={query}
             onChangeText={setQuery}
             autoFocus
           />
-          <TouchableOpacity onPress={() => { setQuery(''); onClose() }}>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted }}>Cancel</Text>
-          </TouchableOpacity>
         </View>
 
         <ScrollView
@@ -62,24 +68,24 @@ export function ExerciseSearchModal({
               onPress={() => { onAdd(slug); setQuery(''); onClose() }}
               style={{
                 flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-                borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-                marginBottom: 8, backgroundColor: colors.card,
+                borderRadius: 6, paddingHorizontal: 14, paddingVertical: 14,
+                marginBottom: 6, backgroundColor: colors.card,
                 borderWidth: 1, borderColor: colors.border,
               }}>
-              <View>
-                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text }}>{ex.name}</Text>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 2 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.text, letterSpacing: 1.5, lineHeight: 20 }}>{(ex.name || '').toUpperCase()}</Text>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 3 }}>
                   {ex.category === 'cardio'
-                    ? `Cardio · ${ex.cardioMetric || 'duration'}`
-                    : ex.muscles?.primary?.slice(0, 2).join(', ')}
+                    ? `CARDIO · ${(ex.cardioMetric || 'DURATION').toUpperCase()}`
+                    : (ex.muscles?.primary?.slice(0, 2).join(' · ') || '').toUpperCase()}
                 </Text>
               </View>
               <Text style={{ color: colors.muted, fontSize: 20 }}>+</Text>
             </TouchableOpacity>
           ))}
           {results.length === 0 && (
-            <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, textAlign: 'center', marginTop: 40 }}>
-              No exercises found
+            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 2, textAlign: 'center', marginTop: 40 }}>
+              NO EXERCISES FOUND
             </Text>
           )}
         </ScrollView>
@@ -103,28 +109,31 @@ export function NotesModal({ visible, note, onChange, onClose }: NotesModalProps
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1, backgroundColor: colors.bg }}>
         <View style={{
-          paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16,
-          flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+          paddingTop: 56, paddingHorizontal: 20, paddingBottom: 14,
+          flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
           borderBottomWidth: 1, borderBottomColor: colors.border,
         }}>
-          <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1 }}>
-            SESSION NOTES
-          </Text>
+          <View>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.push, letterSpacing: 2.5, marginBottom: 2 }}>JOURNAL</Text>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 3, lineHeight: 28 }}>
+              SESSION NOTES
+            </Text>
+          </View>
           <TouchableOpacity onPress={onClose}>
-            <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.pull }}>Done</Text>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.push, letterSpacing: 2 }}>DONE ✓</Text>
           </TouchableOpacity>
         </View>
         <View style={{ flex: 1, padding: 20 }}>
           <TextInput
-            style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.text, flex: 1, textAlignVertical: 'top' }}
+            style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.text, flex: 1, textAlignVertical: 'top', lineHeight: 20 }}
             multiline
-            placeholder="Any PRs, injuries, or things to remember..."
+            placeholder="Any PRs, injuries, or things to remember…"
             placeholderTextColor={colors.muted}
             value={note}
             onChangeText={onChange}
           />
-          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.border, marginTop: 8 }}>
-            AUTO-SAVES AS YOU TYPE
+          <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 2, marginTop: 8 }}>
+            · AUTO-SAVES AS YOU TYPE
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -137,7 +146,7 @@ export function NotesModal({ visible, note, onChange, onClose }: NotesModalProps
 export function ExerciseVideoPlayer({ videoUrl }: { videoUrl: string }) {
   const player = useVideoPlayer(videoUrl, p => { p.loop = true; p.play() })
   return (
-    <View style={{ marginBottom: 20, borderRadius: 14, overflow: 'hidden', backgroundColor: '#000' }}>
+    <View style={{ marginBottom: 20, borderRadius: 6, overflow: 'hidden', backgroundColor: '#000' }}>
       <VideoView
         player={player}
         style={{ width: '100%', aspectRatio: 16 / 9 }}
@@ -148,125 +157,3 @@ export function ExerciseVideoPlayer({ videoUrl }: { videoUrl: string }) {
   )
 }
 
-// ─── ExerciseInfoModal ────────────────────────────────────────
-
-const MUSCLE_POSITIONS: Record<string, string> = {
-  chest: 'Chest', pectorals: 'Chest',
-  shoulders: 'Shoulders', deltoids: 'Shoulders',
-  triceps: 'Triceps', biceps: 'Biceps',
-  back: 'Back', lats: 'Lats', rhomboids: 'Upper Back', traps: 'Traps',
-  glutes: 'Glutes', hamstrings: 'Hamstrings',
-  quads: 'Quads', quadriceps: 'Quads',
-  calves: 'Calves', core: 'Core', abs: 'Core', abdominals: 'Core',
-  forearms: 'Forearms', 'hip flexors': 'Hip Flexors', adductors: 'Adductors',
-}
-
-function normalizeMuscle(m: string): string {
-  const lower = m.toLowerCase()
-  for (const [key, val] of Object.entries(MUSCLE_POSITIONS)) {
-    if (lower.includes(key)) return val
-  }
-  return m
-}
-
-interface ExerciseInfoModalProps {
-  exercise: any
-  visible: boolean
-  onClose: () => void
-  dayColor: string
-}
-
-export function ExerciseInfoModal({ exercise, visible, onClose, dayColor }: ExerciseInfoModalProps) {
-  const { colors } = useTheme()
-  if (!exercise) return null
-
-  const primary       = (exercise.muscles?.primary   || []) as string[]
-  const secondary     = (exercise.muscles?.secondary || []) as string[]
-  const videoUrl      = exercise.video?.url || null
-  const notes         = exercise.notes || null
-  const primaryNorm   = [...new Set(primary.map(normalizeMuscle))]
-  const secondaryNorm = [...new Set(secondary.map(normalizeMuscle))]
-
-  return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-        <View style={{
-          borderTopLeftRadius: 24, borderTopRightRadius: 24,
-          backgroundColor: colors.card, maxHeight: '80%',
-        }}>
-          {/* Header */}
-          <View style={{
-            flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-            padding: 20, borderBottomWidth: 1, borderBottomColor: colors.border,
-          }}>
-            <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1 }}>
-                {(exercise.name || '').toUpperCase()}
-              </Text>
-              {exercise.tag && (
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 2 }}>
-                  {exercise.tag.toUpperCase()}
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}>
-              <Text style={{ fontSize: 22, color: colors.muted }}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            {/* Video */}
-            {videoUrl && <ExerciseVideoPlayer videoUrl={videoUrl} />}
-
-            {/* Muscles */}
-            {primaryNorm.length > 0 && (
-              <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 8 }}>
-                  PRIMARY MUSCLES
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {primaryNorm.map(m => (
-                    <View key={m} style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: dayColor + '25', borderWidth: 1, borderColor: dayColor + '50' }}>
-                      <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: dayColor }}>{m}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {secondaryNorm.length > 0 && (
-              <View style={{ marginBottom: 16 }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 8 }}>
-                  SECONDARY
-                </Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-                  {secondaryNorm.map(m => (
-                    <View key={m} style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-                      <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>{m}</Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Coaching notes */}
-            {notes && (
-              <View style={{ marginBottom: 20, borderRadius: 14, padding: 14, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginBottom: 8 }}>
-                  COACHING NOTES
-                </Text>
-                <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text, lineHeight: 20 }}>{notes}</Text>
-              </View>
-            )}
-
-            {!notes && primaryNorm.length === 0 && !videoUrl && (
-              <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, textAlign: 'center', paddingTop: 20 }}>
-                No additional info for this exercise.
-              </Text>
-            )}
-          </ScrollView>
-        </View>
-      </View>
-    </Modal>
-  )
-}

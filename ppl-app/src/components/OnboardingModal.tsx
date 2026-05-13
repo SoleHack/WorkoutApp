@@ -54,8 +54,8 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 6, paddingTop: 64, paddingBottom: 8 }}>
           {STEPS.map(s => (
             <View key={s} style={{
-              width: s === step ? 20 : 6, height: 6, borderRadius: 3,
-              backgroundColor: s === step ? colors.text : colors.border,
+              width: s === step ? 24 : 6, height: 4, borderRadius: 2,
+              backgroundColor: s === step ? colors.push : colors.border,
             }} />
           ))}
         </View>
@@ -65,17 +65,23 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
           {/* ── Step 1: Welcome ── */}
           {step === 'welcome' && (
             <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-              <Text style={{ fontSize: 64, marginBottom: 24 }}>💪</Text>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 42, color: colors.text, letterSpacing: 3, textAlign: 'center', lineHeight: 44 }}>
-                WELCOME TO{'\n'}PPL TRACKER
+              <Text style={{ fontSize: 56, marginBottom: 16 }}>💪</Text>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.push, letterSpacing: 3, marginBottom: 8 }}>WELCOME TO</Text>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 56, color: colors.text, letterSpacing: 4, textAlign: 'center', lineHeight: 56 }}>
+                THE FORGE
               </Text>
-              <Text style={{ fontFamily: 'DMSans', fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 16, lineHeight: 22 }}>
-                Track your Push/Pull/Legs workouts, monitor progress, and stay consistent.
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
+                <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginRight: 10 }} />
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 3 }}>FORGE PROTOCOL v1.0</Text>
+                <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
+              </View>
+              <Text style={{ fontFamily: 'DMSans', fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 20, lineHeight: 22, paddingHorizontal: 20 }}>
+                Track your protocol. Monitor your progress. Stay consistent. Forge yourself.
               </Text>
               <TouchableOpacity
                 onPress={() => setStep('name')}
-                style={{ marginTop: 48, borderRadius: 14, paddingVertical: 16, paddingHorizontal: 48, backgroundColor: colors.text }}>
-                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.bg, letterSpacing: 2 }}>GET STARTED</Text>
+                style={{ marginTop: 44, borderRadius: 6, paddingVertical: 16, paddingHorizontal: 40, backgroundColor: colors.push }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 12, color: colors.bg, letterSpacing: 3 }}>GET STARTED →</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -83,18 +89,22 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
           {/* ── Step 2: Name ── */}
           {step === 'name' && (
             <View style={{ flex: 1, justifyContent: 'center' }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 34, color: colors.text, letterSpacing: 2, marginBottom: 8 }}>
-                WHAT'S YOUR NAME?
+              <View style={{ borderLeftWidth: 3, borderLeftColor: colors.push, paddingLeft: 12, marginBottom: 24 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.push, letterSpacing: 2.5, marginBottom: 4 }}>STEP 02 · IDENTITY</Text>
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 40, color: colors.text, letterSpacing: 3, lineHeight: 40 }}>
+                  YOUR NAME
+                </Text>
+              </View>
+              <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, marginBottom: 22, lineHeight: 20 }}>
+                This shows on your profile and in partner comparisons.
               </Text>
-              <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, marginBottom: 32, lineHeight: 20 }}>
-                This shows up on your profile and in partner comparisons.
-              </Text>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2, marginBottom: 6 }}>NAME</Text>
               <TextInput
                 style={{
-                  borderRadius: 14, paddingHorizontal: 18, paddingVertical: 16,
-                  fontFamily: 'DMSans', fontSize: 18, color: colors.text,
-                  backgroundColor: colors.card, borderWidth: 1.5,
-                  borderColor: name.trim() ? colors.text : colors.border,
+                  borderRadius: 6, paddingHorizontal: 14, paddingVertical: 14,
+                  fontFamily: 'DMSans', fontSize: 16, color: colors.text,
+                  backgroundColor: colors.card, borderWidth: 1,
+                  borderColor: name.trim() ? colors.push : colors.border,
                 }}
                 placeholder="Enter your name"
                 placeholderTextColor={colors.muted}
@@ -107,12 +117,12 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
               />
               <TouchableOpacity
                 onPress={handleNameNext}
-                style={{ marginTop: 20, borderRadius: 14, paddingVertical: 16, alignItems: 'center',
-                  backgroundColor: name.trim() ? colors.text : colors.card,
-                  borderWidth: 1, borderColor: name.trim() ? colors.text : colors.border }}>
-                <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, letterSpacing: 2,
+                style={{ marginTop: 18, borderRadius: 6, paddingVertical: 16, alignItems: 'center',
+                  backgroundColor: name.trim() ? colors.push : colors.card,
+                  borderWidth: 1, borderColor: name.trim() ? colors.push : colors.border }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 12, letterSpacing: 3,
                   color: name.trim() ? colors.bg : colors.muted }}>
-                  {name.trim() ? 'CONTINUE' : 'SKIP'}
+                  {name.trim() ? 'CONTINUE →' : 'SKIP'}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -121,10 +131,13 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
           {/* ── Step 3: Pick Program ── */}
           {step === 'program' && (
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 34, color: colors.text, letterSpacing: 2, marginBottom: 8, marginTop: 24 }}>
-                PICK YOUR PROGRAM
-              </Text>
-              <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, marginBottom: 24, lineHeight: 20 }}>
+              <View style={{ borderLeftWidth: 3, borderLeftColor: colors.push, paddingLeft: 12, marginBottom: 18, marginTop: 24 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.push, letterSpacing: 2.5, marginBottom: 4 }}>STEP 03 · PROTOCOL</Text>
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 36, color: colors.text, letterSpacing: 3, lineHeight: 36 }}>
+                  PICK YOUR PROGRAM
+                </Text>
+              </View>
+              <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted, marginBottom: 22, lineHeight: 20 }}>
                 You can change this anytime from the Train tab.
               </Text>
 
@@ -137,17 +150,20 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
                     onPress={() => handleActivate(p.id)}
                     disabled={activating}
                     style={{
-                      borderRadius: 14, padding: 18, marginBottom: 12,
-                      backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+                      borderRadius: 6, padding: 16, marginBottom: 10,
+                      backgroundColor: colors.card,
+                      borderLeftWidth: 3, borderLeftColor: colors.push,
+                      borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1,
+                      borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border,
                     }}>
-                    <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1 }}>
-                      {p.name.toUpperCase()}
-                    </Text>
                     {p.split_type && (
-                      <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginTop: 4, letterSpacing: 1 }}>
+                      <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.push, letterSpacing: 2.5, marginBottom: 4 }}>
                         {p.split_type.toUpperCase()}
                       </Text>
                     )}
+                    <Text style={{ fontFamily: 'BebasNeue', fontSize: 24, color: colors.text, letterSpacing: 2, lineHeight: 26 }}>
+                      {p.name.toUpperCase()}
+                    </Text>
                     {p.description && (
                       <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 6, lineHeight: 18 }}>
                         {p.description}
@@ -161,7 +177,7 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
               )}
 
               <TouchableOpacity onPress={onComplete} style={{ marginTop: 8, paddingVertical: 14, alignItems: 'center' }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: colors.muted }}>Skip for now →</Text>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>SKIP FOR NOW →</Text>
               </TouchableOpacity>
             </View>
           )}

@@ -6,5 +6,5 @@ export {
   ExerciseSearchModal,
   NotesModal,
   ExerciseVideoPlayer,
-  ExerciseInfoModal,
 } from './WorkoutModals'
+export { ExerciseInfoModal } from './ExerciseInfoModal'

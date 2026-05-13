@@ -1,0 +1,49 @@
+{
+  "configVersion": 0,
+  "apple": {
+    "version": "2.0.0",
+    "copyright": "2026 Sole Hack",
+    "categories": ["HEALTH_AND_FITNESS"],
+    "release": {
+      "automaticRelease": true,
+      "phasedRelease": false
+    },
+    "info": {
+      "en-US": {
+        "title": "The Forge Method",
+        "subtitle": "Track Every Set. Hit Every PR.",
+        "description": "THE FORGE — A WORKOUT TRACKER THAT EARNS ITS PLACE ON YOUR HOME SCREEN\n\nEvery gym app feels like a social network with a rest timer bolted on. The Forge is the opposite. Clean. Fast. Built for the lift, not the scroll.\n\n\nWHY IT'S DIFFERENT\n\n— No ads. No paywall blocking the timer mid-set. No social feed begging for your attention.\n— Active workout screen tuned for the rack: tap a set, log the weight, the rest timer fires itself.\n— Every PR flagged the instant you hit it. No spreadsheet. No math.\n— Dark theme by default — your phone is your business, not the gym's.\n\n\nWHAT YOU CAN TRACK\n\n• Sets, reps, weight, RPE — logged in two taps, with built-in support for supersets, drop sets, and rest-pause finishers.\n• Personal records — strength and volume PRs auto-detected per exercise the moment you hit them.\n• Bodyweight — log inside the app or read directly from Apple Health.\n• Body composition — body-fat estimates, full circumference measurements, week-over-week trends.\n• Progress photos — front, side, back, locked to your account.\n• Cardio — separate log so it doesn't pollute your lifting volume math.\n• Volume landmarks — MEV / MAV / MRV per muscle group, reset Monday, so you can program intelligently instead of guessing.\n• Custom workout templates — build your own splits or run a program that ships with the app.\n\n\nPARTNER MODE\n\nTrain with someone else? Connect with a training partner inside the app. When they finish a session, you get a push. When you finish, they do. Accountability is built in, not bolted on.\n\n\nAPPLE HEALTH\n\nTwo-way bodyweight sync. Read from your scale, write back when you log inside the app. No double-entry.\n\n\nEXPORT YOUR DATA\n\nYour training history is yours. One tap exports the whole log as CSV — drop it into Numbers, Sheets, or whatever analyzer you want.\n\n\nPRIVACY YOU CAN AUDIT\n\nNo third-party analytics. No advertising SDKs. No tracking identifiers. Just your data, encrypted in transit and at rest. Delete your account from inside the app any time and it's gone.\n\n\nWHAT'S IN THE BOX\n\n• 250+ exercises across every major and minor muscle group\n• Rest timer with auto-fire after set save\n• Strength, volume, and bodyweight charts\n• Workout share cards for the days you want to show off\n• Built for iPhone, dark mode native\n\n\nLift heavier. Log faster. Stop fighting your tracker.\n\n— The Forge",
+        "keywords": [
+          "gym",
+          "lifting",
+          "strength",
+          "hypertrophy",
+          "bodybuilding",
+          "powerlifting",
+          "tracker",
+          "log",
+          "sets",
+          "reps",
+          "prs",
+          "volume",
+          "ppl"
+        ],
+        "marketingUrl": "https://theforgefitness.app",
+        "privacyPolicyUrl": "https://theforgefitness.app/privacy",
+        "privacyChoicesUrl": "https://theforgefitness.app/privacy",
+        "supportUrl": "https://theforgefitness.app/support",
+        "promoText": "Push, Pull, Legs. Bodyweight, body fat, PRs, volume — all in one tracker. Apple Health sync. Partner mode. No ads. No paywall. The cleanest gym log on iOS.",
+        "releaseNotes": "v2.0 — The Forge Method launches.\n\n• FORGE — a 12-week PPL² periodization program, free, built into the app. Five phases, weekly load tuning, technique progression, coach notes.\n• Supersets & circuits — adjacent exercises render as combined cards with a shared rest timer and round grid.\n• 1RM tracking — manual entry or one-tap auto-detect from your recent best set. Drives suggested working weights in periodized programs.\n• Program builder — phase manager + per-week tuning grid for your own custom periodized programs.\n• Notifications redesigned — reminders no longer fire the same day you've already trained.\n• Plus a long list of polish: accessibility labels everywhere, native iOS time picker, account-deletion cascades, faster Progress tab, partner code stored server-side.\n\nLift heavier. Log faster. Don't skip the deload."
+      }
+    },
+    "review": {
+      "firstName": "Josh",
+      "lastName": "Anderson",
+      "email": "jsacpt24@yahoo.com",
+      "phone": "+14802857603",
+      "demoUsername": "",
+      "demoPassword": "",
+      "notes": "The Forge is a workout tracker. The core workout, PR tracking, bodyweight, body composition, programs, cardio log, and export work on a single account with no setup. To review the partner-notification flow, sign up two accounts, connect them via Partner tab → invite code, share a program, and complete a session — the second account receives a push."
+    }
+  }
+}

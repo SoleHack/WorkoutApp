@@ -28,7 +28,21 @@ async function fetchCardioExerciseIds(): Promise<Record<string, string>> {
   return map
 }
 
-async function fetchCardioLogs(userId: string) {
+export interface CardioSet {
+  id: string
+  exercise_id: string
+  duration_seconds: number | null
+  distance_meters: number | null
+  completed: boolean
+}
+export interface CardioLog {
+  id: string
+  date: string
+  day_key: string
+  session_sets: CardioSet[] | null
+}
+
+async function fetchCardioLogs(userId: string): Promise<CardioLog[]> {
   const today = getLocalDate()
   const { data } = await supabase
     .from('workout_sessions')
@@ -38,7 +52,7 @@ async function fetchCardioLogs(userId: string) {
     .gte('date', today)
     .order('date', { ascending: false })
     .limit(10)
-  return data || []
+  return (data || []) as unknown as CardioLog[]
 }
 
 // ─── Hook ─────────────────────────────────────────────────────

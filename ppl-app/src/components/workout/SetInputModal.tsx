@@ -130,39 +130,39 @@ export function SetInputModal({
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.5)' }}>
-        <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, backgroundColor: colors.card }}>
+        <View style={{ borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, paddingTop: 22, backgroundColor: colors.card, borderTopWidth: 3, borderTopColor: dayColor }}>
 
           {/* Header */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
             <View>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1 }}>
-                SET {Math.abs(setNumber)}
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: dayColor, letterSpacing: 2.5, marginBottom: 2 }}>
+                SET · {Math.abs(setNumber)}
               </Text>
-              {exercise?.name && (
-                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>
-                  {exercise.name}
-                </Text>
-              )}
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 2.5, lineHeight: 28 }}>
+                {(exercise?.name || 'LOG SET').toUpperCase()}
+              </Text>
             </View>
-            <TouchableOpacity onPress={onCancel}>
-              <Text style={{ fontSize: 22, color: colors.muted }}>✕</Text>
+            <TouchableOpacity onPress={onCancel} style={{ padding: 4 }}>
+              <Text style={{ fontSize: 20, color: colors.muted }}>✕</Text>
             </TouchableOpacity>
           </View>
 
           {/* Progressive overload suggestion banner */}
           {suggestion && !lastSet?.completed && (
             <View style={{
-              borderRadius: 10, padding: 10, marginBottom: 14,
-              backgroundColor: dayColor + '15',
-              borderWidth: 1, borderColor: dayColor + '40',
+              borderRadius: 6, padding: 12, marginBottom: 12,
+              backgroundColor: dayColor + '12',
+              borderLeftWidth: 3, borderLeftColor: dayColor,
+              borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1,
+              borderTopColor: dayColor + '30', borderRightColor: dayColor + '30', borderBottomColor: dayColor + '30',
               flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
             }}>
-              <View>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: dayColor, letterSpacing: 1 }}>
-                  SUGGESTED ({suggestion.reason})
+              <View style={{ flex: 1 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: dayColor, letterSpacing: 2 }}>
+                  SUGGESTED · {suggestion.reason.toUpperCase()}
                 </Text>
-                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.text, marginTop: 2 }}>
-                  {suggestion.weight} {unitLabel} × {suggestion.reps}
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1.5, marginTop: 2 }}>
+                  {suggestion.weight} {unitLabel.toUpperCase()} × {suggestion.reps}
                 </Text>
               </View>
               <TouchableOpacity
@@ -170,36 +170,36 @@ export function SetInputModal({
                   setWeight(suggestion.weight.toString())
                   setReps(suggestion.reps.toString())
                 }}
-                style={{ borderRadius: 8, paddingHorizontal: 12, paddingVertical: 6, backgroundColor: dayColor }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.bg }}>USE</Text>
+                style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: dayColor }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.bg, letterSpacing: 2 }}>USE</Text>
               </TouchableOpacity>
             </View>
           )}
 
           {/* Last set reference (if no suggestion) */}
           {lastSameSet && !suggestion && !lastSet?.completed && (
-            <View style={{ borderRadius: 10, padding: 10, marginBottom: 14, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>LAST TIME</Text>
-              <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text, marginTop: 2 }}>
-                {toDisplay(lastSameSet.weight || 0, weightUnit)} {unitLabel} × {lastSameSet.reps}
+            <View style={{ borderRadius: 6, padding: 12, marginBottom: 12, backgroundColor: colors.bg, borderLeftWidth: 3, borderLeftColor: colors.muted, borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2 }}>LAST TIME</Text>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1.5, marginTop: 2 }}>
+                {toDisplay(lastSameSet.weight || 0, weightUnit)} {unitLabel.toUpperCase()} × {lastSameSet.reps}
                 {lastSameSet.rpe ? `  ·  RPE ${lastSameSet.rpe}` : ''}
               </Text>
             </View>
           )}
 
           {/* Weight + Reps inputs */}
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 14 }}>
             {!isCardio && (
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2, marginBottom: 6 }}>
                   WEIGHT ({unitLabel.toUpperCase()})
                 </Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
                   <TouchableOpacity onPress={() => adjust('weight', -1)} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
                     <Text style={{ color: colors.text, fontSize: 20 }}>−</Text>
                   </TouchableOpacity>
                   <TextInput
-                    style={{ flex: 1, textAlign: 'center', fontFamily: 'DMMono', fontSize: 18, color: colors.text }}
+                    style={{ flex: 1, textAlign: 'center', fontFamily: 'DMMono', fontSize: 20, color: colors.text }}
                     value={weight} onChangeText={setWeight}
                     keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.muted}
                   />
@@ -210,15 +210,15 @@ export function SetInputModal({
               </View>
             )}
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2, marginBottom: 6 }}>
                 {isCardio ? 'DURATION (MIN)' : 'REPS'}
               </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 12, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 6, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.bg }}>
                 <TouchableOpacity onPress={() => adjust('reps', -1)} style={{ paddingHorizontal: 16, paddingVertical: 14 }}>
                   <Text style={{ color: colors.text, fontSize: 20 }}>−</Text>
                 </TouchableOpacity>
                 <TextInput
-                  style={{ flex: 1, textAlign: 'center', fontFamily: 'DMMono', fontSize: 18, color: colors.text }}
+                  style={{ flex: 1, textAlign: 'center', fontFamily: 'DMMono', fontSize: 20, color: colors.text }}
                   value={reps} onChangeText={setReps}
                   keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.muted}
                 />
@@ -231,16 +231,16 @@ export function SetInputModal({
 
           {/* e1RM hint */}
           {e1rmVal && !isCardio && (
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, textAlign: 'center', marginBottom: 16 }}>
-              ≈ {toDisplay(e1rmVal, weightUnit)} {unitLabel} estimated 1RM
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, textAlign: 'center', marginBottom: 16 }}>
+              ≈ {toDisplay(e1rmVal, weightUnit)} {unitLabel.toUpperCase()} ESTIMATED 1RM
             </Text>
           )}
 
           {/* RPE (optional) */}
           {!isCardio && (
             <View style={{ marginBottom: 20 }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginBottom: 8 }}>
-                RPE (OPTIONAL)
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2, marginBottom: 8 }}>
+                RPE · OPTIONAL
               </Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={{ flexDirection: 'row', gap: 6 }}>
@@ -249,13 +249,13 @@ export function SetInputModal({
                       key={r}
                       onPress={() => setRpe(rpe === r.toString() ? '' : r.toString())}
                       style={{
-                        borderRadius: 8, paddingHorizontal: 12, paddingVertical: 8,
+                        borderRadius: 4, paddingHorizontal: 14, paddingVertical: 8,
                         backgroundColor: rpe === r.toString() ? dayColor : colors.bg,
                         borderWidth: 1,
                         borderColor: rpe === r.toString() ? dayColor : colors.border,
                       }}>
                       <Text style={{
-                        fontFamily: 'DMMono', fontSize: 12,
+                        fontFamily: 'DMMono_500', fontSize: 11, letterSpacing: 1.5,
                         color: rpe === r.toString() ? colors.bg : colors.muted,
                       }}>
                         {r}
@@ -271,13 +271,13 @@ export function SetInputModal({
           <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity
               onPress={onCancel}
-              style={{ flex: 1, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              style={{ flex: 1, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.muted, letterSpacing: 2 }}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleLog}
-              style={{ flex: 2, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: dayColor }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>✓ Log Set</Text>
+              style={{ flex: 2, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: dayColor }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 12, color: colors.bg, letterSpacing: 3 }}>LOG SET →</Text>
             </TouchableOpacity>
           </View>
 

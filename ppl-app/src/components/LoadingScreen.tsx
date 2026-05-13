@@ -61,27 +61,32 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
       justifyContent: 'center',
       opacity: fade,
     }}>
-      {/* PPL letters in brand colors */}
-      <View style={{ flexDirection: 'row', marginBottom: 32 }}>
-        {[
-          { letter: 'P', color: colors.push },
-          { letter: 'P', color: colors.pull },
-          { letter: 'L', color: colors.legs },
-        ].map(({ letter, color }, i) => (
-          <Text key={i} style={{
-            fontFamily: 'BebasNeue',
-            fontSize: 64,
-            color,
-            letterSpacing: 8,
-            lineHeight: 68,
-          }}>
-            {letter}
-          </Text>
-        ))}
+      {/* THE FORGE brand */}
+      <Text style={{
+        fontFamily: 'BebasNeue',
+        fontSize: 56,
+        color: colors.push,
+        letterSpacing: 4,
+        lineHeight: 56,
+        marginBottom: 6,
+      }}>
+        THE FORGE
+      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 28 }}>
+        <View style={{ width: 20, height: 1, backgroundColor: colors.muted, marginRight: 10 }} />
+        <Text style={{
+          fontFamily: 'DMMono',
+          fontSize: 9,
+          color: colors.muted,
+          letterSpacing: 3,
+        }}>
+          FORGE PROTOCOL v1.0
+        </Text>
+        <View style={{ width: 20, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
       </View>
 
       {/* Animated bar trio */}
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: message ? 24 : 0 }}>
+      <View style={{ flexDirection: 'row', gap: 6, marginBottom: message ? 20 : 0 }}>
         {[
           { anim: bar1, color: colors.push },
           { anim: bar2, color: colors.pull },
@@ -90,9 +95,8 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
           <Animated.View
             key={i}
             style={{
-              width: 40,
-              height: 4,
-              borderRadius: 2,
+              width: 36,
+              height: 3,
               backgroundColor: color,
               opacity: anim,
             }}
@@ -102,10 +106,10 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
 
       {message ? (
         <Text style={{
-          fontFamily: 'DMMono',
-          fontSize: 11,
+          fontFamily: 'DMMono_500',
+          fontSize: 10,
           color: colors.muted,
-          letterSpacing: 1.5,
+          letterSpacing: 2.5,
           marginTop: 4,
         }}>
           {message.toUpperCase()}

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback } from 'react'
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react'
 import { storage } from './storage'
 import { getColors, ColorScheme } from './theme'
 
@@ -31,11 +31,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     storage.set(THEME_KEY, t) // synchronous write
   }, [])
 
-  return (
-    <ThemeContext.Provider value={{ theme, colors: getColors(theme), setTheme }}>
-      {children}
-    </ThemeContext.Provider>
+  // Stable context value so consumers don't re-render unless theme actually changes.
+  const value = useMemo(
+    () => ({ theme, colors: getColors(theme), setTheme }),
+    [theme, setTheme]
   )
+
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
 }
 
 export function useTheme() {

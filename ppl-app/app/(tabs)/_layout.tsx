@@ -17,19 +17,28 @@ function TabIcon({
   focused: boolean
 }) {
   const { colors } = useTheme()
+  const tint = focused ? colors.push : colors.muted
   return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 8, width: 60 }}>
+    <View style={{ alignItems: 'center', justifyContent: 'center', width: 60, paddingTop: 6 }}>
+      {/* Active rail — 2px orange bar above the icon */}
+      <View style={{
+        height: 2,
+        width: 24,
+        backgroundColor: focused ? colors.push : 'transparent',
+        borderRadius: 1,
+        marginBottom: 6,
+      }} />
       <Ionicons
         name={focused ? iconFocused : icon}
         size={22}
-        color={focused ? colors.text : colors.muted}
+        color={tint}
       />
       <Text style={{
-        fontFamily: 'DMMono',
-        fontSize: 8,
-        letterSpacing: 0.3,
-        marginTop: 3,
-        color: focused ? colors.text : colors.muted,
+        fontFamily: focused ? 'DMMono_500' : 'DMMono',
+        fontSize: 9,
+        letterSpacing: 1.5,
+        marginTop: 4,
+        color: tint,
       }}>
         {label}
       </Text>

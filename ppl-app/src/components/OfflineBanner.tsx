@@ -41,8 +41,8 @@ export function OfflineBanner({ isOnline, wasOffline, onDismissRecovery }: Offli
         paddingTop: 52, // below status bar
         paddingBottom: 10,
         paddingHorizontal: 20,
-        backgroundColor: isRecovered ? colors.legs : '#1A0A0A',
-        borderBottomWidth: 1,
+        backgroundColor: isRecovered ? colors.legs : colors.danger + '14',
+        borderBottomWidth: 2,
         borderBottomColor: isRecovered ? colors.legs : colors.danger,
         flexDirection: 'row',
         alignItems: 'center',
@@ -50,22 +50,22 @@ export function OfflineBanner({ isOnline, wasOffline, onDismissRecovery }: Offli
       }}>
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
           <View style={{
-            width: 8, height: 8, borderRadius: 4,
-            backgroundColor: isRecovered ? colors.legs : colors.danger,
+            width: 8, height: 8, borderRadius: 2,
+            backgroundColor: isRecovered ? colors.bg : colors.danger,
             marginRight: 10,
           }} />
-          <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: isRecovered ? colors.bg : colors.danger, letterSpacing: 1 }}>
-            {isRecovered ? 'BACK ONLINE' : 'NO INTERNET CONNECTION'}
+          <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: isRecovered ? colors.bg : colors.danger, letterSpacing: 2.5 }}>
+            {isRecovered ? 'BACK ONLINE' : 'NO CONNECTION'}
           </Text>
         </View>
         {!isRecovered && (
-          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.danger + '80' }}>
-            Data may not sync
+          <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.danger + 'B0', letterSpacing: 1.5 }}>
+            DATA MAY NOT SYNC
           </Text>
         )}
         {isRecovered && (
           <TouchableOpacity onPress={onDismissRecovery}>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.bg }}>✕</Text>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 12, color: colors.bg }}>✕</Text>
           </TouchableOpacity>
         )}
       </View>

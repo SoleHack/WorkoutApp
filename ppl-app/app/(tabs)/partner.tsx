@@ -6,13 +6,21 @@ import { useAuth } from '@/hooks/useAuth'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { useSettings } from '@/hooks/useSettings'
 import { supabase } from '@/lib/supabase'
+import { withErrorBoundary } from '@/components/withErrorBoundary'
 
 function e1rm(w: number, r: number) { return r === 1 ? w : Math.round(w * (1 + r / 30)) }
 
-function StatBox({ label, value, sub, color }: any) {
+// Locally-styled stat tile for the partner card (centered layout differs from the
+// shared @/components/forge StatBox). Intentionally not merged.
+function StatBox({ label, value, sub, color }: {
+  label: string
+  value: string | number
+  sub?: string
+  color?: string
+}) {
   const { colors } = useTheme()
   return (
-    <View style={{ flex: 1, alignItems: 'center', borderRadius: 12, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+    <View style={{ flex: 1, alignItems: 'center', borderRadius: 6, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
       <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: color || colors.text, letterSpacing: 1 }}>{value}</Text>
       {sub ? <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: color || colors.muted, marginTop: 1 }}>{sub}</Text> : null}
       <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, marginTop: 3, textAlign: 'center' }}>{label}</Text>
@@ -20,7 +28,31 @@ function StatBox({ label, value, sub, color }: any) {
   )
 }
 
-async function loadUserStats(userId: string) {
+interface PartnerSessionSet {
+  exercise_id: string
+  weight: number | null
+  reps: number | null
+  completed: boolean
+  is_warmup: boolean
+}
+interface PartnerSession {
+  date: string
+  completed_at: string | null
+  duration_seconds: number | null
+  day_key: string
+  session_sets: PartnerSessionSet[] | null
+}
+
+interface UserStats {
+  sessions: number
+  streak: number
+  totalVol: number
+  prCount: number
+  topE1rm: number
+  avgDur: number | null
+}
+
+async function loadUserStats(userId: string): Promise<UserStats | null> {
   const { data: sessions } = await supabase
     .from('workout_sessions')
     .select('date, completed_at, duration_seconds, day_key, session_sets(exercise_id, weight, reps, completed, is_warmup)')
@@ -30,15 +62,16 @@ async function loadUserStats(userId: string) {
     .limit(200)
 
   if (!sessions) return null
-  const completed = sessions.filter((s: any) => s.completed_at && s.day_key !== 'cardio')
+  const typed = sessions as unknown as PartnerSession[]
+  const completed = typed.filter(s => s.completed_at && s.day_key !== 'cardio')
 
-  const totalVol = completed.reduce((a: number, s: any) =>
-    a + (s.session_sets || []).filter((x: any) => x.completed && !x.is_warmup && x.weight && x.reps)
-      .reduce((b: number, x: any) => b + x.weight * x.reps, 0), 0)
+  const totalVol = completed.reduce((a, s) =>
+    a + (s.session_sets || []).filter(x => x.completed && !x.is_warmup && x.weight && x.reps)
+      .reduce((b, x) => b + (x.weight! * x.reps!), 0), 0)
 
   const prMap: Record<string, number> = {}
-  completed.forEach((s: any) => {
-    ;(s.session_sets || []).forEach((x: any) => {
+  completed.forEach(s => {
+    ;(s.session_sets || []).forEach(x => {
       if (!x.completed || !x.weight || !x.reps || x.is_warmup) return
       const est = e1rm(x.weight, x.reps)
       if (!prMap[x.exercise_id] || est > prMap[x.exercise_id]) prMap[x.exercise_id] = est
@@ -47,16 +80,16 @@ async function loadUserStats(userId: string) {
 
   let streak = 0
   const today = new Date(); today.setHours(0, 0, 0, 0)
-  const doneSet = new Set(completed.map((s: any) => s.date))
+  const doneSet = new Set(completed.map(s => s.date))
   for (let i = 0; i <= 365; i++) {
     const d = new Date(today); d.setDate(d.getDate() - i)
     if (doneSet.has(d.toISOString().split('T')[0])) streak++
     else if (i > 0) break
   }
 
-  const durSessions = completed.filter((s: any) => s.duration_seconds > 0)
+  const durSessions = completed.filter(s => (s.duration_seconds ?? 0) > 0)
   const avgDur = durSessions.length > 0
-    ? Math.round(durSessions.reduce((a: number, s: any) => a + s.duration_seconds, 0) / durSessions.length / 60)
+    ? Math.round(durSessions.reduce((a, s) => a + (s.duration_seconds || 0), 0) / durSessions.length / 60)
     : null
 
   return {
@@ -92,7 +125,7 @@ function getMotivation(myWeek: number, partnerWeek: number, partnerName: string)
   return null
 }
 
-export default function PartnerScreen() {
+function PartnerScreen() {
   const { colors } = useTheme()
   const { user } = useAuth()
   const { settings } = useSettings()
@@ -100,8 +133,8 @@ export default function PartnerScreen() {
 
   const [loadingMine, setLoadingMine]       = useState(true)
   const [loadingPartner, setLoadingPartner] = useState(false)
-  const [myStats, setMyStats]               = useState<any>(null)
-  const [partnerStats, setPartnerStats]     = useState<any>(null)
+  const [myStats, setMyStats]               = useState<UserStats | null>(null)
+  const [partnerStats, setPartnerStats]     = useState<UserStats | null>(null)
   const [partnerDates, setPartnerDates]     = useState<string[]>([])
   const [myDates, setMyDates]               = useState<string[]>([])
   const [partnerName, setPartnerName]       = useState('')
@@ -114,18 +147,15 @@ export default function PartnerScreen() {
 
   useEffect(() => {
     if (!user) return
-    setMyCode(user.id.replace(/-/g, '').slice(-6).toUpperCase())
     loadMyData()
   }, [user])
 
   const loadMyData = async () => {
     setLoadingMine(true)
 
-    // Load my own stats
     const stats = await loadUserStats(user!.id)
     setMyStats(stats)
 
-    // Store my session dates for weekly comparison
     const { data: mySessionData } = await supabase
       .from('workout_sessions')
       .select('date')
@@ -134,15 +164,15 @@ export default function PartnerScreen() {
       .neq('day_key', 'cardio')
       .order('date', { ascending: false })
       .limit(90)
-    setMyDates((mySessionData || []).map((s: any) => s.date))
+    setMyDates((mySessionData || []).map(s => s.date))
 
-    // Query user_settings directly for partner_user_id
-    const { data: row, error } = await supabase
+    const { data: row } = await supabase
       .from('user_settings')
-      .select('partner_user_id, partner_display_name')
+      .select('partner_user_id, partner_display_name, partner_code')
       .eq('user_id', user!.id)
-      .single()
+      .maybeSingle()
 
+    setMyCode(row?.partner_code || '')
     setLoadingMine(false)
 
     if (row?.partner_user_id) {
@@ -154,20 +184,17 @@ export default function PartnerScreen() {
   const loadPartnerData = async (partnerId: string, cachedName?: string | null) => {
     setLoadingPartner(true)
 
-    // Fetch display name from public_stats (readable by all authenticated users)
     const { data: pRow } = await supabase
       .from('public_stats')
       .select('display_name')
       .eq('user_id', partnerId)
-      .single()
+      .maybeSingle()
     setPartnerName(pRow?.display_name || cachedName || 'Training Partner')
 
-    // Use SECURITY DEFINER RPC to bypass RLS on workout_sessions
     const { data: rpcData, error: rpcError } = await supabase
       .rpc('get_partner_stats', { partner_id: partnerId })
 
     if (rpcError || !rpcData) {
-      console.log('RPC error:', JSON.stringify(rpcError))
       setLoadingPartner(false)
       return
     }
@@ -201,17 +228,16 @@ export default function PartnerScreen() {
 
     const code = searchCode.trim().toUpperCase()
 
-    // Scan user_settings for matching code (last 6 chars of user_id, no dashes)
-    const { data: rows } = await supabase
-      .from('user_settings')
-      .select('user_id, partner_display_name')
-      .limit(1000)
+    const { data: matches, error: rpcError } = await supabase
+      .rpc('find_partner_by_code', { code })
 
-    const match = rows?.find((r: any) =>
-      r.user_id.replace(/-/g, '').slice(-6).toUpperCase() === code &&
-      r.user_id !== user!.id
-    )
+    if (rpcError) {
+      setSearchError('Search failed. Please try again.')
+      setSearching(false)
+      return
+    }
 
+    const match = matches?.[0]
     if (!match) {
       setSearchError('No user found with that code. Check the code and try again.')
       setSearching(false)
@@ -227,7 +253,7 @@ export default function PartnerScreen() {
     setShowConnect(false)
     setSearchCode('')
     setSearching(false)
-    loadPartnerData(match.user_id)
+    loadPartnerData(match.user_id, match.display_name)
   }
 
   const handleDisconnect = () => {
@@ -251,7 +277,7 @@ export default function PartnerScreen() {
     if (!myStats) return
     await Share.share({
       message: [
-        '🏋️ PPL Tracker Stats',
+        '🏋️ The Forge — Stats',
         `Sessions: ${myStats.sessions}`,
         `Streak: ${myStats.streak} days 🔥`,
         `Volume: ${myStats.totalVol}k ${wu}`,
@@ -259,7 +285,7 @@ export default function PartnerScreen() {
         `Best e1RM: ~${myStats.topE1rm} ${wu}`,
         '',
         `Partner code: ${myCode}`,
-        'myppltracker.com',
+        'theforgefitness.app',
       ].join('\n')
     })
   }
@@ -269,16 +295,19 @@ export default function PartnerScreen() {
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 16 }}>
-        <Text style={{ fontFamily: 'BebasNeue', fontSize: 34, color: colors.text, letterSpacing: 2 }}>PARTNER</Text>
-        <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1 }}>
-          COMPARE · COMPETE · CONNECT
-        </Text>
+        <View style={{ borderLeftWidth: 3, borderLeftColor: colors.push, paddingLeft: 12 }}>
+          <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.push, letterSpacing: 2.5, marginBottom: 2 }}>ALLIANCE</Text>
+          <Text style={{ fontFamily: 'BebasNeue', fontSize: 44, color: colors.text, letterSpacing: 3, lineHeight: 44 }}>PARTNER</Text>
+          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2, marginTop: 4 }}>
+            COMPARE · COMPETE · CONNECT
+          </Text>
+        </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
 
         {/* ── My stats card ── */}
-        <View style={{ borderRadius: 16, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.push + '60', overflow: 'hidden', marginBottom: 20 }}>
+        <View style={{ borderRadius: 6, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.push + '60', overflow: 'hidden', marginBottom: 20 }}>
           <View style={{ height: 3, backgroundColor: colors.push }} />
           <View style={{ padding: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -287,7 +316,7 @@ export default function PartnerScreen() {
                 <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginTop: 2 }}>MY CARD</Text>
               </View>
               <TouchableOpacity onPress={handleShare}
-                style={{ borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.push + '25', borderWidth: 1, borderColor: colors.push + '50' }}>
+                style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.push + '25', borderWidth: 1, borderColor: colors.push + '50' }}>
                 <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.push }}>Share ↗</Text>
               </TouchableOpacity>
             </View>
@@ -305,7 +334,7 @@ export default function PartnerScreen() {
                 </View>
               </>
             )}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, borderRadius: 10, padding: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, borderRadius: 4, padding: 12, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
               <View>
                 <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>YOUR PARTNER CODE</Text>
                 <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.text, letterSpacing: 4, marginTop: 2 }}>{myCode}</Text>
@@ -321,7 +350,7 @@ export default function PartnerScreen() {
         {/* ── Partner card (connected) ── */}
         {partnerUserId ? (
           <>
-            <View style={{ borderRadius: 16, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.pull + '60', overflow: 'hidden', marginBottom: 12 }}>
+            <View style={{ borderRadius: 6, backgroundColor: colors.card, borderWidth: 1.5, borderColor: colors.pull + '60', overflow: 'hidden', marginBottom: 12 }}>
               <View style={{ height: 3, backgroundColor: colors.pull }} />
               <View style={{ padding: 16 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
@@ -364,7 +393,7 @@ export default function PartnerScreen() {
                       return (
                         <>
                           {/* This week */}
-                          <View style={{ marginTop: 16, borderRadius: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
+                          <View style={{ marginTop: 16, borderRadius: 4, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, padding: 14 }}>
                             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 12 }}>THIS WEEK</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 12, justifyContent: 'center', marginBottom: 8 }}>
                               {/* My sessions bar */}
@@ -405,7 +434,7 @@ export default function PartnerScreen() {
                           </View>
 
                           {/* Head to head */}
-                          <View style={{ marginTop: 12, borderRadius: 10, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
+                          <View style={{ marginTop: 12, borderRadius: 4, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, overflow: 'hidden' }}>
                             <View style={{ paddingHorizontal: 14, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: colors.border }}>
                               <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5 }}>HEAD TO HEAD</Text>
                             </View>
@@ -441,20 +470,20 @@ export default function PartnerScreen() {
 
             {!showConnect && (
               <TouchableOpacity onPress={() => setShowConnect(true)}
-                style={{ borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}>
+                style={{ borderRadius: 6, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, marginBottom: 16 }}>
                 <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>Change Partner</Text>
               </TouchableOpacity>
             )}
           </>
         ) : (
           !showConnect && (
-            <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, marginBottom: 16, alignItems: 'center' }}>
+            <View style={{ borderRadius: 6, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 20, marginBottom: 16, alignItems: 'center' }}>
               <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1, marginBottom: 6 }}>NO PARTNER CONNECTED</Text>
               <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, textAlign: 'center', lineHeight: 20, marginBottom: 16 }}>
                 Enter your training partner's 6-character code to connect and compare progress.
               </Text>
               <TouchableOpacity onPress={() => setShowConnect(true)}
-                style={{ borderRadius: 10, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.pull + '25', borderWidth: 1, borderColor: colors.pull + '60' }}>
+                style={{ borderRadius: 4, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.pull + '25', borderWidth: 1, borderColor: colors.pull + '60' }}>
                 <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: colors.pull }}>Connect a Partner</Text>
               </TouchableOpacity>
             </View>
@@ -463,7 +492,7 @@ export default function PartnerScreen() {
 
         {/* ── Connect / change form ── */}
         {showConnect && (
-          <View style={{ borderRadius: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
+          <View style={{ borderRadius: 6, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, padding: 16, marginBottom: 16 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>ENTER PARTNER CODE</Text>
               <TouchableOpacity onPress={() => { setShowConnect(false); setSearchCode(''); setSearchError('') }}>
@@ -472,7 +501,7 @@ export default function PartnerScreen() {
             </View>
             <View style={{ flexDirection: 'row', gap: 8 }}>
               <TextInput
-                style={{ flex: 1, borderRadius: 10, padding: 12, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, letterSpacing: 4, textAlign: 'center' }}
+                style={{ flex: 1, borderRadius: 4, padding: 12, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, letterSpacing: 4, textAlign: 'center' }}
                 placeholder="XXXXXX"
                 placeholderTextColor={colors.muted}
                 value={searchCode}
@@ -482,7 +511,7 @@ export default function PartnerScreen() {
                 autoFocus
               />
               <TouchableOpacity onPress={handleSearch} disabled={searching || searchCode.length < 4}
-                style={{ borderRadius: 10, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: searchCode.length >= 4 ? colors.pull : colors.bg, borderWidth: 1, borderColor: searchCode.length >= 4 ? colors.pull : colors.border }}>
+                style={{ borderRadius: 4, paddingHorizontal: 18, justifyContent: 'center', backgroundColor: searchCode.length >= 4 ? colors.pull : colors.bg, borderWidth: 1, borderColor: searchCode.length >= 4 ? colors.pull : colors.border }}>
                 {searching
                   ? <ActivityIndicator color={colors.bg} size="small" />
                   : <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: searchCode.length >= 4 ? colors.bg : colors.muted }}>GO</Text>}
@@ -498,3 +527,5 @@ export default function PartnerScreen() {
     </View>
   )
 }
+
+export default withErrorBoundary(PartnerScreen, 'Partner screen')

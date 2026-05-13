@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, memo } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, RefreshControl,
   TextInput, Modal, KeyboardAvoidingView, Platform, Alert,
@@ -7,10 +7,10 @@ import { useRouter, useFocusEffect } from 'expo-router'
 import Svg, { Polyline } from 'react-native-svg'
 import { OnboardingModal } from '@/components/OnboardingModal'
 import { LoadingScreen } from '@/components/LoadingScreen'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/lib/ThemeContext'
-import { useActiveProgram } from '@/hooks/useActiveProgram'
+import { useActiveProgram, type ScheduleSlot } from '@/hooks/useActiveProgram'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
@@ -18,12 +18,20 @@ import { supabase } from '@/lib/supabase'
 import { storage } from '@/lib/storage'
 import { useHealthKit } from '@/hooks/useHealthKit'
 import { getLocalDate } from '@/lib/date'
+import { SectionLabel } from '@/components/forge'
+import { withErrorBoundary } from '@/components/withErrorBoundary'
 
 const DAYS_SHORT = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const DAYS_FULL  = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
 
 // ─── Log Weight Modal ────────────────────────────────────────
-function LogWeightModal({ visible, onClose, onLog, unit }: any) {
+interface LogWeightModalProps {
+  visible: boolean
+  onClose: () => void
+  onLog: (val: number) => void
+  unit: string
+}
+const LogWeightModal = memo(function LogWeightModal({ visible, onClose, onLog, unit }: LogWeightModalProps) {
   const { colors } = useTheme()
   const [val, setVal] = useState('')
   const submit = () => { if (!val) return; onLog(parseFloat(val)); setVal(''); onClose() }
@@ -31,34 +39,44 @@ function LogWeightModal({ visible, onClose, onLog, unit }: any) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.65)' }}>
-        <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, backgroundColor: colors.card }}>
-          <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 6 }}>LOG BODYWEIGHT</Text>
-          <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginBottom: 16 }}>
-            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+        <View style={{ borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, paddingTop: 28, backgroundColor: colors.card, borderTopWidth: 3, borderTopColor: colors.push }}>
+          <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.push, letterSpacing: 2.5, marginBottom: 4 }}>BODYWEIGHT</Text>
+          <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 3, lineHeight: 32, marginBottom: 6 }}>LOG WEIGHT</Text>
+          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2, marginBottom: 18 }}>
+            {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
           </Text>
           <TextInput
-            style={{ borderRadius: 14, paddingHorizontal: 16, paddingVertical: 16, fontFamily: 'DMMono', fontSize: 28, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center', marginBottom: 16 }}
+            style={{ borderRadius: 6, paddingHorizontal: 16, paddingVertical: 16, fontFamily: 'DMMono', fontSize: 28, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center', marginBottom: 16 }}
             placeholder={'0 ' + unit} placeholderTextColor={colors.muted}
             value={val} onChangeText={setVal} keyboardType="decimal-pad" autoFocus
             onSubmitEditing={submit} returnKeyType="done" />
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity onPress={() => { setVal(''); onClose() }}
-              style={{ flex: 1, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              style={{ flex: 1, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.muted, letterSpacing: 2 }}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={submit} disabled={!val}
-              style={{ flex: 2, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: colors.text, opacity: val ? 1 : 0.4 }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>Log Weight</Text>
+              style={{ flex: 2, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: colors.push, opacity: val ? 1 : 0.4 }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.bg, letterSpacing: 3 }}>LOG WEIGHT →</Text>
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
     </Modal>
   )
-}
+})
 
 // ─── Edit Cardio Row ──────────────────────────────────────────
-function EditCardioRow({ set, ex, editingCardio, setEditingCardio, idToSlugMap, onUpdate }: any) {
+type EditingCardio = { setId: string; sessionId: string; duration: string; distance: string }
+interface EditCardioRowProps {
+  set: { id: string }
+  ex: { name?: string; icon?: string; metric?: string } | undefined
+  editingCardio: EditingCardio
+  setEditingCardio: (v: EditingCardio | null) => void
+  idToSlugMap: Record<string, string>
+  onUpdate: (setId: string, fields: { durationMinutes: string; distanceMiles: string }) => Promise<void>
+}
+const EditCardioRow = memo(function EditCardioRow({ set, ex, editingCardio, setEditingCardio, onUpdate }: EditCardioRowProps) {
   const { colors } = useTheme()
   const [dur, setDur]   = useState(editingCardio.duration)
   const [dist, setDist] = useState(editingCardio.distance)
@@ -81,34 +99,34 @@ function EditCardioRow({ set, ex, editingCardio, setEditingCardio, idToSlugMap, 
         <View style={{ flex: 1 }}>
           <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 4 }}>DURATION (MIN)</Text>
           <TextInput
-            style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull, textAlign: 'center' }}
+            style={{ borderRadius: 6, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull, textAlign: 'center' }}
             value={dur} onChangeText={setDur} keyboardType="decimal-pad" placeholder="0" placeholderTextColor={colors.muted} />
         </View>
         {ex?.metric?.includes('distance') && (
           <View style={{ flex: 1 }}>
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1, marginBottom: 4 }}>DISTANCE (MI)</Text>
             <TextInput
-              style={{ borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull, textAlign: 'center' }}
+              style={{ borderRadius: 6, paddingHorizontal: 12, paddingVertical: 10, fontFamily: 'DMMono', fontSize: 18, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull, textAlign: 'center' }}
               value={dist} onChangeText={setDist} keyboardType="decimal-pad" placeholder="0.0" placeholderTextColor={colors.muted} />
           </View>
         )}
       </View>
       <View style={{ flexDirection: 'row', gap: 8 }}>
         <TouchableOpacity onPress={() => setEditingCardio(null)}
-          style={{ flex: 1, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+          style={{ flex: 1, paddingVertical: 10, borderRadius: 6, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
           <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.muted }}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity onPress={save} disabled={saving}
-          style={{ flex: 2, paddingVertical: 10, borderRadius: 10, alignItems: 'center', backgroundColor: colors.pull, opacity: saving ? 0.6 : 1 }}>
+          style={{ flex: 2, paddingVertical: 10, borderRadius: 6, alignItems: 'center', backgroundColor: colors.pull, opacity: saving ? 0.6 : 1 }}>
           <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: colors.bg }}>{saving ? 'Saving...' : '✓ Save'}</Text>
         </TouchableOpacity>
       </View>
     </View>
   )
-}
+})
 
 // ─── Cardio Modal ─────────────────────────────────────────────
-function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: () => void; onLog: (slug: string, duration: string, distance: string) => Promise<void> }) {
+const CardioModal = memo(function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: () => void; onLog: (slug: string, duration: string, distance: string) => Promise<void> }) {
   const { colors } = useTheme()
   const [slug, setSlug] = useState('treadmill')
   const [duration, setDuration] = useState('')
@@ -127,49 +145,52 @@ function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.7)' }}>
-        <View style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, backgroundColor: colors.card }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1 }}>LOG CARDIO</Text>
-            <TouchableOpacity onPress={onClose}><Text style={{ fontSize: 22, color: colors.muted }}>✕</Text></TouchableOpacity>
+        <View style={{ borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 24, paddingTop: 28, backgroundColor: colors.card, borderTopWidth: 3, borderTopColor: colors.pull }}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 }}>
+            <View>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.pull, letterSpacing: 2.5, marginBottom: 4 }}>CONDITIONING</Text>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 3, lineHeight: 32 }}>LOG CARDIO</Text>
+            </View>
+            <TouchableOpacity onPress={onClose} style={{ padding: 4 }}><Text style={{ fontSize: 20, color: colors.muted }}>✕</Text></TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 18 }}>
             {CARDIO_EXERCISES.map(ex => (
               <TouchableOpacity key={ex.slug} onPress={() => setSlug(ex.slug)}
-                style={{ marginRight: 8, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, alignItems: 'center', backgroundColor: slug === ex.slug ? colors.pull : colors.bg, borderWidth: 1, borderColor: slug === ex.slug ? colors.pull : colors.border, minWidth: 70 }}>
+                style={{ marginRight: 6, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 6, alignItems: 'center', backgroundColor: slug === ex.slug ? colors.pull : 'transparent', borderWidth: 1, borderColor: slug === ex.slug ? colors.pull : colors.border, minWidth: 72 }}>
                 <Text style={{ fontSize: 20 }}>{ex.icon}</Text>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: slug === ex.slug ? colors.bg : colors.muted, marginTop: 2 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: slug === ex.slug ? colors.bg : colors.muted, marginTop: 3, letterSpacing: 1.5 }}>
                   {ex.name.toUpperCase()}
                 </Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
-          <View style={{ flexDirection: 'row', gap: 12, marginBottom: 20 }}>
+          <View style={{ flexDirection: 'row', gap: 10, marginBottom: 20 }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>DURATION (MIN)</Text>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2, marginBottom: 6 }}>DURATION (MIN)</Text>
               <TextInput
-                style={{ borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, fontFamily: 'DMMono', fontSize: 22, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center' }}
+                style={{ borderRadius: 6, paddingHorizontal: 14, paddingVertical: 14, fontFamily: 'DMMono', fontSize: 22, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center' }}
                 value={duration} onChangeText={setDuration} keyboardType="decimal-pad"
                 placeholder="0" placeholderTextColor={colors.muted} />
             </View>
             {selectedEx?.metric?.includes('distance') && (
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginBottom: 6 }}>DISTANCE (MI)</Text>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2, marginBottom: 6 }}>DISTANCE (MI)</Text>
                 <TextInput
-                  style={{ borderRadius: 12, paddingHorizontal: 16, paddingVertical: 13, fontFamily: 'DMMono', fontSize: 22, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center' }}
+                  style={{ borderRadius: 6, paddingHorizontal: 14, paddingVertical: 14, fontFamily: 'DMMono', fontSize: 22, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border, textAlign: 'center' }}
                   value={distance} onChangeText={setDistance} keyboardType="decimal-pad"
                   placeholder="0.0" placeholderTextColor={colors.muted} />
               </View>
             )}
           </View>
-          <View style={{ flexDirection: 'row', gap: 12 }}>
+          <View style={{ flexDirection: 'row', gap: 10 }}>
             <TouchableOpacity onPress={onClose}
-              style={{ flex: 1, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+              style={{ flex: 1, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.muted, letterSpacing: 2 }}>CANCEL</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={handleLog} disabled={saving || (!duration && !distance)}
-              style={{ flex: 2, paddingVertical: 16, borderRadius: 12, alignItems: 'center', backgroundColor: colors.pull, opacity: saving || (!duration && !distance) ? 0.5 : 1 }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>
-                {saving ? 'Saving...' : '✓ Log Cardio'}
+              style={{ flex: 2, paddingVertical: 16, borderRadius: 6, alignItems: 'center', backgroundColor: colors.pull, opacity: saving || (!duration && !distance) ? 0.5 : 1 }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.bg, letterSpacing: 3 }}>
+                {saving ? 'SAVING…' : 'LOG CARDIO →'}
               </Text>
             </TouchableOpacity>
           </View>
@@ -177,13 +198,23 @@ function CardioModal({ visible, onClose, onLog }: { visible: boolean; onClose: (
       </KeyboardAvoidingView>
     </Modal>
   )
+})
+
+// Lightweight session row used in the Today screen — only the columns we select.
+interface RecentSessionRow {
+  id: string
+  date: string
+  day_key: string
+  completed_at: string | null
+  duration_seconds: number | null
 }
 
 // ─── Main Screen ─────────────────────────────────────────────
-export default function TodayScreen() {
+function TodayScreen() {
   const { colors } = useTheme()
   const router = useRouter()
   const { user } = useAuth()
+  const qc = useQueryClient()
   const { programData, loading: programLoading } = useActiveProgram()
   const { entries: bwEntries, latest: bwLatest, change: bwChange, logWeight } = useBodyweight()
   const { enabled: hkEnabled, writeWeight: hkWriteWeight } = useHealthKit()
@@ -199,15 +230,17 @@ export default function TodayScreen() {
   const [goalInput, setGoalInput] = useState('')
   const [showCardioModal, setShowCardioModal] = useState(false)
   const [editingCardio, setEditingCardio] = useState<{ setId: string; sessionId: string; duration: string; distance: string } | null>(null)
-  const _storedRestDate = storage.getString('ppl_rest_override')
+  const [coachNoteOpen, setCoachNoteOpen] = useState(false)
   const _todayForRest = getLocalDate()
-  // Clear stale rest override from a previous day
-  if (_storedRestDate && _storedRestDate !== _todayForRest) {
-    storage.remove('ppl_rest_override')
-  }
+  const _storedRestDate = storage.getString('ppl_rest_override')
   const [restDayOverride, setRestDayOverride] = useState(
     _storedRestDate === _todayForRest
   )
+  useEffect(() => {
+    if (_storedRestDate && _storedRestDate !== _todayForRest) {
+      storage.remove('ppl_rest_override')
+    }
+  }, [_storedRestDate, _todayForRest])
 
   const today        = new Date()
   const todayStr     = getLocalDate()
@@ -220,11 +253,11 @@ export default function TodayScreen() {
   const wu           = settings.weightUnit || 'lbs'
 
   // Today's logged cardio entries — must come after todayStr
-  const todayCardio = (recentLogs as any[]).filter((l: any) => l.date === todayStr)
-    .flatMap((l: any) => (l.session_sets || []).map((s: any) => ({ ...s, sessionId: l.id })))
+  const todayCardio = recentLogs.filter(l => l.date === todayStr)
+    .flatMap(l => (l.session_sets || []).map(s => ({ ...s, sessionId: l.id })))
 
   // ── Session data ───────────────────────────────────────────
-  const { data: recentSessions = [], refetch, isRefetching } = useQuery({
+  const { data: recentSessions = [], refetch, isRefetching } = useQuery<RecentSessionRow[]>({
     queryKey: ['recentSessions', user?.id],
     queryFn: async () => {
       const { data } = await supabase
@@ -233,7 +266,7 @@ export default function TodayScreen() {
         .eq('user_id', user!.id)
         .order('date', { ascending: false })
         .limit(90)
-      return data || []
+      return (data || []) as RecentSessionRow[]
     },
     enabled: !!user,
   })
@@ -253,38 +286,58 @@ export default function TodayScreen() {
     const d = getLocalDate()
     storage.set('ppl_rest_override', d)
     setRestDayOverride(true)
-    // Record the rest day as a session so it appears in history
-    if (user) {
-      await supabase.from('workout_sessions').upsert({
+    if (!user) return
+    try {
+      const { error } = await supabase.from('workout_sessions').upsert({
         user_id: user.id,
         day_key: 'rest',
         date: d,
         completed_at: new Date().toISOString(),
       }, { onConflict: 'user_id,date,day_key' })
+      if (error) throw error
       refetch()
+    } catch {
+      storage.remove('ppl_rest_override')
+      setRestDayOverride(false)
+      Alert.alert('Could not save rest day', 'Check your connection and try again.')
     }
   }
 
   const handleUndoRest = async () => {
     storage.remove('ppl_rest_override')
     setRestDayOverride(false)
-    // Remove the rest day session record
-    if (user) {
-      await supabase.from('workout_sessions')
+    if (!user) return
+    try {
+      const { error } = await supabase.from('workout_sessions')
         .delete()
         .eq('user_id', user.id)
         .eq('day_key', 'rest')
         .eq('date', getLocalDate())
+      if (error) throw error
       refetch()
+    } catch {
+      // Surface but don't block — the rest day flag is already cleared locally.
+      Alert.alert('Could not remove rest day record', 'It may still appear in your history; pull to refresh and try again.')
     }
   }
 
-  const sessions = recentSessions as any[]
+  const sessions = recentSessions
+
+  // Stable callbacks declared BEFORE the early return so hook count
+  // stays constant across renders.
+  const handleLogWeight = useCallback(async (val: number) => {
+    const lbs = wu === 'kg' ? Math.round(val / 0.453592 * 10) / 10 : val
+    await logWeight({ weight: lbs })
+    if (hkEnabled) hkWriteWeight(lbs).catch(() => {})
+  }, [wu, logWeight, hkEnabled, hkWriteWeight])
+
+  const closeWeightModal = useCallback(() => setShowWeightModal(false), [])
+  const closeCardioModal = useCallback(() => setShowCardioModal(false), [])
 
   // ── Derived values ─────────────────────────────────────────
   if (programLoading) return <LoadingScreen />
 
-  const schedule    = (programData?.SCHEDULE || []) as any[]
+  const schedule: ScheduleSlot[] = programData?.SCHEDULE || []
   const PROGRAM     = programData?.PROGRAM    || {}
   const EXERCISES   = programData?.EXERCISES  || {}
 
@@ -294,7 +347,7 @@ export default function TodayScreen() {
   const morningDone    = morningKey ? sessions.some(s => s.date === todayStr && s.completed_at && s.day_key === morningKey) : false
   const morningSession = morningKey ? sessions.find(s => s.date === todayStr && s.completed_at && s.day_key === morningKey) : null
 
-  const todaySlot    = schedule.find((s: any) => s.dayIndex === dbDayOfWeek)
+  const todaySlot    = schedule.find(s => s.dayIndex === dbDayOfWeek)
   const todayDayKey  = todaySlot?.isRest ? null : todaySlot?.dayKey
   const todayWorkout = todayDayKey ? PROGRAM[todayDayKey] : null
   const isRest       = !!todaySlot?.isRest || restDayOverride
@@ -330,14 +383,14 @@ export default function TodayScreen() {
 
   // 7-day sparkline points
   const sparkPoints = (() => {
-    const recent = (bwEntries as any[]).slice(-7)
+    const recent = bwEntries.slice(-7)
     if (recent.length < 2) return null
     const W = 60, H = 28
-    const weights = recent.map((e: any) => wu === 'kg' ? e.weight * 0.453592 : e.weight)
+    const weights = recent.map(e => wu === 'kg' ? e.weight * 0.453592 : e.weight)
     const min = Math.min(...weights)
     const max = Math.max(...weights)
     const range = max - min || 1
-    return recent.map((e: any, i: number) => {
+    return recent.map((e, i) => {
       const w = wu === 'kg' ? e.weight * 0.453592 : e.weight
       const x = (i / (recent.length - 1)) * W
       const y = H - ((w - min) / range) * H
@@ -347,7 +400,7 @@ export default function TodayScreen() {
 
   // ── Week day status ────────────────────────────────────────
   const getWeekStatus = (jsDayIdx: number): string => {
-    const slot = schedule.find((s: any) => s.dayIndex === toDbDay(jsDayIdx))
+    const slot = schedule.find(s => s.dayIndex === toDbDay(jsDayIdx))
     if (slot?.isRest || !slot?.dayKey) return 'rest'
 
     const nowMidnight = new Date()
@@ -359,23 +412,16 @@ export default function TodayScreen() {
 
     if (target > nowMidnight) return 'future'
     if (target.getTime() === nowMidnight.getTime()) {
-      return sessions.some((s: any) => s.date === targetStr && s.completed_at && s.day_key !== 'cardio' && s.day_key !== 'rest')
+      return sessions.some(s => s.date === targetStr && s.completed_at && s.day_key !== 'cardio' && s.day_key !== 'rest')
         ? 'done' : 'future'
     }
-    const done = sessions.some((s: any) =>
+    const done = sessions.some(s =>
       s.date === targetStr && s.completed_at && s.day_key !== 'cardio' && s.day_key !== 'rest'
     )
     return done ? 'done' : 'missed'
   }
 
   // ── Helpers ────────────────────────────────────────────────
-  const handleLogWeight = async (val: number) => {
-    const lbs = wu === 'kg' ? Math.round(val / 0.453592 * 10) / 10 : val
-    await logWeight({ weight: lbs })
-    // Mirror to Apple Health if enabled
-    if (hkEnabled) hkWriteWeight(lbs).catch(() => {})
-  }
-
   const handleSetGoal = (val: string) => {
     const num = parseFloat(val)
     if (!isNaN(num) && num > 0) {
@@ -409,27 +455,134 @@ export default function TodayScreen() {
       {/* ── Header ── */}
       <View style={{ paddingTop: 56, paddingHorizontal: 20, paddingBottom: 0 }}>
         <View style={{ flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <View>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 34, color: colors.text, letterSpacing: 2, lineHeight: 36 }}>TODAY</Text>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 1 }}>
+          <View style={{ borderLeftWidth: 3, borderLeftColor: colors.push, paddingLeft: 12 }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.push, letterSpacing: 2.5, marginBottom: 2 }}>
+              FORGE PROTOCOL
+            </Text>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 44, color: colors.text, letterSpacing: 3, lineHeight: 44 }}>TODAY</Text>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2, marginTop: 2 }}>
               {today.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }).toUpperCase()}
             </Text>
           </View>
           {streak > 0 && (
-            <View style={{ alignItems: 'flex-end', paddingBottom: 2 }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.push, letterSpacing: 1, lineHeight: 28 }}>{streak}</Text>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.push }}>{'🔥 STREAK'}</Text>
+            <View style={{ alignItems: 'flex-end', paddingBottom: 4 }}>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 36, color: colors.push, letterSpacing: 2, lineHeight: 36 }}>{streak}</Text>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.push, letterSpacing: 2 }}>DAY STREAK</Text>
             </View>
           )}
         </View>
       </View>
+
+      {/* ── Periodization strip (only for periodized programs like FORGE) ── */}
+      {programData?.isPeriodized && programData.currentWeekData && programData.totalWeeks > 1 && (
+        <View style={{ marginTop: 16, marginHorizontal: 16, borderRadius: 6, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, borderLeftWidth: 3, borderLeftColor: colors.push, overflow: 'hidden' }}>
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={() => setCoachNoteOpen(v => !v)}
+            style={{ paddingHorizontal: 14, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2 }}>
+                {`WEEK ${programData.currentWeek} OF ${programData.totalWeeks}`}
+                {programData.currentPhase ? `  ·  ${programData.currentPhase.name}` : ''}
+              </Text>
+              {programData.currentWeekData.progressionFocus ? (
+                <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.text, marginTop: 4 }} numberOfLines={coachNoteOpen ? undefined : 1}>
+                  {programData.currentWeekData.progressionFocus}
+                </Text>
+              ) : null}
+            </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 10 }}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Previous week"
+                hitSlop={8}
+                disabled={programData.currentWeek <= 1}
+                onPress={async () => {
+                  const target = programData.currentWeek - 1
+                  if (target < 1) return
+                  await supabase.rpc('set_program_week', { target_week: target })
+                  qc.invalidateQueries({ queryKey: ['activeProgram', user?.id] })
+                }}
+                style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 4, borderWidth: 1, borderColor: colors.border, opacity: programData.currentWeek <= 1 ? 0.3 : 1 }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 13, color: colors.muted }}>‹</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Next week"
+                hitSlop={8}
+                disabled={programData.currentWeek >= programData.totalWeeks}
+                onPress={async () => {
+                  const target = programData.currentWeek + 1
+                  if (target > programData.totalWeeks) return
+                  await supabase.rpc('set_program_week', { target_week: target })
+                  qc.invalidateQueries({ queryKey: ['activeProgram', user?.id] })
+                }}
+                style={{ width: 28, height: 28, alignItems: 'center', justifyContent: 'center', borderRadius: 4, borderWidth: 1, borderColor: colors.border, opacity: programData.currentWeek >= programData.totalWeeks ? 0.3 : 1 }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 13, color: colors.muted }}>›</Text>
+              </TouchableOpacity>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 14, color: colors.muted, marginLeft: 2 }}>
+                {coachNoteOpen ? '▴' : '▾'}
+              </Text>
+            </View>
+          </TouchableOpacity>
+
+          {coachNoteOpen && (
+            <View style={{ paddingHorizontal: 14, paddingBottom: 14, paddingTop: 4, borderTopWidth: 1, borderTopColor: colors.border }}>
+              {programData.currentWeekData.coachNote ? (
+                <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, lineHeight: 19, marginTop: 8 }}>
+                  {programData.currentWeekData.coachNote}
+                </Text>
+              ) : null}
+
+              {(programData.currentWeekData.compoundTarget || programData.currentWeekData.accessoryTarget) && (
+                <View style={{ marginTop: 12, gap: 4 }}>
+                  {programData.currentWeekData.compoundTarget && (
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.text }}>
+                      <Text style={{ color: colors.push }}>COMPOUNDS · </Text>
+                      {programData.currentWeekData.compoundTarget}
+                    </Text>
+                  )}
+                  {programData.currentWeekData.accessoryTarget && (
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.text }}>
+                      <Text style={{ color: colors.pull }}>ACCESSORIES · </Text>
+                      {programData.currentWeekData.accessoryTarget}
+                    </Text>
+                  )}
+                </View>
+              )}
+
+              {programData.currentWeekData.techniques.length > 0 && (
+                <View style={{ marginTop: 12, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {programData.currentWeekData.techniques.map(t => (
+                    <View key={t} style={{ borderRadius: 3, paddingHorizontal: 6, paddingVertical: 2, backgroundColor: colors.push + '20', borderWidth: 1, borderColor: colors.push + '60' }}>
+                      <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.push, letterSpacing: 1.5 }}>
+                        {t.replace(/_/g, ' ').toUpperCase()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+
+              {programData.currentWeekData.specialInstructions && programData.currentWeekData.specialInstructions.length > 0 && (
+                <View style={{ marginTop: 12, gap: 4 }}>
+                  {programData.currentWeekData.specialInstructions.map((line, i) => (
+                    <Text key={i} style={{ fontFamily: 'DMSans', fontSize: 12, color: colors.muted, lineHeight: 17 }}>
+                      • {line}
+                    </Text>
+                  ))}
+                </View>
+              )}
+            </View>
+          )}
+        </View>
+      )}
 
       {/* ── THIS WEEK strip (moved up, below header) ── */}
       {programData && (
         <View style={{ paddingHorizontal: 20, paddingTop: 16, paddingBottom: 4 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             {DAYS_SHORT.map((letter, i) => {
-              const slot    = schedule.find((s: any) => s.dayIndex === toDbDay(i))
+              const slot    = schedule.find(s => s.dayIndex === toDbDay(i))
               const workout = slot?.dayKey ? PROGRAM[slot.dayKey] : null
               const status  = getWeekStatus(i)
               const isToday = i === dayOfWeek
@@ -443,7 +596,7 @@ export default function TodayScreen() {
                 const diff   = i - nowMidnight.getDay()
                 const target = new Date(nowMidnight); target.setDate(nowMidnight.getDate() + diff)
                 const targetStr = target.toISOString().split('T')[0]
-                return sessions.find((s: any) => s.date === targetStr && s.completed_at && s.day_key !== 'cardio' && s.day_key !== 'rest')
+                return sessions.find(s => s.date === targetStr && s.completed_at && s.day_key !== 'cardio' && s.day_key !== 'rest')
               })() : null
 
               const handleDotPress = () => {
@@ -492,7 +645,7 @@ export default function TodayScreen() {
         <View style={{ flexDirection: 'row', marginBottom: 14, gap: 10 }}>
           {/* Bodyweight */}
           <TouchableOpacity onPress={() => setShowWeightModal(true)}
-            style={{ flex: 1, borderRadius: 16, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+            style={{ flex: 1, borderRadius: 6, padding: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' }}>
               <View>
                 <Text style={{ fontFamily: 'BebasNeue', fontSize: 32, color: colors.text, letterSpacing: 1, lineHeight: 34 }}>
@@ -520,10 +673,10 @@ export default function TodayScreen() {
               const current  = bwLatest.weight
               const goalDisp = wu === 'kg' ? (goalWeight * 0.453592).toFixed(1) : goalWeight.toString()
               const losing   = goalWeight < current
-              const startW   = (bwEntries as any[]).length > 0
+              const startW   = bwEntries.length > 0
                 ? (losing
-                    ? Math.max(...(bwEntries as any[]).map((e: any) => e.weight))
-                    : Math.min(...(bwEntries as any[]).map((e: any) => e.weight)))
+                    ? Math.max(...bwEntries.map(e => e.weight))
+                    : Math.min(...bwEntries.map(e => e.weight)))
                 : current
               const total    = Math.abs(startW - goalWeight)
               const done     = Math.abs(current - goalWeight)
@@ -569,76 +722,74 @@ export default function TodayScreen() {
 
           {/* Month count + all-time */}
           <View style={{ flex: 1, flexDirection: 'column' }}>
-            <View style={{ flex: 1, borderRadius: 14, padding: 12, marginBottom: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.pull, letterSpacing: 1, lineHeight: 28 }}>{monthCount}</Text>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>
+            <View style={{ flex: 1, borderRadius: 6, padding: 12, marginBottom: 10, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.pull, letterSpacing: 2, lineHeight: 28 }}>{monthCount}</Text>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 2, marginTop: 2 }}>
                 {today.toLocaleDateString('en-US', { month: 'short' }).toUpperCase()} SESSIONS
               </Text>
             </View>
-            <View style={{ flex: 1, borderRadius: 14, padding: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
-              <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.text, letterSpacing: 1, lineHeight: 28 }}>
+            <View style={{ flex: 1, borderRadius: 6, padding: 12, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border, justifyContent: 'center' }}>
+              <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 2, lineHeight: 28 }}>
                 {completedDates.length}
               </Text>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>TOTAL</Text>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 2, marginTop: 2 }}>TOTAL</Text>
             </View>
           </View>
         </View>
 
         {/* ── Last workout ── */}
-        {lastWorkout && !todayDone && (
+        {lastWorkout && lastDone && !todayDone && (
           <TouchableOpacity onPress={() => router.push(('/session/' + lastDone.id) as any)}
-            style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <View style={{ width: 4, height: 36, borderRadius: 2, backgroundColor: lastWorkout.color, marginRight: 12 }} />
+            style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 10, marginBottom: 14, backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: lastWorkout.color, borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border }}>
             <View style={{ flex: 1 }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1 }}>LAST SESSION</Text>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: lastWorkout.color, marginTop: 1 }}>{lastWorkout.label}</Text>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2 }}>LAST SESSION</Text>
+              <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: lastWorkout.color, marginTop: 2 }}>{lastWorkout.label}</Text>
             </View>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>
-              {new Date(lastDone.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              {lastDone.duration_seconds ? ` · ${Math.round(lastDone.duration_seconds / 60)}m` : ''}
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>
+              {new Date(lastDone.date + 'T12:00:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()}
+              {lastDone.duration_seconds ? ` · ${Math.round(lastDone.duration_seconds / 60)}M` : ''}
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 14, marginLeft: 8 }}>→</Text>
+            <Text style={{ color: colors.muted, fontSize: 14, marginLeft: 10 }}>→</Text>
           </TouchableOpacity>
         )}
 
         {/* ── Today's workout ── */}
-        <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginBottom: 10 }}>
-          TODAY'S WORKOUT
-        </Text>
+        <SectionLabel marginTop={0}>TODAY'S WORKOUT</SectionLabel>
 
         {programLoading ? (
-          <View style={{ borderRadius: 16, padding: 20, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted }}>Loading program...</Text>
+          <View style={{ borderRadius: 6, padding: 20, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, letterSpacing: 2 }}>LOADING PROGRAM…</Text>
           </View>
 
         ) : !programData ? (
-          <View style={{ borderRadius: 16, padding: 24, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 8 }}>NO PROGRAM SET</Text>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, textAlign: 'center', marginBottom: 16 }}>
+          <View style={{ borderRadius: 6, padding: 24, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 26, color: colors.text, letterSpacing: 2.5, marginBottom: 8 }}>NO PROGRAM SET</Text>
+            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, textAlign: 'center', marginBottom: 18 }}>
               Set up your program on the web or under Programs.
             </Text>
             <TouchableOpacity onPress={() => router.push('/(tabs)/programs' as any)}
-              style={{ borderRadius: 12, paddingHorizontal: 24, paddingVertical: 12, backgroundColor: colors.text }}>
-              <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>View Programs</Text>
+              style={{ borderRadius: 6, paddingHorizontal: 28, paddingVertical: 14, backgroundColor: colors.push }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.bg, letterSpacing: 2.5 }}>VIEW PROGRAMS →</Text>
             </TouchableOpacity>
           </View>
 
         ) : isRest ? (
-          <View style={{ borderRadius: 16, padding: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.muted, letterSpacing: 2 }}>REST DAY 😴</Text>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 6 }}>
-              {restDayOverride ? 'You marked today as a rest day.' : 'Recovery is part of the program. Eat well, sleep, repeat.'}
+          <View style={{ borderRadius: 6, padding: 20, backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: colors.muted, borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: colors.muted, letterSpacing: 2.5, marginBottom: 4 }}>RECOVERY</Text>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 36, color: colors.text, letterSpacing: 3, lineHeight: 36 }}>REST DAY</Text>
+            <Text style={{ fontFamily: 'DMSans', fontSize: 13, color: colors.muted, marginTop: 10, lineHeight: 18 }}>
+              {restDayOverride ? 'You marked today as a rest day.' : 'Recovery is part of the protocol. Eat well, sleep, repeat.'}
             </Text>
             {restDayOverride && (
               <TouchableOpacity onPress={handleUndoRest}
-                style={{ marginTop: 14, borderRadius: 10, paddingVertical: 10, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>Undo — take me back to the workout</Text>
+                style={{ marginTop: 14, borderRadius: 6, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>UNDO — BACK TO WORKOUT</Text>
               </TouchableOpacity>
             )}
             {/* Cardio quick-log on rest days */}
             <TouchableOpacity onPress={() => setShowCardioModal(true)}
-              style={{ marginTop: 12, borderRadius: 10, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.pull + '15', borderWidth: 1, borderColor: colors.pull + '40' }}>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.pull }}>+ LOG CARDIO</Text>
+              style={{ marginTop: 10, borderRadius: 6, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.pull + '14', borderWidth: 1, borderColor: colors.pull + '40' }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.pull, letterSpacing: 2.5 }}>+ LOG CARDIO</Text>
             </TouchableOpacity>
           </View>
 
@@ -649,35 +800,32 @@ export default function TodayScreen() {
               else if (!todayDone) router.push('/workout/' + todayDayKey as any)
             }}
             activeOpacity={0.75}
-            style={{ borderRadius: 16, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1.5, borderColor: todayDone ? colors.success : todayWorkout.color }}>
+            style={{ borderRadius: 6, overflow: 'hidden', backgroundColor: colors.card, borderWidth: 1, borderColor: todayDone ? colors.success : (todayWorkout.color + '50') }}>
 
             {/* Accent bar */}
             <View style={{ height: 3, backgroundColor: todayDone ? colors.success : todayWorkout.color }} />
 
             <View style={{ padding: 18 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 14 }}>
-                <View>
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: todayDone ? colors.success : todayWorkout.color, letterSpacing: 1.5 }}>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: todayDone ? colors.success : todayWorkout.color, letterSpacing: 2.5 }}>
                     {DAYS_FULL[dayOfWeek].toUpperCase()} · {todayWorkout.dayType?.toUpperCase() || ''}
                   </Text>
-                  <Text style={{ fontFamily: 'BebasNeue', fontSize: 38, color: colors.text, letterSpacing: 1, lineHeight: 40, marginTop: 2 }}>
+                  <Text style={{ fontFamily: 'BebasNeue', fontSize: 44, color: colors.text, letterSpacing: 3, lineHeight: 46, marginTop: 4 }}>
                     {todayWorkout.label.toUpperCase()}
                   </Text>
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>
-                    {todayWorkout.exercises.length} exercises
+                  <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 2 }}>
+                    {todayWorkout.exercises.length} EXERCISES
                   </Text>
-                </View>
-                <View style={{ borderRadius: 99, width: 46, height: 46, alignItems: 'center', justifyContent: 'center', backgroundColor: todayDone ? colors.success : todayWorkout.color, marginTop: 4 }}>
-                  <Text style={{ fontSize: todayDone ? 18 : 20, color: colors.bg }}>{todayDone ? '✓' : '→'}</Text>
                 </View>
               </View>
 
               {/* Exercise tags */}
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16, marginHorizontal: -3 }}>
-                {todayWorkout.exercises.slice(0, 6).map((ex: any, i: number) => {
+                {todayWorkout.exercises.slice(0, 6).map((ex, i) => {
                   const exName = String((EXERCISES[ex.id]?.name || ex.id || '').split(' ').slice(0, 2).join(' '))
                   return (
-                    <View key={i} style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: (todayDone ? colors.success : todayWorkout.color) + '20', margin: 3 }}>
+                    <View key={i} style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: (todayDone ? colors.success : todayWorkout.color) + '20', margin: 3 }}>
                       <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: todayDone ? colors.success : todayWorkout.color }}>
                         {exName}
                       </Text>
@@ -685,7 +833,7 @@ export default function TodayScreen() {
                   )
                 })}
                 {todayWorkout.exercises.length > 6 ? (
-                  <View style={{ borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.border, margin: 3 }}>
+                  <View style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 4, backgroundColor: colors.border, margin: 3 }}>
                     <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted }}>
                       {'+' + String(todayWorkout.exercises.length - 6)}
                     </Text>
@@ -695,22 +843,22 @@ export default function TodayScreen() {
 
               {!todayDone ? (
                 <View>
-                  <View style={{ borderRadius: 12, paddingVertical: 15, alignItems: 'center', backgroundColor: todayWorkout.color }}>
-                    <Text style={{ fontFamily: 'BebasNeue', fontSize: 18, color: colors.bg, letterSpacing: 2 }}>START WORKOUT →</Text>
+                  <View style={{ borderRadius: 6, paddingVertical: 16, alignItems: 'center', backgroundColor: todayWorkout.color }}>
+                    <Text style={{ fontFamily: 'DMMono_500', fontSize: 12, color: colors.bg, letterSpacing: 3 }}>START WORKOUT →</Text>
                   </View>
                   <TouchableOpacity onPress={e => { e.stopPropagation?.(); handleRestDay() }}
-                    style={{ marginTop: 8, borderRadius: 12, paddingVertical: 11, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>😴 Take a rest day instead</Text>
+                    style={{ marginTop: 8, borderRadius: 6, paddingVertical: 12, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                    <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>TAKE A REST DAY INSTEAD</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.success, letterSpacing: 1 }}>
-                    ✓ COMPLETED TODAY
-                    {todaySession?.duration_seconds ? ' · ' + Math.floor(todaySession.duration_seconds / 60) + 'm' : ''}
+                  <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.success, letterSpacing: 2 }}>
+                    ✓ COMPLETED
+                    {todaySession?.duration_seconds ? ' · ' + Math.floor(todaySession.duration_seconds / 60) + 'M' : ''}
                   </Text>
-                  <View style={{ borderRadius: 10, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.success + '20', borderWidth: 1, borderColor: colors.success + '50' }}>
-                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.success }}>View →</Text>
+                  <View style={{ borderRadius: 4, paddingHorizontal: 14, paddingVertical: 8, backgroundColor: colors.success + '1A', borderWidth: 1, borderColor: colors.success + '50' }}>
+                    <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.success, letterSpacing: 2 }}>VIEW →</Text>
                   </View>
                 </View>
               )}
@@ -718,15 +866,15 @@ export default function TodayScreen() {
           </TouchableOpacity>
 
         ) : (
-          <View style={{ borderRadius: 16, padding: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-            <Text style={{ fontFamily: 'DMSans', fontSize: 14, color: colors.muted }}>No workout scheduled for today.</Text>
+          <View style={{ borderRadius: 6, padding: 20, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.muted, letterSpacing: 2 }}>NO WORKOUT SCHEDULED</Text>
           </View>
         )}
 
         {/* ── Cardio section ── */}
         <View style={{ marginTop: 12 }}>
           {/* Logged entries for today */}
-          {todayCardio.map((set: any) => {
+          {todayCardio.map(set => {
             const exSlug = idToSlugMap[set.exercise_id]
             const ex     = CARDIO_EXERCISES.find(e => e.slug === exSlug)
             const durMin = set.duration_seconds ? Math.round(set.duration_seconds / 60) : null
@@ -734,7 +882,7 @@ export default function TodayScreen() {
             const isEditing = editingCardio?.setId === set.id
 
             return (
-              <View key={set.id} style={{ borderRadius: 14, marginBottom: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.pull + '40', overflow: 'hidden' }}>
+              <View key={set.id} style={{ borderRadius: 6, marginBottom: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.pull + '40', overflow: 'hidden' }}>
                 {isEditing ? (
                   // ── Edit row ──
                   <EditCardioRow
@@ -774,9 +922,9 @@ export default function TodayScreen() {
 
           {/* Add cardio button */}
           <TouchableOpacity onPress={() => setShowCardioModal(true)}
-            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 14, paddingVertical: 14, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.pull + '50' }}>
-            <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.pull }}>
-              {todayCardio.length > 0 ? '+ Add More Cardio' : '🏃 Log Cardio'}
+            style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderRadius: 6, paddingVertical: 14, backgroundColor: colors.pull + '0A', borderWidth: 1, borderColor: colors.pull + '50' }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.pull, letterSpacing: 2.5 }}>
+              {todayCardio.length > 0 ? '+ ADD MORE CARDIO' : '+ LOG CARDIO'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -784,26 +932,23 @@ export default function TodayScreen() {
         {/* ── Morning Routine ── */}
         {morningWorkout && morningKey && (
           <>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 20, marginBottom: 10 }}>
-              MORNING ROUTINE
-            </Text>
+            <SectionLabel>MORNING ROUTINE</SectionLabel>
             <TouchableOpacity
               onPress={() => {
                 if (morningDone && morningSession?.id) router.push(('/session/' + morningSession.id) as any)
                 else router.push('/workout/' + morningKey as any)
               }}
-              style={{ borderRadius: 16, padding: 16, backgroundColor: colors.card, borderWidth: 1, borderColor: morningDone ? colors.success : colors.border, flexDirection: 'row', alignItems: 'center' }}>
-              <View style={{ width: 4, height: 40, borderRadius: 2, backgroundColor: morningDone ? colors.success : morningWorkout.color || colors.muted, marginRight: 14 }} />
+              style={{ borderRadius: 6, padding: 14, backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: morningDone ? colors.success : (morningWorkout.color || colors.muted), borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border, flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ flex: 1 }}>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: morningDone ? colors.success : morningWorkout.color || colors.muted, letterSpacing: 1 }}>AM ROUTINE</Text>
-                <Text style={{ fontFamily: 'DMSans_500', fontSize: 15, color: colors.text, marginTop: 1 }}>{morningWorkout.label}</Text>
-                <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 1 }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: morningDone ? colors.success : (morningWorkout.color || colors.muted), letterSpacing: 2.5 }}>AM ROUTINE</Text>
+                <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 2, marginTop: 2 }}>{morningWorkout.label.toUpperCase()}</Text>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 1 }}>
                   {morningDone
-                    ? '✓ Done' + (morningSession?.duration_seconds ? ' · ' + Math.floor(morningSession.duration_seconds / 60) + 'm' : '')
-                    : (morningWorkout.exercises?.length || 0) + ' exercises'}
+                    ? '✓ DONE' + (morningSession?.duration_seconds ? ' · ' + Math.floor(morningSession.duration_seconds / 60) + 'M' : '')
+                    : (morningWorkout.exercises?.length || 0) + ' EXERCISES'}
                 </Text>
               </View>
-              <Text style={{ color: morningDone ? colors.success : colors.muted, fontSize: 18 }}>
+              <Text style={{ color: morningDone ? colors.success : colors.muted, fontSize: 18, marginLeft: 10 }}>
                 {morningDone ? '✓' : '→'}
               </Text>
             </TouchableOpacity>
@@ -812,11 +957,12 @@ export default function TodayScreen() {
 
         {/* ── Upcoming workouts ── */}
         {programData && (() => {
-          const upcoming: any[] = []
+          type Upcoming = { dayIndex: number; slot: ScheduleSlot; workout: (typeof PROGRAM)[string]; daysAway: number }
+          const upcoming: Upcoming[] = []
           for (let i = 1; i <= 6; i++) {
             const jsIdx = (jsDayOfWeek + i) % 7
-            const slot  = schedule.find((s: any) => s.dayIndex === toDbDay(jsIdx))
-            if (!slot?.isRest && slot?.dayKey && PROGRAM[slot.dayKey]) {
+            const slot  = schedule.find(s => s.dayIndex === toDbDay(jsIdx))
+            if (slot && !slot.isRest && slot.dayKey && PROGRAM[slot.dayKey]) {
               upcoming.push({ dayIndex: jsIdx, slot, workout: PROGRAM[slot.dayKey], daysAway: i })
               if (upcoming.length >= 2) break
             }
@@ -824,18 +970,18 @@ export default function TodayScreen() {
           if (!upcoming.length) return null
           return (
             <>
-              <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 24, marginBottom: 10 }}>UP NEXT</Text>
+              <SectionLabel marginTop={24}>UP NEXT</SectionLabel>
               {upcoming.map(({ dayIndex, slot, workout, daysAway }) => (
                 <TouchableOpacity key={dayIndex}
                   onPress={() => router.push('/workout/' + slot.dayKey as any)}
-                  style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8, backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border }}>
-                  <View style={{ width: 4, height: 36, borderRadius: 2, backgroundColor: workout.color, marginRight: 12 }} />
+                  style={{ flexDirection: 'row', alignItems: 'center', borderRadius: 6, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 8, backgroundColor: colors.card, borderLeftWidth: 3, borderLeftColor: workout.color, borderTopWidth: 1, borderRightWidth: 1, borderBottomWidth: 1, borderTopColor: colors.border, borderRightColor: colors.border, borderBottomColor: colors.border }}>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: 'DMSans_500', fontSize: 13, color: workout.color }}>{workout.label}</Text>
-                    <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted, marginTop: 1 }}>{workout.exercises.length} exercises</Text>
+                    <Text style={{ fontFamily: 'DMMono_500', fontSize: 9, color: workout.color, letterSpacing: 2.5 }}>{(workout.dayType || '').toUpperCase()}</Text>
+                    <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 2, marginTop: 2 }}>{workout.label.toUpperCase()}</Text>
+                    <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5, marginTop: 1 }}>{workout.exercises.length} EXERCISES</Text>
                   </View>
-                  <Text style={{ fontFamily: 'DMMono', fontSize: 11, color: colors.muted }}>
-                    {daysAway === 1 ? 'Tomorrow' : DAYS_FULL[dayIndex]}
+                  <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>
+                    {(daysAway === 1 ? 'TOMORROW' : DAYS_FULL[dayIndex].toUpperCase())}
                   </Text>
                 </TouchableOpacity>
               ))}
@@ -847,11 +993,12 @@ export default function TodayScreen() {
       {/* Goal weight edit inline modal */}
       {editingGoal && (
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.6)', zIndex: 100, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 32 }}>
-          <View style={{ borderRadius: 20, padding: 24, backgroundColor: colors.card, width: '100%' }}>
-            <Text style={{ fontFamily: 'BebasNeue', fontSize: 22, color: colors.text, letterSpacing: 1, marginBottom: 4 }}>SET GOAL WEIGHT</Text>
-            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, marginBottom: 16 }}>{wu.toUpperCase()}</Text>
+          <View style={{ borderRadius: 8, padding: 24, paddingTop: 22, backgroundColor: colors.card, width: '100%', borderTopWidth: 3, borderTopColor: colors.pull }}>
+            <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.pull, letterSpacing: 2.5, marginBottom: 4 }}>TARGET</Text>
+            <Text style={{ fontFamily: 'BebasNeue', fontSize: 28, color: colors.text, letterSpacing: 3, marginBottom: 4, lineHeight: 28 }}>SET GOAL WEIGHT</Text>
+            <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 2, marginBottom: 16 }}>UNIT · {wu.toUpperCase()}</Text>
             <TextInput
-              style={{ borderRadius: 12, padding: 14, fontFamily: 'DMMono', fontSize: 28, color: colors.text, backgroundColor: colors.bg, borderWidth: 1.5, borderColor: colors.pull, textAlign: 'center', marginBottom: 16 }}
+              style={{ borderRadius: 6, padding: 14, fontFamily: 'DMMono', fontSize: 28, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.pull, textAlign: 'center', marginBottom: 16 }}
               value={goalInput}
               onChangeText={setGoalInput}
               keyboardType="decimal-pad"
@@ -859,20 +1006,20 @@ export default function TodayScreen() {
               placeholderTextColor={colors.muted}
               autoFocus
             />
-            <View style={{ flexDirection: 'row', gap: 10 }}>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
               {goalWeight !== null && (
                 <TouchableOpacity onPress={handleClearGoal}
-                  style={{ flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.danger + '50' }}>
-                  <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.danger }}>Clear</Text>
+                  style={{ flex: 1, borderRadius: 6, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.danger + '50' }}>
+                  <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.danger, letterSpacing: 2 }}>CLEAR</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={() => setEditingGoal(false)}
-                style={{ flex: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
-                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.muted }}>Cancel</Text>
+                style={{ flex: 1, borderRadius: 6, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, color: colors.muted, letterSpacing: 2 }}>CANCEL</Text>
               </TouchableOpacity>
               <TouchableOpacity onPress={() => handleSetGoal(goalInput)}
-                style={{ flex: 2, borderRadius: 12, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.pull }}>
-                <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.bg }}>Save</Text>
+                style={{ flex: 2, borderRadius: 6, paddingVertical: 14, alignItems: 'center', backgroundColor: colors.pull }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: colors.bg, letterSpacing: 3 }}>SAVE →</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -886,14 +1033,14 @@ export default function TodayScreen() {
 
       <LogWeightModal
         visible={showWeightModal}
-        onClose={() => setShowWeightModal(false)}
+        onClose={closeWeightModal}
         onLog={handleLogWeight}
         unit={wu}
       />
 
       <CardioModal
         visible={showCardioModal}
-        onClose={() => setShowCardioModal(false)}
+        onClose={closeCardioModal}
         onLog={async (slug, duration, distance) => {
           await logCardio({ slug, durationMinutes: duration, distanceMiles: distance })
         }}
@@ -901,3 +1048,5 @@ export default function TodayScreen() {
     </View>
   )
 }
+
+export default withErrorBoundary(TodayScreen, 'Today screen')

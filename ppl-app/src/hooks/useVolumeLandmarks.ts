@@ -43,11 +43,41 @@ function normalizeMuscle(m: string): string | null {
   return null
 }
 
+export type LandmarkStatus = 'over' | 'mav' | 'mev' | 'below'
+
+export interface VolumeLandmark {
+  key: string
+  label: string
+  mev: number
+  mav: number
+  mrv: number
+  sets: number
+  status: LandmarkStatus
+}
+
+interface LandmarkExerciseInput {
+  muscles?: { primary?: string[]; secondary?: string[] }
+}
+
+interface LandmarkSessionSet {
+  completed: boolean
+  is_warmup: boolean
+  weight: number | null
+  reps: number | null
+  exercise_id: string
+}
+
+interface LandmarkSession {
+  date: string
+  completed_at: string | null
+  session_sets?: LandmarkSessionSet[] | null
+}
+
 export function useVolumeLandmarks(
-  EXERCISES: Record<string, any>,
-  sessions: any[]
+  EXERCISES: Record<string, LandmarkExerciseInput>,
+  sessions: LandmarkSession[]
 ) {
-  const landmarks = useMemo(() => {
+  const landmarks = useMemo<VolumeLandmark[]>(() => {
     // Count working sets per muscle group since Monday of this week
     const now = new Date()
     const monday = new Date(now)
@@ -61,15 +91,15 @@ export function useVolumeLandmarks(
       .filter(s => s.completed_at && new Date(s.date + 'T12:00:00') >= sevenDaysAgo)
       .forEach(s => {
         ;(s.session_sets || [])
-          .filter((set: any) => set.completed && !set.is_warmup && set.weight && set.reps)
-          .forEach((set: any) => {
+          .filter(set => set.completed && !set.is_warmup && set.weight && set.reps)
+          .forEach(set => {
             const ex = EXERCISES[set.exercise_id]
             if (!ex) return
             const muscles = [
               ...(ex.muscles?.primary || []),
-              ...(ex.muscles?.secondary || []).map((m: string) => m + '__secondary'),
+              ...(ex.muscles?.secondary || []).map(m => m + '__secondary'),
             ]
-            muscles.forEach((rawMuscle: string) => {
+            muscles.forEach(rawMuscle => {
               const isSecondary = rawMuscle.endsWith('__secondary')
               const m = isSecondary ? rawMuscle.replace('__secondary', '') : rawMuscle
               const key = normalizeMuscle(m)
@@ -82,7 +112,8 @@ export function useVolumeLandmarks(
 
     return Object.entries(LANDMARKS).map(([key, lm]) => {
       const sets = Math.round(setsByMuscle[key] || 0)
-      const status = sets >= lm.mrv ? 'over'
+      const status: LandmarkStatus =
+        sets >= lm.mrv ? 'over'
         : sets >= lm.mav ? 'mav'
         : sets >= lm.mev ? 'mev'
         : 'below'
