@@ -3,9 +3,12 @@ import {
   View, Text, Modal, TouchableOpacity,
   TextInput, ScrollView, ActivityIndicator,
 } from 'react-native'
+import Constants from 'expo-constants'
 import { useTheme } from '@/lib/ThemeContext'
 import { useSettings } from '@/hooks/useSettings'
 import { usePrograms } from '@/hooks/usePrograms'
+
+const VERSION_LABEL = `v${(Constants.expoConfig?.version || '2.0.0').split('.').slice(0, 2).join('.')}`
 
 const STEPS = ['welcome', 'name', 'program'] as const
 type Step = typeof STEPS[number]
@@ -72,7 +75,7 @@ export function OnboardingModal({ visible, onComplete }: OnboardingProps) {
               </Text>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 10 }}>
                 <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginRight: 10 }} />
-                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 3 }}>FORGE PROTOCOL v1.0</Text>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 3 }}>FORGE PROTOCOL {VERSION_LABEL}</Text>
                 <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
               </View>
               <Text style={{ fontFamily: 'DMSans', fontSize: 15, color: colors.muted, textAlign: 'center', marginTop: 20, lineHeight: 22, paddingHorizontal: 20 }}>

@@ -1,6 +1,10 @@
 import { useEffect, useRef } from 'react'
 import { View, Text, Animated, Easing } from 'react-native'
+import Constants from 'expo-constants'
 import { useTheme } from '@/lib/ThemeContext'
+
+// Major.minor version pulled from app.json (e.g. "2.0.0" → "v2.0")
+const VERSION_LABEL = `v${(Constants.expoConfig?.version || '2.0.0').split('.').slice(0, 2).join('.')}`
 
 interface LoadingScreenProps {
   message?: string
@@ -80,7 +84,7 @@ export function LoadingScreen({ message }: LoadingScreenProps) {
           color: colors.muted,
           letterSpacing: 3,
         }}>
-          FORGE PROTOCOL v1.0
+          FORGE PROTOCOL {VERSION_LABEL}
         </Text>
         <View style={{ width: 20, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
       </View>

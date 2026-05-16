@@ -3,8 +3,11 @@ import {
   View, Text, TextInput, TouchableOpacity, KeyboardAvoidingView,
   Platform, ScrollView, ActivityIndicator, Image,
 } from 'react-native'
+import Constants from 'expo-constants'
 import { useAuth } from '@/hooks/useAuth'
 import { useTheme } from '@/lib/ThemeContext'
+
+const VERSION_LABEL = `v${(Constants.expoConfig?.version || '2.0.0').split('.').slice(0, 2).join('.')}`
 
 type Mode = 'login' | 'signup' | 'reset'
 
@@ -78,7 +81,7 @@ export default function LoginScreen() {
               color: colors.muted,
               letterSpacing: 3,
             }}>
-              FORGE PROTOCOL v1.0
+              FORGE PROTOCOL {VERSION_LABEL}
             </Text>
             <View style={{ width: 24, height: 1, backgroundColor: colors.muted, marginLeft: 10 }} />
           </View>
