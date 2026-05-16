@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
-import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist'
+import ReorderableList, { reorderItems, useReorderableDrag, type ReorderableListReorderEvent } from 'react-native-reorderable-list'
 import { useRouter } from 'expo-router'
 import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions, type WorkoutExercise } from '@/hooks/usePrograms'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
@@ -697,6 +697,23 @@ function ProgramEditorView({ programId, onBack, onOpenWorkout, onOpenPeriodizati
 const TAGS = ['compound', 'isolation', 'warmup', 'cooldown']
 const REST_OPTIONS = [30, 45, 60, 90, 120, 150, 180, 240]
 
+// Drag handle for ReorderableList rows. Must be a child of a ReorderableList
+// renderItem so the useReorderableDrag hook resolves to the right drag fn.
+function DragHandle({ color }: { color: string }) {
+  const drag = useReorderableDrag()
+  return (
+    <TouchableOpacity
+      onLongPress={drag}
+      delayLongPress={150}
+      hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
+      style={{ width: 22, marginRight: 6, alignItems: 'center', justifyContent: 'center' }}
+      accessibilityLabel="Drag to reorder"
+      accessibilityHint="Hold and drag to move this exercise to a new position">
+      <Text style={{ fontFamily: 'DMMono', fontSize: 18, color, lineHeight: 20 }}>⋮⋮</Text>
+    </TouchableOpacity>
+  )
+}
+
 function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: () => void }) {
   const { colors } = useTheme()
   const DAY_TYPE_COLORS = getDayTypeColors(colors)
@@ -828,21 +845,17 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
         </View>
       )}
 
-      <DraggableFlatList<ExerciseGroup>
+      <ReorderableList
         data={groupedExercises}
         keyExtractor={g => g.key}
-        style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
-        activationDistance={12}
-        onDragEnd={({ data }) => {
+        dragEnabled={isOwned}
+        onReorder={({ from, to }: ReorderableListReorderEvent) => {
           if (!isOwned) return
-          const orderedIds = data.flatMap(g => g.members.map(m => m.id))
-          // No-op if nothing changed
-          const currentIds = exercises.map(e => e.id)
-          const changed = orderedIds.length !== currentIds.length ||
-            orderedIds.some((id, i) => id !== currentIds[i])
-          if (changed) reorderExercises(orderedIds)
+          const next = reorderItems(groupedExercises, from, to)
+          const orderedIds = next.flatMap(g => g.members.map(m => m.id))
+          reorderExercises(orderedIds)
         }}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 40 }}>
@@ -855,9 +868,8 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
             )}
           </View>
         }
-        renderItem={({ item: group, drag, isActive, getIndex }: RenderItemParams<ExerciseGroup>) => {
+        renderItem={({ item: group, index: groupIdx }: { item: ExerciseGroup; index: number }) => {
           const c = workoutColor
-          const groupIdx = getIndex() ?? 0
           // Offset for numbering across all previous groups' members
           const baseIndex = groupedExercises.slice(0, groupIdx).reduce((a, g) => a + g.members.length, 0)
           const isMulti = group.members.length > 1
@@ -869,7 +881,6 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
               borderWidth: isMulti ? 1 : 0,
               borderColor: isMulti ? c + '40' : 'transparent',
               padding: isMulti ? 6 : 0,
-              opacity: isActive ? 0.85 : 1,
             }}>
               {group.members.map((ex, memberIdx) => {
             const isEditing = editingId === ex.id
@@ -880,16 +891,7 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                 <TouchableOpacity onPress={() => isOwned && setEditingId(isEditing ? null : ex.id)}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
                   {isOwned && isFirstInGroup ? (
-                    <TouchableOpacity
-                      onLongPress={drag}
-                      delayLongPress={150}
-                      disabled={isActive}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
-                      style={{ width: 22, marginRight: 6, alignItems: 'center', justifyContent: 'center' }}
-                      accessibilityLabel="Drag to reorder"
-                      accessibilityHint="Hold and drag to move this exercise to a new position">
-                      <Text style={{ fontFamily: 'DMMono', fontSize: 18, color: colors.muted, lineHeight: 20 }}>⋮⋮</Text>
-                    </TouchableOpacity>
+                    <DragHandle color={colors.muted} />
                   ) : (
                     <View style={{ width: 22, marginRight: 6 }} />
                   )}
