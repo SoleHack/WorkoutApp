@@ -466,6 +466,35 @@ export function useWorkoutEditor(workoutId: string | null) {
     onError: () => invalidate(),
   })
 
+  // Reorder: caller provides the new order as an array of workout_exercise ids.
+  // We optimistically reorder + reindex locally, then fire parallel updates.
+  const reorderExercisesMutation = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      if (!data?.workout?.user_id || !workoutId) return
+      await Promise.all(
+        orderedIds.map((id, idx) =>
+          supabase.from('workout_exercises').update({ order_index: idx }).eq('id', id)
+        )
+      )
+    },
+    onMutate: async (orderedIds) => {
+      qc.setQueryData(['workoutEditor', workoutId], (old: any) => {
+        if (!old) return old
+        const byId = new Map<string, WorkoutExercise>(
+          old.exercises.map((e: WorkoutExercise) => [e.id, e])
+        )
+        const reordered = orderedIds
+          .map((id, idx) => {
+            const ex = byId.get(id)
+            return ex ? { ...ex, order_index: idx } : null
+          })
+          .filter((x): x is WorkoutExercise => x !== null)
+        return { ...old, exercises: reordered }
+      })
+    },
+    onError: () => invalidate(),
+  })
+
   return {
     workout: data?.workout || null,
     exercises: data?.exercises || [],
@@ -476,6 +505,7 @@ export function useWorkoutEditor(workoutId: string | null) {
     updateExercise: (weId: string, updates: any) =>
       updateExerciseMutation.mutateAsync({ weId, updates }),
     removeExercise: removeExerciseMutation.mutateAsync,
+    reorderExercises: reorderExercisesMutation.mutateAsync,
     refresh: invalidate,
   }
 }

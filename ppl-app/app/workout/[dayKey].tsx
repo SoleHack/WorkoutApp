@@ -1,8 +1,9 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, Alert,
 } from 'react-native'
+import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist'
 import { useLocalSearchParams, useRouter } from 'expo-router'
 import * as Haptics from 'expo-haptics'
 import { useWorkout } from '@/hooks/useWorkout'
@@ -306,7 +307,26 @@ function WorkoutScreen() {
 
   const activeEx = activeSetModal ? day.exercises.find(e => e.exerciseDbId === activeSetModal.exerciseId) : null
 
-  const exerciseGroups = groupExercises(allExercises.filter((x): x is ProgramExercise => x !== null))
+  const naturalGroups = useMemo(
+    () => groupExercises(allExercises.filter((x): x is ProgramExercise => x !== null)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [day.exercises, extraExercises, skippedExercises, EXERCISES]
+  )
+
+  // Session-local reorder: array of group keys in user's chosen order. Null
+  // means "use the natural program order." Adding/skipping an exercise resets
+  // the override so the new exercise appears in its natural position.
+  const [groupOrderOverride, setGroupOrderOverride] = useState<string[] | null>(null)
+
+  const exerciseGroups = useMemo(() => {
+    if (!groupOrderOverride) return naturalGroups
+    const byKey = new Map(naturalGroups.map(g => [g.key, g]))
+    const ordered = groupOrderOverride.map(k => byKey.get(k)).filter((g): g is NonNullable<typeof g> => !!g)
+    // Append any groups not in the override (e.g. newly added during session)
+    const seen = new Set(ordered.map(g => g.key))
+    for (const g of naturalGroups) if (!seen.has(g.key)) ordered.push(g)
+    return ordered
+  }, [naturalGroups, groupOrderOverride])
 
   // Renders a technique badge (DROP SET / MYO REPS / etc.) styled like the KEY badge.
   const renderTechniqueBadge = (technique: string | null) => {
@@ -956,13 +976,60 @@ function WorkoutScreen() {
         />
       )}
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 }} showsVerticalScrollIndicator={false}>
-        {exerciseGroups.map(group =>
-          group.members.length === 1 || group.groupType === 'single' || group.supersetGroup == null
+      <DraggableFlatList<ExerciseGroup>
+        data={exerciseGroups}
+        keyExtractor={g => g.key}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 140 }}
+        showsVerticalScrollIndicator={false}
+        activationDistance={12}
+        onDragEnd={({ data }) => {
+          const newKeys = data.map(g => g.key)
+          const currentKeys = exerciseGroups.map(g => g.key)
+          const changed = newKeys.length !== currentKeys.length ||
+            newKeys.some((k, i) => k !== currentKeys[i])
+          if (changed) setGroupOrderOverride(newKeys)
+        }}
+        renderItem={({ item: group, drag, isActive }: RenderItemParams<ExerciseGroup>) => {
+          const inner = group.members.length === 1 || group.groupType === 'single' || group.supersetGroup == null
             ? renderSingleExerciseCard(group.members[0])
             : renderGroupCard(group)
-        )}
-        {/* Skipped exercises — shown with undo option */}
+          return (
+            <View style={{ opacity: isActive ? 0.85 : 1, position: 'relative' }}>
+              <TouchableOpacity
+                onLongPress={drag}
+                delayLongPress={150}
+                disabled={isActive}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                accessibilityLabel="Drag to reorder exercise"
+                accessibilityHint="Hold and drag to move this exercise to a new position in your workout"
+                style={{
+                  position: 'absolute', top: 8, right: 12, zIndex: 10,
+                  paddingHorizontal: 8, paddingVertical: 4,
+                  borderRadius: 4,
+                  backgroundColor: colors.card2 + 'CC',
+                }}>
+                <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: colors.muted, letterSpacing: 1 }}>⋮⋮</Text>
+              </TouchableOpacity>
+              {inner}
+            </View>
+          )
+        }}
+        ListFooterComponent={
+          <>
+            {groupOrderOverride && (
+              <TouchableOpacity
+                onPress={() => setGroupOrderOverride(null)}
+                style={{
+                  alignSelf: 'center', marginBottom: 14,
+                  borderRadius: 6, paddingHorizontal: 12, paddingVertical: 6,
+                  backgroundColor: colors.card, borderWidth: 1, borderColor: colors.border,
+                }}
+                accessibilityLabel="Reset exercise order to program default">
+                <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1.5 }}>↺ RESET ORDER</Text>
+              </TouchableOpacity>
+            )}
+            {/* Skipped exercises — shown with undo option */}
         {skippedExercises.size > 0 && (
           <View style={{ marginBottom: 10 }}>
             <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.muted, letterSpacing: 1.5, marginBottom: 8 }}>SKIPPED</Text>
@@ -1100,7 +1167,9 @@ function WorkoutScreen() {
             </TouchableOpacity>
           </>
         )}
-      </ScrollView>
+          </>
+        }
+      />
 
       <SetInputModal
         visible={!!activeSetModal}

@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput,
   Modal, Alert, ActivityIndicator, KeyboardAvoidingView, Platform,
 } from 'react-native'
+import DraggableFlatList, { type RenderItemParams } from 'react-native-draggable-flatlist'
 import { useRouter } from 'expo-router'
-import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions } from '@/hooks/usePrograms'
+import { usePrograms, useProgramEditor, useWorkouts, useMorningRoutine, useWorkoutEditor, useExerciseLibrary, useWorkoutActions, type WorkoutExercise } from '@/hooks/usePrograms'
 import { useActiveProgram } from '@/hooks/useActiveProgram'
 import { PeriodizationEditorView } from '@/components/forge/PeriodizationEditor'
 import { useAuth } from '@/hooks/useAuth'
@@ -699,7 +700,7 @@ const REST_OPTIONS = [30, 45, 60, 90, 120, 150, 180, 240]
 function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: () => void }) {
   const { colors } = useTheme()
   const DAY_TYPE_COLORS = getDayTypeColors(colors)
-  const { workout, exercises, loading, updateWorkout, addExercise, updateExercise, removeExercise } = useWorkoutEditor(workoutId)
+  const { workout, exercises, loading, updateWorkout, addExercise, updateExercise, removeExercise, reorderExercises } = useWorkoutEditor(workoutId)
   const { exercises: library, loading: libLoading } = useExerciseLibrary()
   const { getAll: getTemplates } = useWorkoutTemplates()
   const [showAddEx, setShowAddEx] = useState(false)
@@ -711,6 +712,29 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null)
 
   const isOwned = !!workout?.user_id
+
+  // Group adjacent exercises sharing the same superset/circuit letter+type
+  // into a single draggable unit. Single exercises form 1-member groups.
+  type ExerciseGroup = {
+    key: string
+    members: WorkoutExercise[]
+    groupType: 'single' | 'superset' | 'circuit'
+    groupLetter: string | null
+  }
+  const groupedExercises = useMemo<ExerciseGroup[]>(() => {
+    const out: ExerciseGroup[] = []
+    for (const ex of exercises) {
+      const isMulti = ex.group_type !== 'single' && ex.superset_group != null
+      const last = out[out.length - 1]
+      if (isMulti && last && last.groupType === ex.group_type && last.groupLetter === ex.superset_group) {
+        last.members.push(ex)
+        last.key += '+' + ex.id
+      } else {
+        out.push({ key: ex.id, members: [ex], groupType: ex.group_type, groupLetter: ex.superset_group })
+      }
+    }
+    return out
+  }, [exercises])
 
   const filteredLib = library.filter(e =>
     exSearch.length < 2 || e.name.toLowerCase().includes(exSearch.toLowerCase()) || e.category.toLowerCase().includes(exSearch.toLowerCase())
@@ -804,8 +828,23 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
         </View>
       )}
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingBottom: 100 }} showsVerticalScrollIndicator={false}>
-        {exercises.length === 0 ? (
+      <DraggableFlatList<ExerciseGroup>
+        data={groupedExercises}
+        keyExtractor={g => g.key}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
+        showsVerticalScrollIndicator={false}
+        activationDistance={12}
+        onDragEnd={({ data }) => {
+          if (!isOwned) return
+          const orderedIds = data.flatMap(g => g.members.map(m => m.id))
+          // No-op if nothing changed
+          const currentIds = exercises.map(e => e.id)
+          const changed = orderedIds.length !== currentIds.length ||
+            orderedIds.some((id, i) => id !== currentIds[i])
+          if (changed) reorderExercises(orderedIds)
+        }}
+        ListEmptyComponent={
           <View style={{ alignItems: 'center', paddingTop: 40 }}>
             <Text style={{ fontSize: 40, marginBottom: 12 }}>🏋️</Text>
             <Text style={{ fontFamily: 'BebasNeue', fontSize: 20, color: colors.text, letterSpacing: 1 }}>NO EXERCISES YET</Text>
@@ -815,14 +854,45 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
               </Text>
             )}
           </View>
-        ) : (
-          exercises.map((ex, i) => {
+        }
+        renderItem={({ item: group, drag, isActive, getIndex }: RenderItemParams<ExerciseGroup>) => {
+          const c = workoutColor
+          const groupIdx = getIndex() ?? 0
+          // Offset for numbering across all previous groups' members
+          const baseIndex = groupedExercises.slice(0, groupIdx).reduce((a, g) => a + g.members.length, 0)
+          const isMulti = group.members.length > 1
+          return (
+            <View style={{
+              marginBottom: 10,
+              borderRadius: 6,
+              backgroundColor: isMulti ? colors.card2 : 'transparent',
+              borderWidth: isMulti ? 1 : 0,
+              borderColor: isMulti ? c + '40' : 'transparent',
+              padding: isMulti ? 6 : 0,
+              opacity: isActive ? 0.85 : 1,
+            }}>
+              {group.members.map((ex, memberIdx) => {
             const isEditing = editingId === ex.id
-            const c = workoutColor
+            const i = baseIndex + memberIdx
+            const isFirstInGroup = memberIdx === 0
             return (
-              <View key={ex.id} style={{ borderRadius: 6, marginBottom: 10, backgroundColor: colors.card, borderWidth: isEditing ? 1.5 : 1, borderColor: isEditing ? c : colors.border, overflow: 'hidden' }}>
+              <View key={ex.id} style={{ borderRadius: 6, marginBottom: isMulti && memberIdx < group.members.length - 1 ? 6 : 0, backgroundColor: colors.card, borderWidth: isEditing ? 1.5 : 1, borderColor: isEditing ? c : colors.border, overflow: 'hidden' }}>
                 <TouchableOpacity onPress={() => isOwned && setEditingId(isEditing ? null : ex.id)}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 14 }}>
+                  {isOwned && isFirstInGroup ? (
+                    <TouchableOpacity
+                      onLongPress={drag}
+                      delayLongPress={150}
+                      disabled={isActive}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 4 }}
+                      style={{ width: 22, marginRight: 6, alignItems: 'center', justifyContent: 'center' }}
+                      accessibilityLabel="Drag to reorder"
+                      accessibilityHint="Hold and drag to move this exercise to a new position">
+                      <Text style={{ fontFamily: 'DMMono', fontSize: 18, color: colors.muted, lineHeight: 20 }}>⋮⋮</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <View style={{ width: 22, marginRight: 6 }} />
+                  )}
                   <View style={{ width: 28, height: 28, borderRadius: 6, backgroundColor: c + '20', alignItems: 'center', justifyContent: 'center', marginRight: 12 }}>
                     <Text style={{ fontFamily: 'BebasNeue', fontSize: 14, color: c }}>{String(i + 1)}</Text>
                   </View>
@@ -960,9 +1030,11 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                 )}
               </View>
             )
-          })
-        )}
-      </ScrollView>
+          })}
+            </View>
+          )
+        }}
+      />
 
       {/* Add Exercise Modal */}
       <Modal visible={showAddEx} transparent animationType="slide" onRequestClose={() => setShowAddEx(false)}>
