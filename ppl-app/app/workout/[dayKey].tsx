@@ -154,7 +154,15 @@ function WorkoutScreen() {
   const detectUpgrade = useDetectOneRMUpgrade()
 
   const [activeSetModal, setActiveSetModal] = useState<{ exerciseId: string; setNumber: number } | null>(null)
-  const [restTimer, setRestTimer] = useState<number | null>(null)
+  const [restTimer, _setRestTimerInner] = useState<number | null>(null)
+  // Nonce bumps every time we start a fresh rest period so the RestTimer
+  // remounts (via key prop) and counts from the new value instead of
+  // letting the previous countdown bleed into the next exercise's set.
+  const [restNonce, setRestNonce] = useState(0)
+  const setRestTimer = useCallback((s: number | null) => {
+    _setRestTimerInner(s)
+    if (s !== null) setRestNonce(n => n + 1)
+  }, [])
   const [customRest, setCustomRest] = useState<Record<string, number>>({}) // per-exercise override
   const [restPickerEx, setRestPickerEx] = useState<string | null>(null) // which ex has picker open
   const [groupPickerEx, setGroupPickerEx] = useState<string | null>(null) // workoutExId of card with group picker open
@@ -803,15 +811,38 @@ function WorkoutScreen() {
           borderLeftWidth: 3,
           borderLeftColor: day.color,
         }}>
-        {/* Header strip — group letter, type, round count */}
+        {/* Header strip — group letter, type, round count, skip */}
         <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderBottomWidth: 1, borderBottomColor: colors.border, backgroundColor: day.color + '12' }}>
-          <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: day.color, letterSpacing: 2 }}>
+          <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: day.color, letterSpacing: 2, flex: 1 }} numberOfLines={1}>
             {group.supersetGroup ? `${group.supersetGroup} · ` : ''}{groupLabel}{rounds > 0 ? ` · ${rounds} ROUND${rounds === 1 ? '' : 'S'}` : ''}
           </Text>
-          <View style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: currentRound >= rounds ? day.color : day.color + '1A', borderWidth: 1, borderColor: currentRound >= rounds ? day.color : day.color + '50' }}>
-            <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: currentRound >= rounds ? colors.bg : day.color, letterSpacing: 1.5 }}>
-              {`${currentRound}/${rounds}`}
-            </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <TouchableOpacity
+              onPress={() => Alert.alert(
+                `Skip ${groupLabel.toLowerCase()}?`,
+                'You can undo this from the SKIPPED section at the bottom of the workout.',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Skip',
+                    style: 'destructive',
+                    onPress: () => setSkippedExercises(prev => {
+                      const n = new Set(prev)
+                      members.forEach(m => n.add(m.exerciseDbId))
+                      return n
+                    }),
+                  },
+                ]
+              )}
+              accessibilityLabel={`Skip ${groupLabel.toLowerCase()}`}
+              style={{ width: 28, height: 28, borderRadius: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}>
+              <Text style={{ fontFamily: 'DMMono', fontSize: 14, color: colors.muted }}>✕</Text>
+            </TouchableOpacity>
+            <View style={{ borderRadius: 4, paddingHorizontal: 10, paddingVertical: 5, backgroundColor: currentRound >= rounds ? day.color : day.color + '1A', borderWidth: 1, borderColor: currentRound >= rounds ? day.color : day.color + '50' }}>
+              <Text style={{ fontFamily: 'DMMono_500', fontSize: 11, color: currentRound >= rounds ? colors.bg : day.color, letterSpacing: 1.5 }}>
+                {`${currentRound}/${rounds}`}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -1002,7 +1033,7 @@ function WorkoutScreen() {
         )}
       </View>
 
-      {restTimer !== null && <RestTimer seconds={restTimer} onDone={() => setRestTimer(null)} />}
+      {restTimer !== null && <RestTimer key={restNonce} seconds={restTimer} onDone={() => setRestTimer(null)} />}
 
       {showPR && (
         <PRBanner
