@@ -221,16 +221,17 @@ function SettingsScreen() {
           <Row label="Theme">
             <SegmentControl options={['dark', 'light']} value={theme} onChange={v => { const t = v as 'dark' | 'light'; setTheme(t); save({ theme: t }) }} />
           </Row>
-          <Row label="Apple Health" sublabel={hkEnabled ? "Bodyweight syncing ✓" : Platform.OS === 'ios' ? "Sync bodyweight to & from Health" : "iOS only"} last>
-            <Switch
-              value={hkEnabled}
-              onValueChange={Platform.OS === 'ios' ? setHkEnabled : undefined}
-              disabled={Platform.OS !== 'ios'}
-              accessibilityLabel="Apple Health bodyweight sync"
-              trackColor={{ false: colors.border, true: colors.legs }}
-              thumbColor={colors.bg}
-            />
-          </Row>
+          {hkAvailable && (
+            <Row label="Apple Health" sublabel={hkEnabled ? "Bodyweight syncing ✓" : "Sync bodyweight to & from Health"} last>
+              <Switch
+                value={hkEnabled}
+                onValueChange={setHkEnabled}
+                accessibilityLabel="Apple Health bodyweight sync"
+                trackColor={{ false: colors.border, true: colors.legs }}
+                thumbColor={colors.bg}
+              />
+            </Row>
+          )}
         </Section>
 
         {/* ── Strength Baseline ── */}
@@ -246,17 +247,6 @@ function SettingsScreen() {
 
         {/* ── Body Tracking ── */}
         <Section title="BODY TRACKING">
-          {hkAvailable && (
-            <Row label="Apple Health" sublabel={hkEnabled ? 'Bodyweight syncing ✓' : 'Sync bodyweight to & from Health'}>
-              <Switch
-                value={hkEnabled}
-                onValueChange={setHkEnabled}
-                accessibilityLabel="Apple Health bodyweight sync"
-                trackColor={{ false: colors.border, true: colors.legs }}
-                thumbColor={colors.bg}
-              />
-            </Row>
-          )}
           <Row label="Measurements"
             sublabel={latestMeasurements
               ? `Last: ${fmtDate(latestMeasurements.date)}${bf !== null ? ` · ${bf}% BF` : ''}`
@@ -414,6 +404,48 @@ function SettingsScreen() {
           ])}
           style={{ borderRadius: 6, paddingVertical: 16, alignItems: 'center', backgroundColor: colors.card, borderWidth: 1, borderColor: colors.danger + '40', marginBottom: 12 }}>
           <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.danger }}>Sign Out</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => Alert.alert(
+            'Delete Account',
+            'This will permanently delete your account and all your data — workouts, PRs, bodyweight history, progress photos, measurements, and settings. This cannot be undone.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Continue',
+                style: 'destructive',
+                onPress: () => Alert.alert(
+                  'Are you absolutely sure?',
+                  'Tap Delete Forever to permanently remove your account. Nothing will be recoverable.',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Delete Forever',
+                      style: 'destructive',
+                      onPress: async () => {
+                        try {
+                          const { error } = await supabase.functions.invoke('delete-account')
+                          if (error) {
+                            Alert.alert('Couldn’t delete account', error.message || 'Please try again or contact support@theforgefitness.app.')
+                            return
+                          }
+                          // Account is gone server-side; sign out clears the local session.
+                          await signOut()
+                        } catch (e) {
+                          Alert.alert('Couldn’t delete account', 'Please try again or contact support@theforgefitness.app.')
+                        }
+                      },
+                    },
+                  ]
+                ),
+              },
+            ]
+          )}
+          accessibilityLabel="Delete account permanently"
+          style={{ borderRadius: 6, paddingVertical: 16, alignItems: 'center', backgroundColor: colors.danger + '15', borderWidth: 1, borderColor: colors.danger + '60', marginBottom: 12 }}>
+          <Text style={{ fontFamily: 'DMSans_500', fontSize: 14, color: colors.danger }}>Delete Account</Text>
+          <Text style={{ fontFamily: 'DMMono', fontSize: 10, color: colors.muted, letterSpacing: 1, marginTop: 4 }}>PERMANENT · CASCADES TO ALL YOUR DATA</Text>
         </TouchableOpacity>
 
         <Text style={{ fontFamily: 'DMMono', fontSize: 9, color: colors.border, textAlign: 'center', marginBottom: 8 }}>
