@@ -19,7 +19,7 @@ const features = [
   },
   {
     label: 'BODYWEIGHT',
-    body: 'Log inside the app or read directly from Apple Health. Two-way sync, no double-entry.',
+    body: 'Quick logging, trend chart, and goal tracking — without surfacing it everywhere you don’t need it.',
     accent: 'var(--color-core)',
   },
   {
@@ -62,8 +62,8 @@ const faqs = [
     a: 'Connect with a training partner via an invite code. When they finish a workout, you get a push notification. When you finish, they do. Accountability built in, not bolted on.',
   },
   {
-    q: 'Do you use HealthKit?',
-    a: 'Only for bodyweight, and only with your permission. Two-way sync — read from your scale, write back when you log inside the app. We don’t touch the rest of your Health data.',
+    q: 'Does it sync with Apple Health?',
+    a: 'Not in v2.0. Apple Health bodyweight sync is on the roadmap for an upcoming release. For now, log bodyweight inside the app.',
   },
   {
     q: 'Can I delete my account?',

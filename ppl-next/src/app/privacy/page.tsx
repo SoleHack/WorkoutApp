@@ -68,12 +68,6 @@ export default function PrivacyPage() {
               issued by Apple if you enable notifications. Used solely to deliver
               notifications you’ve subscribed to.
             </li>
-            <li>
-              <strong>Apple Health (optional):</strong> if you grant permission,
-              we read your bodyweight from HealthKit and write bodyweight you log
-              inside the app back to HealthKit. We never read or write anything
-              else.
-            </li>
           </ul>
           <p className="mt-4 text-[var(--color-muted)]">
             We do <em>not</em> collect: your contacts, location, advertising

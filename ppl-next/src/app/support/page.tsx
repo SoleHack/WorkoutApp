@@ -18,10 +18,6 @@ const troubleshooting = [
     a: 'You’re on a build older than v2.0. Update to v2.0 — reminders now suppress automatically once you complete a session for the day. If it still happens on v2.0, toggle the reminder off and on in Settings → Notifications to refresh the schedule.',
   },
   {
-    q: 'Apple Health bodyweight isn’t syncing.',
-    a: 'Open the Health app → Browse → Body Measurements → Weight → Data Sources & Access. Confirm The Forge has both Read and Write enabled. If it does, log a new bodyweight inside The Forge — that will trigger a write and resync the read direction.',
-  },
-  {
     q: 'My partner can’t see the program I shared.',
     a: 'Programs are shared at the moment of partner-connection, not retroactively. Disconnect and reconnect with the same invite code, or activate the program after you’re connected — both work.',
   },

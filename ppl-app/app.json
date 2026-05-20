@@ -29,7 +29,7 @@
       "entitlements": {
         "com.apple.developer.healthkit": true
       },
-      "buildNumber": "5"
+      "buildNumber": "6"
     },
     "android": {
       "adaptiveIcon": {
