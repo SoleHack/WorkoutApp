@@ -3,16 +3,21 @@ import { Platform, Alert, Linking } from 'react-native'
 import { storage } from '@/lib/storage'
 
 // Only import on iOS — Health is not available on Android or simulator.
-// react-native-health 1.19+ uses `module.exports = HealthKit` (CJS), not a
-// default export — so `.default` is undefined. Read the require result
-// directly. Getting this wrong silently returns null and the toggle
-// no-ops on tap. (App Review caught this on iPad; it was also broken on
-// iPhone — just hidden behind the same silent failure path.)
+//
+// react-native-health does Object.assign({}, NativeModules.AppleHealthKit, ...)
+// when its native side isn't linked, returning a stub with only a `Constants`
+// property and no methods. We must verify the methods we need are actually
+// functions before treating the module as usable — otherwise calling
+// AppleHealthKit.isAvailable() crashes with "undefined is not a function"
+// the moment any screen calls useHealthKit().
 let AppleHealthKit: any = null
 if (Platform.OS === 'ios') {
   try {
     const mod = require('react-native-health')
-    AppleHealthKit = mod?.default || mod
+    const candidate = mod?.default || mod
+    if (candidate && typeof candidate.isAvailable === 'function') {
+      AppleHealthKit = candidate
+    }
   } catch {
     // Not installed or simulator — silently ignore
   }
