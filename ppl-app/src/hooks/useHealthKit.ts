@@ -1,12 +1,18 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Platform } from 'react-native'
+import { Platform, Alert, Linking } from 'react-native'
 import { storage } from '@/lib/storage'
 
-// Only import on iOS — Health is not available on Android or simulator
+// Only import on iOS — Health is not available on Android or simulator.
+// react-native-health 1.19+ uses `module.exports = HealthKit` (CJS), not a
+// default export — so `.default` is undefined. Read the require result
+// directly. Getting this wrong silently returns null and the toggle
+// no-ops on tap. (App Review caught this on iPad; it was also broken on
+// iPhone — just hidden behind the same silent failure path.)
 let AppleHealthKit: any = null
 if (Platform.OS === 'ios') {
   try {
-    AppleHealthKit = require('react-native-health').default
+    const mod = require('react-native-health')
+    AppleHealthKit = mod?.default || mod
   } catch {
     // Not installed or simulator — silently ignore
   }
@@ -49,8 +55,26 @@ export function useHealthKit() {
 
   const setEnabled = useCallback(async (value: boolean) => {
     if (value && !authorized) {
+      // No native module = HealthKit unavailable on this device/build.
+      if (!AppleHealthKit) {
+        Alert.alert(
+          'Apple Health unavailable',
+          'HealthKit isn’t available on this device. Bodyweight will only be stored inside The Forge.',
+        )
+        return
+      }
       const granted = await requestAuthorization()
-      if (!granted) return
+      if (!granted) {
+        Alert.alert(
+          'Health access not granted',
+          'To sync bodyweight, enable access in iOS Settings → Privacy & Security → Health → The Forge.',
+          [
+            { text: 'OK', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openURL('app-settings:').catch(() => {}) },
+          ]
+        )
+        return
+      }
     }
     storage.set(ENABLED_KEY, value ? 'true' : 'false')
     setEnabledState(value)
