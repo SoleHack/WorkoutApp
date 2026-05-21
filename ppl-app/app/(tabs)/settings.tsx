@@ -7,7 +7,6 @@ import { useAuth } from '@/hooks/useAuth'
 import { useSettings } from '@/hooks/useSettings'
 import { useBodyweight } from '@/hooks/useBodyweight'
 import { useBodyMeasurements } from '@/hooks/useBodyComposition'
-import { useHealthKit } from '@/hooks/useHealthKit'
 import { useNotifications } from '@/hooks/useNotifications'
 import { navyBodyFat, bfCategory, leanMass } from '@/lib/bodyFat'
 import { useTheme } from '@/lib/ThemeContext'
@@ -76,7 +75,6 @@ function SettingsScreen() {
   const { colors, theme, setTheme } = useTheme()
   const { settings, save } = useSettings()
   const { entries: bwEntries, latest: bwLatest } = useBodyweight()
-  const { available: hkAvailable, enabled: hkEnabled, setEnabled: setHkEnabled } = useHealthKit()
   const {
     reminderEnabled, reminderHour, reminderMinute,
     streakEnabled, prEnabled,
@@ -218,20 +216,9 @@ function SettingsScreen() {
           <Row label="Weight Unit">
             <SegmentControl options={['lbs', 'kg']} value={wu} onChange={v => save({ weightUnit: v as 'lbs' | 'kg' })} />
           </Row>
-          <Row label="Theme">
+          <Row label="Theme" last>
             <SegmentControl options={['dark', 'light']} value={theme} onChange={v => { const t = v as 'dark' | 'light'; setTheme(t); save({ theme: t }) }} />
           </Row>
-          {hkAvailable && (
-            <Row label="Apple Health" sublabel={hkEnabled ? "Bodyweight syncing ✓" : "Sync bodyweight to & from Health"} last>
-              <Switch
-                value={hkEnabled}
-                onValueChange={setHkEnabled}
-                accessibilityLabel="Apple Health bodyweight sync"
-                trackColor={{ false: colors.border, true: colors.legs }}
-                thumbColor={colors.bg}
-              />
-            </Row>
-          )}
         </Section>
 
         {/* ── Strength Baseline ── */}

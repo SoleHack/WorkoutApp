@@ -49,10 +49,6 @@
     </dict>
     <key>NSCameraUsageDescription</key>
     <string>Take progress photos to track your physique over time.</string>
-    <key>NSHealthShareUsageDescription</key>
-    <string>Read your bodyweight from Apple Health to track progress.</string>
-    <key>NSHealthUpdateUsageDescription</key>
-    <string>Write your bodyweight to Apple Health when you log it.</string>
     <key>NSMicrophoneUsageDescription</key>
     <string>Allow $(PRODUCT_NAME) to access your microphone</string>
     <key>NSPhotoLibraryAddUsageDescription</key>

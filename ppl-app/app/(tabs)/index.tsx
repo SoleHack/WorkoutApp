@@ -16,7 +16,6 @@ import { useSettings } from '@/hooks/useSettings'
 import { useCardioLog, CARDIO_EXERCISES } from '@/hooks/useCardioLog'
 import { supabase } from '@/lib/supabase'
 import { storage } from '@/lib/storage'
-import { useHealthKit } from '@/hooks/useHealthKit'
 import { getLocalDate } from '@/lib/date'
 import { SectionLabel } from '@/components/forge'
 import { withErrorBoundary } from '@/components/withErrorBoundary'
@@ -217,7 +216,6 @@ function TodayScreen() {
   const qc = useQueryClient()
   const { programData, loading: programLoading } = useActiveProgram()
   const { entries: bwEntries, latest: bwLatest, change: bwChange, logWeight } = useBodyweight()
-  const { enabled: hkEnabled, writeWeight: hkWriteWeight } = useHealthKit()
   const { settings } = useSettings()
   const { recentLogs, idToSlugMap, logCardio, updateCardioSet, deleteCardioSet } = useCardioLog()
   const [showWeightModal, setShowWeightModal] = useState(false)
@@ -328,8 +326,7 @@ function TodayScreen() {
   const handleLogWeight = useCallback(async (val: number) => {
     const lbs = wu === 'kg' ? Math.round(val / 0.453592 * 10) / 10 : val
     await logWeight({ weight: lbs })
-    if (hkEnabled) hkWriteWeight(lbs).catch(() => {})
-  }, [wu, logWeight, hkEnabled, hkWriteWeight])
+  }, [wu, logWeight])
 
   const closeWeightModal = useCallback(() => setShowWeightModal(false), [])
   const closeCardioModal = useCallback(() => setShowCardioModal(false), [])
