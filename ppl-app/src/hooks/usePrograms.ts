@@ -301,7 +301,14 @@ export function useWorkouts() {
         .select('id, name, slug, color, day_type, focus, is_morning_routine, user_id').eq('is_archived', false)
         .or(orFilter)
         .order('name', { ascending: true })
-      return (data || []) as Workout[]
+      const all = (data || []) as Workout[]
+      // When the user has cloned a system workout, both appear (same name,
+      // owned vs user_id=null). Prefer the owned copy — system defaults are
+      // visible inside the system program itself, not as standalone entries.
+      const ownedNames = new Set(
+        all.filter(w => w.user_id === user!.id).map(w => w.name.trim().toLowerCase())
+      )
+      return all.filter(w => w.user_id === user!.id || !ownedNames.has(w.name.trim().toLowerCase()))
     },
     enabled: !!user,
     staleTime: 1000 * 60 * 5,
@@ -407,9 +414,11 @@ export function useWorkoutEditor(workoutId: string | null) {
       exerciseId: string
       defaults?: { sets?: number; reps?: string; rest_seconds?: number; tag?: string }
     }) => {
-      if (!data?.workout?.user_id) return
+      if (!data?.workout?.user_id) {
+        throw new Error('This is a system workout. Clone it from the workout list to make edits.')
+      }
       const nextOrder = (data?.exercises || []).length
-      await supabase.from('workout_exercises').insert({
+      const { error } = await supabase.from('workout_exercises').insert({
         workout_id: workoutId,
         exercise_id: exerciseId,
         sets: defaults?.sets || 3,
@@ -419,6 +428,7 @@ export function useWorkoutEditor(workoutId: string | null) {
         notes: null,
         order_index: nextOrder,
       })
+      if (error) throw error
     },
     onSettled: invalidate,
   })
@@ -518,6 +528,8 @@ export interface ExerciseLib {
   category: string
   slug: string
   tags: string[] | null
+  muscles: string[] | null
+  secondary_muscles: string[] | null
 }
 
 export function useExerciseLibrary() {
@@ -526,7 +538,7 @@ export function useExerciseLibrary() {
     queryFn: async () => {
       const { data } = await supabase
         .from('exercises')
-        .select('id, name, category, slug, tags')
+        .select('id, name, category, slug, tags, muscles, secondary_muscles')
         .order('name')
       return (data || []) as ExerciseLib[]
     },

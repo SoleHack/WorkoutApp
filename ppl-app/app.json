@@ -24,7 +24,7 @@
         "NSPhotoLibraryUsageDescription": "Choose photos from your library for progress tracking.",
         "NSPhotoLibraryAddUsageDescription": "Save progress photos to your library."
       },
-      "buildNumber": "6"
+      "buildNumber": "7"
     },
     "android": {
       "adaptiveIcon": {

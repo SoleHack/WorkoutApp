@@ -723,6 +723,7 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
   const [showAddEx, setShowAddEx] = useState(false)
   const [showTemplates, setShowTemplates] = useState(false)
   const [exSearch, setExSearch] = useState('')
+  const [muscleFilter, setMuscleFilter] = useState<string | null>(null) // selected chip; null = ALL
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState(false)
   const [nameVal, setNameVal] = useState('')
@@ -753,20 +754,56 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
     return out
   }, [exercises])
 
-  const filteredLib = library.filter(e =>
-    exSearch.length < 2 || e.name.toLowerCase().includes(exSearch.toLowerCase()) || e.category.toLowerCase().includes(exSearch.toLowerCase())
-  )
+  // Muscle filter chips — broad groupings that map to terms in tags + muscles[].
+  // Each chip's match list is checked case-insensitively against tags and the
+  // muscles/secondary_muscles arrays so the user can think in body-part terms
+  // (CHEST, GLUTES, BICEPS) without needing to know the data shape.
+  const MUSCLE_GROUPS: { label: string; match: string[] }[] = [
+    { label: 'CHEST',     match: ['chest', 'pec'] },
+    { label: 'BACK',      match: ['back', 'lat', 'rhomboid', 'trapezius', 'rear deltoid'] },
+    { label: 'SHOULDERS', match: ['shoulder', 'deltoid', 'delt'] },
+    { label: 'BICEPS',    match: ['bicep'] },
+    { label: 'TRICEPS',   match: ['tricep'] },
+    { label: 'FOREARMS',  match: ['forearm', 'grip'] },
+    { label: 'QUADS',     match: ['quad'] },
+    { label: 'HAMS',      match: ['hamstring'] },
+    { label: 'GLUTES',    match: ['glute'] },
+    { label: 'CALVES',    match: ['calf', 'calves', 'soleus', 'gastrocnemius'] },
+    { label: 'CORE',      match: ['core', 'abs', 'oblique'] },
+    { label: 'CARDIO',    match: ['cardio'] },
+  ]
+  const filteredLib = library.filter(e => {
+    if (muscleFilter) {
+      const group = MUSCLE_GROUPS.find(g => g.label === muscleFilter)
+      const hay = [
+        ...(e.tags || []),
+        ...(e.muscles || []),
+        ...(e.secondary_muscles || []),
+        e.category,
+      ].join(' ').toLowerCase()
+      const matches = group?.match.some(t => hay.includes(t))
+      if (!matches) return false
+    }
+    if (exSearch.length < 2) return true
+    return e.name.toLowerCase().includes(exSearch.toLowerCase())
+      || e.category.toLowerCase().includes(exSearch.toLowerCase())
+  })
 
   const handleAddExercise = async (ex: { id: string; tags: string[] | null }) => {
     const tag = (ex.tags?.[0] || '').includes('compound') ? 'compound' : 'isolation'
-    await addExercise(ex.id, {
-      sets: tag === 'compound' ? 4 : 3,
-      reps: tag === 'compound' ? '6-8' : '10-12',
-      rest_seconds: tag === 'compound' ? 150 : 90,
-      tag,
-    })
-    setShowAddEx(false)
-    setExSearch('')
+    try {
+      await addExercise(ex.id, {
+        sets: tag === 'compound' ? 4 : 3,
+        reps: tag === 'compound' ? '6-8' : '10-12',
+        rest_seconds: tag === 'compound' ? 150 : 90,
+        tag,
+      })
+      setShowAddEx(false)
+      setExSearch('')
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Please try again.'
+      Alert.alert('Couldn’t add exercise', msg)
+    }
   }
 
   const handleLoadTemplate = async (template: ReturnType<typeof getTemplates>[number]) => {
@@ -1051,18 +1088,57 @@ function WorkoutEditorView({ workoutId, onBack }: { workoutId: string; onBack: (
                 <Text style={{ fontSize: 22, color: colors.muted }}>✕</Text>
               </TouchableOpacity>
             </View>
-            <View style={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+            <View style={{ paddingHorizontal: 16, paddingTop: 10, paddingBottom: 6 }}>
               <TextInput
                 style={{ borderRadius: 6, padding: 12, fontFamily: 'DMSans', fontSize: 14, color: colors.text, backgroundColor: colors.bg, borderWidth: 1, borderColor: colors.border }}
                 placeholder="Search exercises..." placeholderTextColor={colors.muted}
                 value={exSearch} onChangeText={setExSearch} autoFocus />
             </View>
             <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 6, paddingBottom: 10, gap: 6 }}
+              keyboardShouldPersistTaps="handled">
+              <TouchableOpacity
+                onPress={() => setMuscleFilter(null)}
+                accessibilityLabel="Show all exercises"
+                style={{
+                  borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
+                  borderWidth: 1,
+                  backgroundColor: muscleFilter === null ? workoutColor : colors.card2,
+                  borderColor: muscleFilter === null ? workoutColor : colors.border,
+                }}>
+                <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, letterSpacing: 1.5, color: muscleFilter === null ? colors.bg : colors.muted }}>ALL</Text>
+              </TouchableOpacity>
+              {MUSCLE_GROUPS.map(g => {
+                const active = muscleFilter === g.label
+                return (
+                  <TouchableOpacity
+                    key={g.label}
+                    onPress={() => setMuscleFilter(active ? null : g.label)}
+                    accessibilityLabel={`Filter exercises by ${g.label.toLowerCase()}`}
+                    style={{
+                      borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6,
+                      borderWidth: 1,
+                      backgroundColor: active ? workoutColor : colors.card2,
+                      borderColor: active ? workoutColor : colors.border,
+                    }}>
+                    <Text style={{ fontFamily: 'DMMono_500', fontSize: 10, letterSpacing: 1.5, color: active ? colors.bg : colors.muted }}>{g.label}</Text>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+            <ScrollView
               contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 40 }}
               keyboardShouldPersistTaps="handled"
               keyboardDismissMode="on-drag"
             >
               {libLoading ? <ActivityIndicator color={colors.muted} style={{ marginTop: 20 }} /> : (
+                filteredLib.length === 0 ? (
+                  <Text style={{ fontFamily: 'DMMono', fontSize: 12, color: colors.muted, textAlign: 'center', marginTop: 24 }}>
+                    No exercises match{muscleFilter ? ` ${muscleFilter}` : ''}{exSearch.length >= 2 ? ` · "${exSearch}"` : ''}
+                  </Text>
+                ) :
                 filteredLib.map(ex => (
                   <TouchableOpacity key={ex.id} onPress={() => handleAddExercise(ex)}
                     style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 13, borderBottomWidth: 1, borderBottomColor: colors.border }}>
